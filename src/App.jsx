@@ -497,6 +497,7 @@ export default function AvanteCRM() {
             targets={targets}
             activeRep={activeRep}
             setActiveRep={setActiveRep}
+            onNavigate={setView}
           />
         )}
         {view === 'leads' && (
@@ -593,9 +594,11 @@ export default function AvanteCRM() {
           onClose={() => setNewClientCtx(null)}
           onSave={async (data) => {
             const created = await addClient(data);
+            if (!created) return null; // modal will show error
             if (newClientCtx.onCreated) newClientCtx.onCreated(created);
             setNewClientCtx(null);
-            showToast(`New client added: ${created.venue} → ${created.accountManager}'s book`);
+            showToast(`✓ New client saved: ${created.venue} → ${created.accountManager}'s book`);
+            return created;
           }}
         />
       )}
@@ -755,7 +758,7 @@ function Header({ view, setView, onLog, onReset }) {
 }
 
 // =================== Dashboard ===================
-function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep }) {
+function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, onNavigate }) {
   const repFilter = (rec, key = 'accountManager') => activeRep === 'All' || rec[key] === activeRep;
   const filteredClients = clients.filter(c => repFilter(c));
   const filteredVisits = visits.filter(v => repFilter(v, 'salesRep'));
@@ -764,8 +767,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
   const monthSales = filteredVisits.reduce((s, v) => s + (v.saleAmount || 0), 0);
   const visitCount = filteredVisits.length;
   const sold = filteredVisits.filter(v => v.outcome === 'Sold In').length;
-  const totalNew = filteredVisits.length;
-  const conversionRate = totalNew > 0 ? Math.round((sold / totalNew) * 100) : 0;
+  const conversionRate = visitCount > 0 ? Math.round((sold / visitCount) * 100) : 0;
 
   const activeTargets = useMemo(() => {
     if (activeRep === 'All') {
@@ -779,70 +781,115 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
     return targets[activeRep] || { revenue: 0, visits: 0, privateSales: 0, tradeRetail: 0 };
   }, [activeRep, targets]);
 
-  const channelVisits = useMemo(() => {
-    const out = { 'Private Sales': 0, 'Trade Retail': 0 };
-    filteredVisits.forEach(v => { if (out[v.channel] !== undefined) out[v.channel] += 1; });
-    return out;
-  }, [filteredVisits]);
-
   const pct = (a, b) => b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0;
 
+  // Stage counts for pipeline summary
+  const stages = ['New', 'Contacted', 'Qualified', 'Prospect', 'Converted', 'Lost'];
+  const stageCounts = Object.fromEntries(stages.map(s => [s, filteredClients.filter(c => c.status === s).length]));
+  const stageColors = { New: '#006C90', Contacted: '#FDB940', Qualified: '#D78433', Prospect: '#003553', Converted: '#2d8659', Lost: '#9c2c2c' };
+
   return (
-    <div className="space-y-5 md:space-y-8 fade-up">
-      {/* Header — compact on mobile */}
-      <div className="pb-4 border-b border-ink/15">
-        <p className="font-display text-[10px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>PERFORMANCE OVERVIEW</p>
-        <div className="flex items-start justify-between gap-3 mt-1 flex-wrap">
-          <h1 className="font-display text-2xl md:text-4xl ink" style={{ fontWeight: 700 }}>
+    <div className="space-y-4 md:space-y-6 fade-up">
+
+      {/* Page header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap pb-3 border-b border-ink/15">
+        <div>
+          <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>PERFORMANCE OVERVIEW</p>
+          <h1 className="font-display text-xl md:text-3xl ink mt-0.5" style={{ fontWeight: 700 }}>
             {new Date().toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' }).toUpperCase()}
           </h1>
-          <RepToggle active={activeRep} onChange={setActiveRep} />
         </div>
+        <RepToggle active={activeRep} onChange={setActiveRep} />
       </div>
 
-      {/* KPI cards — 2 col on mobile, 4 on desktop */}
+      {/* ── KPI CARDS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KPICard label="Month Sales" value={ZAR(monthSales)} target={activeTargets.revenue} targetValue={ZAR(activeTargets.revenue)} progress={pct(monthSales, activeTargets.revenue)} icon={DollarSign} accent="copper" />
         <KPICard label="Visits" value={visitCount} target={activeTargets.visits} targetValue={`${activeTargets.visits} visits`} progress={pct(visitCount, activeTargets.visits)} icon={Activity} accent="ocean" />
-        <KPICard label="Conversion" value={`${conversionRate}%`} subtitle={`${sold} of ${totalNew} sold`} progress={conversionRate} icon={TrendingUp} accent="gold" />
+        <KPICard label="Conversion" value={`${conversionRate}%`} subtitle={`${sold} of ${visitCount} sold`} progress={conversionRate} icon={TrendingUp} accent="gold" />
         <KPICard label="Total TD" value={ZAR(totalSales)} subtitle="All-time" icon={Award} accent="ink" />
       </div>
 
-      {/* Channel cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <ChannelCard title="Private Sales" subtitle="On-Consumption" icon={Wine} visits={channelVisits['Private Sales']} target={activeTargets.privateSales} />
-        <ChannelCard title="Trade Retail" subtitle="Off-Consumption" icon={Briefcase} visits={channelVisits['Trade Retail']} target={activeTargets.tradeRetail} />
-      </div>
-
-      {/* Leaderboard + Recent visits stacked on mobile */}
+      {/* ── LEADERBOARD + RECENT VISITS ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 premium-card p-4 md:p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="lg:col-span-2 premium-card p-4 md:p-5">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-copper diamond-clip"></div>
               <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>LEADERBOARD</h2>
             </div>
-            <span className="text-[9px] tracking-[0.2em] font-display ocean">THIS MONTH</span>
+            <span className="text-[9px] tracking-[0.15em] font-display ocean uppercase">This month</span>
           </div>
           <Leaderboard clients={clients} visits={allVisits} targets={targets} />
         </div>
-        <div className="premium-card p-4 md:p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 bg-copper diamond-clip"></div>
-            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>RECENT VISITS</h2>
+
+        <div className="premium-card p-4 md:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-copper diamond-clip"></div>
+              <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>RECENT VISITS</h2>
+            </div>
+            <button onClick={() => onNavigate('visits')}
+              className="text-[9px] font-display tracking-[0.15em] copper hover:opacity-70 flex items-center gap-1" style={{ fontWeight: 700 }}>
+              ALL <ChevronRight className="w-3 h-3" />
+            </button>
           </div>
-          <RecentVisits visits={filteredVisits.slice(-5).reverse()} clients={clients} />
+          <RecentVisits visits={filteredVisits.slice(-6).reverse()} clients={clients} />
         </div>
       </div>
 
-      {/* Pipeline */}
-      <div className="premium-card p-4 md:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-2 h-2 bg-copper diamond-clip"></div>
-          <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>PIPELINE {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}</h2>
+      {/* ── PIPELINE SUMMARY (compact) ── */}
+      <div className="premium-card p-4 md:p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-copper diamond-clip"></div>
+            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
+              PIPELINE {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
+            </h2>
+          </div>
+          <button onClick={() => onNavigate('leads')}
+            className="text-[9px] font-display tracking-[0.15em] copper hover:opacity-70 flex items-center gap-1" style={{ fontWeight: 700 }}>
+            VIEW ALL <ChevronRight className="w-3 h-3" />
+          </button>
         </div>
-        <PipelineGrid clients={filteredClients} />
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          {stages.map(s => (
+            <button key={s} onClick={() => onNavigate('leads')}
+              className="text-center p-2 hover:bg-ink/5 transition-colors cursor-pointer">
+              <div className="font-display text-xl md:text-2xl mb-0.5" style={{ fontWeight: 700, color: stageColors[s] }}>{stageCounts[s]}</div>
+              <div className="font-display text-[8px] md:text-[9px] tracking-[0.1em] ocean mb-1.5" style={{ fontWeight: 600 }}>{s.toUpperCase()}</div>
+              <div className="h-1 bg-ink/10">
+                <div className="h-full" style={{ width: `${Math.max(...Object.values(stageCounts), 1) > 0 ? (stageCounts[s] / Math.max(...Object.values(stageCounts), 1)) * 100 : 0}%`, background: stageColors[s] }}></div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* ── QUICK NAV CARDS — tap to go to each section ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {[
+          { id: 'leads', label: 'Leads & Clients', sub: `${filteredClients.length} venues`, icon: Users, color: '#006C90' },
+          { id: 'visits', label: 'Visit Log', sub: `${filteredVisits.length} this month`, icon: ClipboardList, color: '#D78433' },
+          { id: 'manager', label: 'Manager Portal', sub: 'Targets & Export', icon: Settings, color: '#003553' },
+        ].map(item => {
+          const Icon = item.icon;
+          return (
+            <button key={item.id} onClick={() => onNavigate(item.id)}
+              className="premium-card p-4 text-left hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3">
+              <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center" style={{ background: item.color }}>
+                <Icon className="w-5 h-5" style={{ color: '#FFFEF2' }} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-display text-xs tracking-[0.1em] ink truncate" style={{ fontWeight: 700 }}>{item.label.toUpperCase()}</p>
+                <p className="text-[10px] italic ocean mt-0.5">{item.sub}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 copper flex-shrink-0 ml-auto" />
+            </button>
+          );
+        })}
+      </div>
+
     </div>
   );
 }
@@ -2531,96 +2578,171 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
     status: 'New',
     notes: '',
   });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleCreate = () => {
-    console.log('[NewClient] create clicked', form);
-    if (!form.venue.trim()) { alert('Venue name is required.'); return; }
+  const setF = (k, v) => { setForm(f => ({ ...f, [k]: v })); setError(''); };
+
+  const handleCreate = async () => {
+    // Validate required fields
+    if (!form.venue.trim()) { setError('Venue name is required.'); return; }
+    if (!form.channel) { setError('Channel is required (Private Sales or Trade Retail).'); return; }
+    if (!form.accountManager) { setError('Please assign an account manager.'); return; }
+
+    setSaving(true);
+    setError('');
     try {
-      onSave(form);
+      const created = await onSave(form);
+      // onSave handles closing the modal — if it returns null, something went wrong
+      if (!created) {
+        setError('Save failed — could not write to database. Check your connection and try again.');
+      }
     } catch (err) {
       console.error('[NewClient] save threw', err);
-      alert('Could not create client: ' + (err?.message || err));
+      setError('Save failed: ' + (err?.message || String(err)));
+    } finally {
+      setSaving(false);
     }
   };
 
-  const setF = (k, v) => setForm({ ...form, [k]: v });
-
   return (
-    <div className="fixed inset-0 z-[60] flex items-start md:items-center justify-center p-4 bg-ink/80 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
-      <div className="bg-cream max-w-2xl w-full my-4 border-2 border-copper" onClick={(e) => e.stopPropagation()}>
-        <div className="p-5 flex items-center justify-between" style={{ background: '#003553' }}>
+    <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center md:p-4 bg-ink/80 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+      <div className="bg-cream w-full md:max-w-2xl md:my-4 border-t-2 md:border-2 border-copper max-h-[95vh] overflow-y-auto modal-slide-up" onClick={(e) => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="p-4 flex items-center justify-between sticky top-0 z-10" style={{ background: '#003553' }}>
           <div className="flex items-center gap-3">
-            <UserPlus className="w-5 h-5" style={{ color: '#FDB940' }} />
+            <UserPlus className="w-5 h-5 flex-shrink-0" style={{ color: '#FDB940' }} />
             <div>
-              <p className="font-display text-[10px] tracking-[0.4em]" style={{ color: '#FDB940', fontWeight: 600 }}>NEW CLIENT</p>
-              <h2 className="font-display text-xl" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.08em' }}>ADD TO {defaultRep.toUpperCase()}'S BOOK</h2>
+              <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>NEW CLIENT</p>
+              <h2 className="font-display text-lg" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.06em' }}>ADD TO {defaultRep.toUpperCase()}'S BOOK</h2>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-2 hover:opacity-70" style={{ color: '#FFFEF2' }}><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="p-2 hover:opacity-70 flex-shrink-0" style={{ color: '#FFFEF2' }}><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-6 space-y-4">
+
+        <div className="p-4 space-y-4">
+          {/* Venue name — most important field */}
           <div>
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>VENUE NAME *</label>
-            <input type="text" value={form.venue} onChange={(e) => setF('venue', e.target.value)} placeholder="e.g. The Grand Hotel" className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" autoFocus />
+            <input
+              type="text" value={form.venue}
+              onChange={(e) => setF('venue', e.target.value)}
+              placeholder="e.g. The Grand Hotel"
+              className="w-full px-3 py-3 border-2 bg-cream font-body text-sm focus:outline-none"
+              style={{ borderColor: !form.venue.trim() && error ? '#9c2c2c' : 'rgba(0,53,83,0.2)' }}
+              autoFocus
+            />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+
+          {/* Channel — critical for visit logging */}
+          <div>
+            <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>CHANNEL * <span className="italic normal-case text-[9px] ocean">(required for visit logging)</span></label>
+            <div className="grid grid-cols-2 gap-2">
+              {CHANNELS.map(ch => (
+                <button key={ch} type="button"
+                  onClick={() => setF('channel', ch)}
+                  className={`py-3 font-display text-xs tracking-[0.15em] border-2 transition-all ${form.channel === ch ? 'bg-ink border-ink' : 'bg-cream border-ink/20'}`}
+                  style={{ color: form.channel === ch ? '#FFFEF2' : '#003553', fontWeight: 700 }}>
+                  {ch === 'Private Sales' ? 'PRIVATE SALES' : 'TRADE RETAIL'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Two-column fields */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>FIRST NAME</label>
-              <input type="text" value={form.firstName} onChange={(e) => setF('firstName', e.target.value)} className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>FIRST NAME</label>
+              <input type="text" value={form.firstName} onChange={(e) => setF('firstName', e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
             </div>
             <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>LAST NAME</label>
-              <input type="text" value={form.lastName} onChange={(e) => setF('lastName', e.target.value)} className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>LAST NAME</label>
+              <input type="text" value={form.lastName} onChange={(e) => setF('lastName', e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
             </div>
             <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>EMAIL</label>
-              <input type="email" value={form.email} onChange={(e) => setF('email', e.target.value)} className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>EMAIL</label>
+              <input type="email" value={form.email} onChange={(e) => setF('email', e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
             </div>
             <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>PHONE</label>
-              <input type="tel" value={form.phone} onChange={(e) => setF('phone', e.target.value)} className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>PHONE</label>
+              <input type="tel" value={form.phone} onChange={(e) => setF('phone', e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
             </div>
             <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>LOCATION</label>
-              <input type="text" value={form.location} onChange={(e) => setF('location', e.target.value)} placeholder="e.g. Camps Bay" className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>LOCATION</label>
+              <input type="text" value={form.location} onChange={(e) => setF('location', e.target.value)} placeholder="e.g. Camps Bay" className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
             </div>
             <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>DISTRIBUTOR</label>
-              <input type="text" value={form.distributor} onChange={(e) => setF('distributor', e.target.value)} className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>DISTRIBUTOR</label>
+              <input type="text" value={form.distributor} onChange={(e) => setF('distributor', e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
             </div>
             <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>CHANNEL</label>
-              <select value={form.channel} onChange={(e) => setF('channel', e.target.value)} className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
-                {CHANNELS.map(c => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>LEAD SOURCE</label>
-              <select value={form.leadSource} onChange={(e) => setF('leadSource', e.target.value)} className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>LEAD SOURCE</label>
+              <select value={form.leadSource} onChange={(e) => setF('leadSource', e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
                 {LEAD_SOURCES.map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>PRIORITY</label>
-              <select value={form.priority} onChange={(e) => setF('priority', e.target.value)} className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>PRIORITY</label>
+              <select value={form.priority} onChange={(e) => setF('priority', e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
                 {PRIORITIES.map(p => <option key={p}>{p}</option>)}
               </select>
             </div>
-            <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>ACCOUNT MANAGER</label>
-              <select value={form.accountManager} onChange={(e) => setF('accountManager', e.target.value)} className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
-                {SALES_REPS.map(r => <option key={r}>{r}</option>)}
-              </select>
+          </div>
+
+          {/* Account manager — full width */}
+          <div>
+            <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>ACCOUNT MANAGER *</label>
+            <div className="grid grid-cols-3 gap-2">
+              {SALES_REPS.map(r => (
+                <button key={r} type="button"
+                  onClick={() => setF('accountManager', r)}
+                  className={`py-2.5 font-display text-xs tracking-[0.15em] border transition-all ${form.accountManager === r ? 'bg-ink border-ink' : 'bg-cream border-ink/20'}`}
+                  style={{ color: form.accountManager === r ? '#FFFEF2' : '#003553', fontWeight: 700 }}>
+                  {r.toUpperCase()}
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Notes */}
           <div>
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>NOTES</label>
-            <textarea value={form.notes} onChange={(e) => setF('notes', e.target.value)} rows="2" className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
+            <textarea value={form.notes} onChange={(e) => setF('notes', e.target.value)} rows="2" placeholder="Any initial context about this venue..." className="w-full px-3 py-2 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
           </div>
-          <div className="flex justify-end gap-3 pt-3 border-t border-ink/10">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 font-display text-xs tracking-[0.25em] ink hover:bg-ink/5" style={{ fontWeight: 700 }}>CANCEL</button>
-            <button type="button" onClick={handleCreate} className="bg-copper hover:bg-gold px-6 py-2.5 font-display text-xs tracking-[0.25em] flex items-center gap-2" style={{ color: '#FFFEF2', fontWeight: 700 }}>
-              <UserPlus className="w-4 h-4" /> CREATE CLIENT
+
+          {/* Error display */}
+          {error && (
+            <div className="px-3 py-3 border-l-4 text-xs" style={{ borderLeftColor: '#9c2c2c', background: 'rgba(156,44,44,0.08)', color: '#9c2c2c' }}>
+              <span className="font-display tracking-wider" style={{ fontWeight: 700 }}>ERROR: </span>{error}
+            </div>
+          )}
+
+          {/* Confirmation message */}
+          <p className="text-[10px] italic ocean">
+            This client will be saved to Supabase and immediately available for visit logging.
+          </p>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-3 border-t border-ink/10">
+            <button type="button" onClick={onClose} className="flex-none px-4 py-3 font-display text-xs tracking-[0.2em] ink border border-ink/20" style={{ fontWeight: 700 }}>
+              CANCEL
+            </button>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={saving}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 font-display text-xs tracking-[0.2em] transition-all ${saving ? 'opacity-60 cursor-not-allowed' : ''}`}
+              style={{ background: '#D78433', color: '#FFFEF2', fontWeight: 700 }}
+            >
+              {saving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  SAVING TO DATABASE...
+                </>
+              ) : (
+                <><UserPlus className="w-4 h-4" /> CREATE &amp; ADD TO BOOK</>
+              )}
             </button>
           </div>
         </div>
