@@ -1,0 +1,58 @@
+# Avante CRM
+
+A shared sales CRM for the Avante Cape Brandy sales team.
+
+## Quick Deploy (No Terminal Needed)
+
+### Step 1 — Upload to GitHub
+
+1. Go to **github.com** and sign in
+2. Click the **+** button → **New repository**
+3. Name it `avante-crm`, set to **Private**, click **Create repository**
+4. On the next screen, click **uploading an existing file**
+5. Drag and drop the entire `avante-crm` folder contents into the upload area
+6. Click **Commit changes**
+
+### Step 2 — Deploy on Vercel
+
+1. Go to **vercel.com** and sign in with your GitHub account
+2. Click **Add New Project**
+3. Select your `avante-crm` repository
+4. Under **Environment Variables**, add:
+   - `VITE_SUPABASE_URL` = `https://xsuvahsnaulfopdgxqpp.supabase.co`
+   - `VITE_SUPABASE_ANON_KEY` = `sb_publishable_lL6534xp_qqICkysZH-bow_VLgOLfV7`
+5. Click **Deploy**
+
+Your CRM will be live at a URL like `avante-crm.vercel.app` within 2 minutes.
+
+### Step 3 — Set up Supabase RLS policies
+
+In Supabase → Authentication → Policies, for each table (clients, visits, targets):
+1. Click the table → **New Policy** → **Create from scratch**
+2. Policy name: `allow all`
+3. Check: SELECT, INSERT, UPDATE, DELETE
+4. USING expression: `true`
+5. Save
+
+## Making Changes
+
+To update the CRM:
+1. Make changes in Claude
+2. Download the new `App.jsx`
+3. Replace the file on GitHub (click the file → pencil icon → paste new code)
+4. Vercel auto-deploys within 60 seconds
+
+## Project Structure
+
+```
+avante-crm/
+├── src/
+│   ├── App.jsx          ← Main CRM (edit this to make changes)
+│   ├── supabase.js      ← Database connection
+│   ├── main.jsx         ← Entry point
+│   └── index.css        ← Base styles
+├── index.html
+├── package.json
+├── vite.config.js
+└── .env                 ← Your Supabase credentials (never commit this)
+```
