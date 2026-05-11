@@ -463,16 +463,32 @@ export default function AvanteCRM() {
         .border-gold { border-color: #FDB940; }
         .diamond-clip { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
         .premium-card { background: #FFFEF2; border: 1px solid rgba(0,53,83,0.15); box-shadow: 0 1px 0 rgba(0,53,83,0.04), 0 8px 24px -16px rgba(0,53,83,0.2); }
-        .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: rgba(0,53,83,0.05); }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(0,53,83,0.3); border-radius: 3px; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-up { animation: fadeUp 0.4s ease-out forwards; }
+        /* Mobile-friendly touch targets */
+        @media (max-width: 767px) {
+          select, input[type="date"], input[type="text"], input[type="email"],
+          input[type="tel"], input[type="number"], textarea {
+            font-size: 16px !important; /* prevents iOS zoom on focus */
+            min-height: 44px;
+          }
+          button { min-height: 44px; }
+          .mobile-btn { min-height: 48px; }
+        }
+        /* Smooth modal transitions */
+        .modal-slide-up { animation: slideUp 0.25s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0.8; } to { transform: translateY(0); opacity: 1; } }
+        /* Hide scrollbar on horizontal scroll areas */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
       <Header view={view} setView={setView} onLog={() => setShowLogModal(true)} onReset={resetData} />
 
-      <main className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8">
+      <main className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-10 py-5 md:py-8 pb-24 md:pb-8">
         {view === 'dashboard' && (
           <Dashboard
             clients={clients}
@@ -585,12 +601,12 @@ export default function AvanteCRM() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-[80] animate-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center gap-3 px-5 py-3 shadow-2xl border-l-4" style={{ background: '#003553', borderLeftColor: toast.type === 'error' ? '#9c2c2c' : '#FDB940', minWidth: '280px' }}>
-            <div className="w-2 h-2 diamond-clip" style={{ background: toast.type === 'error' ? '#9c2c2c' : '#FDB940' }}></div>
-            <div>
-              <p className="font-display text-[10px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>{toast.type === 'error' ? 'ERROR' : 'SAVED'}</p>
-              <p className="text-sm" style={{ color: '#FFFEF2', fontWeight: 500 }}>{toast.message}</p>
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[80]">
+          <div className="flex items-center gap-3 px-4 py-3 shadow-2xl border-l-4" style={{ background: '#003553', borderLeftColor: toast.type === 'error' ? '#9c2c2c' : '#FDB940', minWidth: '240px', maxWidth: '320px' }}>
+            <div className="w-2 h-2 flex-shrink-0 diamond-clip" style={{ background: toast.type === 'error' ? '#9c2c2c' : '#FDB940' }}></div>
+            <div className="min-w-0">
+              <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>{toast.type === 'error' ? 'ERROR' : 'SAVED'}</p>
+              <p className="text-xs truncate" style={{ color: '#FFFEF2', fontWeight: 500 }}>{toast.message}</p>
             </div>
           </div>
         </div>
@@ -661,61 +677,80 @@ function ConfirmModal({ title, message, confirmLabel, danger, onCancel, onConfir
 function Header({ view, setView, onLog, onReset }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'leads', label: 'Leads & Clients', icon: Users },
-    { id: 'visits', label: 'Visit Log', icon: ClipboardList },
-    { id: 'manager', label: 'Manager Portal', icon: Settings },
+    { id: 'leads', label: 'Clients', icon: Users },
+    { id: 'visits', label: 'Visits', icon: ClipboardList },
+    { id: 'manager', label: 'Manager', icon: Settings },
   ];
   return (
-    <header className="border-b-2 border-ink relative overflow-hidden" style={{ background: '#003553' }}>
-      <RaysBackdrop opacity={0.08} />
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-5 relative">
-        <div className="flex items-center justify-between gap-6 flex-wrap">
-          <div className="flex items-center gap-5">
-            <AvanteLogo size={64} />
-            <div className="border-l border-white/20 pl-5">
-              <p className="font-display text-[10px] tracking-[0.4em]" style={{ color: '#FDB940', fontWeight: 600 }}>SALES PERFORMANCE CRM</p>
-              <p className="font-display text-xs tracking-[0.3em] mt-1" style={{ color: '#FFFEF2', opacity: 0.7 }}>DARE TO FORWARD</p>
+    <>
+      {/* ── Desktop top header ── */}
+      <header className="hidden md:block border-b-2 border-ink relative overflow-hidden" style={{ background: '#003553' }}>
+        <RaysBackdrop opacity={0.08} />
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-4 relative">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <AvanteLogo size={52} />
+              <div className="border-l border-white/20 pl-4">
+                <p className="font-display text-[9px] tracking-[0.4em]" style={{ color: '#FDB940', fontWeight: 600 }}>SALES PERFORMANCE CRM</p>
+                <p className="font-display text-[9px] tracking-[0.3em] mt-0.5" style={{ color: '#FFFEF2', opacity: 0.6 }}>DARE TO FORWARD</p>
+              </div>
+            </div>
+            <nav className="flex items-center gap-1 bg-black/20 p-1">
+              {tabs.map(t => {
+                const Icon = t.icon;
+                const active = view === t.id;
+                return (
+                  <button key={t.id} onClick={() => setView(t.id)}
+                    className={`flex items-center gap-2 px-3 py-2 text-[10px] font-display tracking-[0.15em] transition-all ${active ? 'bg-gold ink' : 'text-white/70 hover:text-white'}`}
+                    style={{ fontWeight: 600 }}>
+                    <Icon className="w-3.5 h-3.5" />
+                    {t.id === 'leads' ? 'LEADS & CLIENTS' : t.id === 'visits' ? 'VISIT LOG' : t.id === 'manager' ? 'MANAGER' : 'DASHBOARD'}
+                  </button>
+                );
+              })}
+            </nav>
+            <div className="flex items-center gap-2">
+              <button onClick={onReset} title="Reset" className="text-white/30 hover:text-white/70 text-[9px] tracking-[0.2em] font-display px-2 py-1">RESET</button>
+              <button onClick={onLog} className="flex items-center gap-2 bg-copper hover:bg-gold px-4 py-2.5 font-display text-[10px] tracking-[0.25em] transition-colors" style={{ color: '#FFFEF2', fontWeight: 700 }}>
+                <Plus className="w-4 h-4" /> LOG VISIT
+              </button>
             </div>
           </div>
-
-          <nav className="flex items-center gap-1 bg-black/20 p-1 rounded-sm">
-            {tabs.map(t => {
-              const Icon = t.icon;
-              const active = view === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setView(t.id)}
-                  className={`flex items-center gap-2 px-3 py-2 text-[11px] font-display tracking-[0.2em] transition-all ${active ? 'bg-gold ink' : 'text-white/70 hover:text-white'}`}
-                  style={{ fontWeight: 600 }}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {t.label.toUpperCase()}
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onReset}
-              title="Reset to seed data"
-              className="text-white/40 hover:text-white/80 text-[10px] tracking-[0.2em] font-display px-2 py-1"
-            >
-              RESET
-            </button>
-            <button
-              onClick={onLog}
-              className="flex items-center gap-2 bg-copper hover:bg-gold text-white px-4 py-2.5 font-display text-xs tracking-[0.25em] transition-colors"
-              style={{ fontWeight: 700 }}
-            >
-              <Plus className="w-4 h-4" />
-              LOG VISIT
-            </button>
-          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* ── Mobile top bar ── */}
+      <header className="md:hidden sticky top-0 z-40 border-b-2 border-ink relative overflow-hidden" style={{ background: '#003553' }}>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <AvanteLogo size={40} />
+            <div>
+              <p className="font-display text-[8px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>AVANTE CRM</p>
+              <p className="font-display text-[7px] tracking-[0.2em]" style={{ color: '#FFFEF2', opacity: 0.5 }}>DARE TO FORWARD</p>
+            </div>
+          </div>
+          <button onClick={onLog} className="flex items-center gap-1.5 bg-copper px-3 py-2 font-display text-[10px] tracking-[0.2em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>
+            <Plus className="w-4 h-4" /> LOG VISIT
+          </button>
+        </div>
+      </header>
+
+      {/* ── Mobile bottom nav ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t-2 border-ink flex" style={{ background: '#003553' }}>
+        {tabs.map(t => {
+          const Icon = t.icon;
+          const active = view === t.id;
+          return (
+            <button key={t.id} onClick={() => setView(t.id)}
+              className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-all ${active ? '' : 'opacity-50'}`}
+              style={{ color: active ? '#FDB940' : '#FFFEF2' }}>
+              <Icon className="w-5 h-5" />
+              <span className="font-display text-[8px] tracking-[0.15em]" style={{ fontWeight: active ? 700 : 500 }}>{t.label.toUpperCase()}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </>
   );
 }
 
@@ -753,64 +788,58 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
   const pct = (a, b) => b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0;
 
   return (
-    <div className="space-y-8 fade-up">
-      <div className="flex items-end justify-between flex-wrap gap-4 pb-4 border-b border-ink/15">
-        <div>
-          <p className="font-display text-[10px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>PERFORMANCE OVERVIEW</p>
-          <h1 className="font-display text-4xl mt-1 ink" style={{ fontWeight: 700 }}>
+    <div className="space-y-5 md:space-y-8 fade-up">
+      {/* Header — compact on mobile */}
+      <div className="pb-4 border-b border-ink/15">
+        <p className="font-display text-[10px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>PERFORMANCE OVERVIEW</p>
+        <div className="flex items-start justify-between gap-3 mt-1 flex-wrap">
+          <h1 className="font-display text-2xl md:text-4xl ink" style={{ fontWeight: 700 }}>
             {new Date().toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' }).toUpperCase()}
           </h1>
-          <p className="italic text-sm ocean mt-1">Live tracking — measure of progress, precision, and pursuit.</p>
+          <RepToggle active={activeRep} onChange={setActiveRep} />
         </div>
-        <RepToggle active={activeRep} onChange={setActiveRep} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI cards — 2 col on mobile, 4 on desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KPICard label="Month Sales" value={ZAR(monthSales)} target={activeTargets.revenue} targetValue={ZAR(activeTargets.revenue)} progress={pct(monthSales, activeTargets.revenue)} icon={DollarSign} accent="copper" />
         <KPICard label="Visits" value={visitCount} target={activeTargets.visits} targetValue={`${activeTargets.visits} visits`} progress={pct(visitCount, activeTargets.visits)} icon={Activity} accent="ocean" />
-        <KPICard label="Conversion Rate" value={`${conversionRate}%`} subtitle={`${sold} of ${totalNew} sold in`} progress={conversionRate} icon={TrendingUp} accent="gold" />
-        <KPICard label="Total Sales TD" value={ZAR(totalSales)} subtitle="All-time, all clients" icon={Award} accent="ink" />
+        <KPICard label="Conversion" value={`${conversionRate}%`} subtitle={`${sold} of ${totalNew} sold`} progress={conversionRate} icon={TrendingUp} accent="gold" />
+        <KPICard label="Total TD" value={ZAR(totalSales)} subtitle="All-time" icon={Award} accent="ink" />
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-copper diamond-clip"></div>
-            <h2 className="font-display text-sm tracking-[0.3em] ink" style={{ fontWeight: 700 }}>CHANNEL KPI TARGETS</h2>
-          </div>
-          <span className="text-[10px] tracking-[0.2em] font-display ocean">EDIT IN MANAGER PORTAL</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ChannelCard title="Private Sales" subtitle="On-Consumption (Restaurants, Bars, Hotels)" icon={Wine} visits={channelVisits['Private Sales']} target={activeTargets.privateSales} />
-          <ChannelCard title="Trade Retail" subtitle="Off-Consumption (Bottle Stores, Liquor Retail)" icon={Briefcase} visits={channelVisits['Trade Retail']} target={activeTargets.tradeRetail} />
-        </div>
+      {/* Channel cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <ChannelCard title="Private Sales" subtitle="On-Consumption" icon={Wine} visits={channelVisits['Private Sales']} target={activeTargets.privateSales} />
+        <ChannelCard title="Trade Retail" subtitle="Off-Consumption" icon={Briefcase} visits={channelVisits['Trade Retail']} target={activeTargets.tradeRetail} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 premium-card p-6">
+      {/* Leaderboard + Recent visits stacked on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 premium-card p-4 md:p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-copper diamond-clip"></div>
-              <h2 className="font-display text-sm tracking-[0.3em] ink" style={{ fontWeight: 700 }}>SALES TEAM LEADERBOARD</h2>
+              <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>LEADERBOARD</h2>
             </div>
-            <span className="text-[10px] tracking-[0.2em] font-display ocean">THIS MONTH</span>
+            <span className="text-[9px] tracking-[0.2em] font-display ocean">THIS MONTH</span>
           </div>
           <Leaderboard clients={clients} visits={allVisits} targets={targets} />
         </div>
-
-        <div className="premium-card p-6">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="premium-card p-4 md:p-6">
+          <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 bg-copper diamond-clip"></div>
-            <h2 className="font-display text-sm tracking-[0.3em] ink" style={{ fontWeight: 700 }}>RECENT VISITS</h2>
+            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>RECENT VISITS</h2>
           </div>
           <RecentVisits visits={filteredVisits.slice(-5).reverse()} clients={clients} />
         </div>
       </div>
 
-      <div className="premium-card p-6">
-        <div className="flex items-center gap-3 mb-4">
+      {/* Pipeline */}
+      <div className="premium-card p-4 md:p-6">
+        <div className="flex items-center gap-2 mb-4">
           <div className="w-2 h-2 bg-copper diamond-clip"></div>
-          <h2 className="font-display text-sm tracking-[0.3em] ink" style={{ fontWeight: 700 }}>PIPELINE STATUS {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}</h2>
+          <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>PIPELINE {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}</h2>
         </div>
         <PipelineGrid clients={filteredClients} />
       </div>
@@ -828,10 +857,10 @@ function RepToggle({ active, onChange }) {
           <button
             key={r}
             onClick={() => onChange(r)}
-            className={`px-4 py-2 font-display text-[11px] tracking-[0.25em] transition-all ${isActive ? 'bg-ink' : 'hover:bg-ink/5'} ${i > 0 ? 'border-l border-ink/20' : ''}`}
+            className={`px-2.5 md:px-4 py-1.5 md:py-2 font-display text-[9px] md:text-[11px] tracking-[0.2em] transition-all ${isActive ? 'bg-ink' : 'hover:bg-ink/5'} ${i > 0 ? 'border-l border-ink/20' : ''}`}
             style={{ fontWeight: 600, color: isActive ? '#FFFEF2' : '#003553' }}
           >
-            {r === 'All' ? 'TEAM' : r.toUpperCase()}
+            {r === 'All' ? 'ALL' : r.toUpperCase()}
           </button>
         );
       })}
@@ -848,25 +877,26 @@ function KPICard({ label, value, subtitle, target, targetValue, progress, icon: 
   };
   const a = accentMap[accent] || accentMap.ink;
   return (
-    <div className="premium-card p-5 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-20 h-20 opacity-[0.04]" style={{ background: a.bg, clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', transform: 'translate(30%, -30%)' }}></div>
-      <div className="flex items-center justify-between mb-3 relative">
-        <span className="font-display text-[10px] tracking-[0.3em]" style={{ color: a.text, fontWeight: 600 }}>{label.toUpperCase()}</span>
-        <Icon className="w-4 h-4" style={{ color: a.text }} />
+    <div className="premium-card p-3 md:p-5 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-16 h-16 opacity-[0.04]" style={{ background: a.bg, clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', transform: 'translate(30%, -30%)' }}></div>
+      <div className="flex items-center justify-between mb-2 relative">
+        <span className="font-display text-[9px] tracking-[0.2em]" style={{ color: a.text, fontWeight: 600 }}>{label.toUpperCase()}</span>
+        <Icon className="w-3.5 h-3.5" style={{ color: a.text }} />
       </div>
-      <div className="font-display text-3xl ink mb-1" style={{ fontWeight: 700 }}>{value}</div>
+      <div className="font-display text-2xl md:text-3xl ink mb-1" style={{ fontWeight: 700 }}>{value}</div>
       {target !== undefined && progress !== undefined ? (
         <>
-          <div className="flex items-center justify-between text-xs mt-3 mb-1.5">
-            <span className="italic ocean">Target {targetValue}</span>
-            <span className="font-display tracking-wider" style={{ color: a.text, fontWeight: 700 }}>{progress}%</span>
+          <div className="flex items-center justify-between text-[10px] mt-2 mb-1">
+            <span className="italic ocean hidden md:inline">Target {targetValue}</span>
+            <span className="italic ocean md:hidden">{progress}%</span>
+            <span className="font-display tracking-wider hidden md:inline" style={{ color: a.text, fontWeight: 700 }}>{progress}%</span>
           </div>
-          <div className="h-1.5 bg-ink/10 relative overflow-hidden">
+          <div className="h-1 bg-ink/10 relative overflow-hidden">
             <div className="h-full transition-all duration-700" style={{ width: `${progress}%`, background: a.bg }}></div>
           </div>
         </>
       ) : (
-        <p className="text-xs italic ocean mt-2">{subtitle}</p>
+        <p className="text-[10px] italic ocean mt-1">{subtitle}</p>
       )}
     </div>
   );
@@ -913,29 +943,29 @@ function Leaderboard({ clients, visits, targets }) {
   }).sort((a, b) => b.monthSales - a.monthSales);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {repStats.map((s, i) => (
-        <div key={s.rep} className="border border-ink/10 p-4 hover:border-copper/40 transition-colors">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center font-display text-sm bg-ink" style={{ color: '#FFFEF2', fontWeight: 700 }}>{i + 1}</div>
-            <div className="flex-1">
-              <div className="flex items-baseline justify-between">
-                <h3 className="font-display text-base tracking-[0.15em] ink" style={{ fontWeight: 700 }}>{s.rep.toUpperCase()}</h3>
-                <span className="font-display text-lg copper" style={{ fontWeight: 700 }}>{ZAR(s.monthSales)}</span>
+        <div key={s.rep} className="border border-ink/10 p-3 hover:border-copper/40 transition-colors">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center font-display text-xs bg-ink" style={{ color: '#FFFEF2', fontWeight: 700 }}>{i + 1}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="font-display text-sm tracking-[0.1em] ink truncate" style={{ fontWeight: 700 }}>{s.rep.toUpperCase()}</h3>
+                <span className="font-display text-base copper flex-shrink-0" style={{ fontWeight: 700 }}>{ZAR(s.monthSales)}</span>
               </div>
-              <p className="text-xs italic ocean">Target {ZAR(s.target)} · {s.visitCount} visits · {s.sold} sold in</p>
+              <p className="text-[10px] italic ocean truncate">{s.visitCount} visits · {s.sold} sold · target {ZAR(s.target)}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 mt-2">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <div className="flex justify-between text-[10px] font-display tracking-[0.2em] mb-1">
+              <div className="flex justify-between text-[9px] font-display tracking-[0.15em] mb-1">
                 <span className="ocean" style={{ fontWeight: 600 }}>REVENUE</span>
                 <span className="copper" style={{ fontWeight: 700 }}>{s.pct}%</span>
               </div>
               <div className="h-1 bg-ink/10"><div className="h-full bg-copper" style={{ width: `${s.pct}%` }}></div></div>
             </div>
             <div>
-              <div className="flex justify-between text-[10px] font-display tracking-[0.2em] mb-1">
+              <div className="flex justify-between text-[9px] font-display tracking-[0.15em] mb-1">
                 <span className="ocean" style={{ fontWeight: 600 }}>VISITS</span>
                 <span className="copper" style={{ fontWeight: 700 }}>{s.visitPct}%</span>
               </div>
@@ -977,11 +1007,11 @@ function PipelineGrid({ clients }) {
   const max = Math.max(...counts.map(c => c.count), 1);
   const colors = { New: '#006C90', Contacted: '#FDB940', Qualified: '#D78433', Prospect: '#003553', Converted: '#2d8659', Lost: '#9c2c2c' };
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
       {counts.map(c => (
-        <div key={c.stage} className="text-center">
-          <div className="font-display text-3xl mb-1" style={{ fontWeight: 700, color: colors[c.stage] }}>{c.count}</div>
-          <div className="font-display text-[10px] tracking-[0.25em] ocean mb-2" style={{ fontWeight: 600 }}>{c.stage.toUpperCase()}</div>
+        <div key={c.stage} className="text-center p-2">
+          <div className="font-display text-2xl md:text-3xl mb-1" style={{ fontWeight: 700, color: colors[c.stage] }}>{c.count}</div>
+          <div className="font-display text-[9px] md:text-[10px] tracking-[0.15em] md:tracking-[0.25em] ocean mb-2" style={{ fontWeight: 600 }}>{c.stage.toUpperCase()}</div>
           <div className="h-1 bg-ink/10">
             <div className="h-full transition-all duration-700" style={{ width: `${(c.count / max) * 100}%`, background: colors[c.stage] }}></div>
           </div>
@@ -1215,32 +1245,32 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
   };
 
   return (
-    <div className="space-y-8 fade-up">
-      {/* Hero */}
+    <div className="space-y-5 md:space-y-8 fade-up">
+      {/* Hero — compact on mobile */}
       <div className="relative overflow-hidden border-2 border-ink" style={{ background: '#003553' }}>
         <RaysBackdrop opacity={0.1} />
-        <div className="relative p-8 md:p-10 flex items-start justify-between gap-6 flex-wrap">
-          <div className="flex items-center gap-5">
-            <AvanteLogo size={72} />
+        <div className="relative p-4 md:p-10">
+          <div className="flex items-center gap-3 mb-3">
+            <AvanteLogo size={44} />
             <div>
-              <p className="font-display text-[10px] tracking-[0.4em]" style={{ color: '#FDB940', fontWeight: 600 }}>STRATEGIC EXECUTION</p>
-              <h1 className="font-display text-3xl md:text-4xl mt-1" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.08em' }}>SALES MANAGER PORTAL</h1>
-              <p className="italic text-sm mt-2" style={{ color: '#FFFEF2', opacity: 0.7 }}>Set the standard. Adjust the targets. Track the pursuit.</p>
+              <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>STRATEGIC EXECUTION</p>
+              <h1 className="font-display text-xl md:text-4xl" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.06em' }}>MANAGER PORTAL</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          {/* Action buttons — row on desktop, 2-col grid on mobile */}
+          <div className="grid grid-cols-2 md:flex md:flex-row gap-2 mt-2">
             {savedFlash && (
-              <span className="inline-flex items-center gap-2 px-3 py-2 font-display text-[10px] tracking-[0.2em]" style={{ color: '#003553', background: '#FDB940', fontWeight: 700 }}>
+              <span className="col-span-2 inline-flex items-center justify-center gap-2 px-3 py-2 font-display text-[10px] tracking-[0.2em]" style={{ color: '#003553', background: '#FDB940', fontWeight: 700 }}>
                 <Save className="w-3.5 h-3.5" /> SAVED
               </span>
             )}
-            <button onClick={handleReset} className="flex items-center gap-2 px-4 py-2.5 font-display text-[10px] tracking-[0.2em] border border-white/30 hover:border-gold transition-colors" style={{ color: '#FFFEF2', fontWeight: 600 }}>
-              <RotateCcw className="w-3.5 h-3.5" /> RESET DEFAULTS
+            <button onClick={handleReset} className="flex items-center justify-center gap-1.5 px-3 py-2.5 font-display text-[10px] tracking-[0.15em] border border-white/30" style={{ color: '#FFFEF2', fontWeight: 600 }}>
+              <RotateCcw className="w-3.5 h-3.5" /> RESET
             </button>
-            <button onClick={handleRevert} disabled={!dirty} className={`px-4 py-2.5 font-display text-[10px] tracking-[0.2em] border transition-colors ${dirty ? 'border-white/30 hover:border-gold' : 'border-white/10 opacity-30 cursor-not-allowed'}`} style={{ color: '#FFFEF2', fontWeight: 600 }}>
+            <button onClick={handleRevert} disabled={!dirty} className={`px-3 py-2.5 font-display text-[10px] tracking-[0.15em] border transition-colors ${dirty ? 'border-white/30' : 'border-white/10 opacity-30 cursor-not-allowed'}`} style={{ color: '#FFFEF2', fontWeight: 600 }}>
               REVERT
             </button>
-            <button onClick={handleSave} disabled={!dirty} className={`flex items-center gap-2 px-5 py-2.5 font-display text-xs tracking-[0.25em] transition-colors ${dirty ? 'bg-copper hover:bg-gold' : 'bg-copper/40 cursor-not-allowed'}`} style={{ color: '#FFFEF2', fontWeight: 700 }}>
+            <button onClick={handleSave} disabled={!dirty} className={`col-span-2 md:col-span-1 flex items-center justify-center gap-2 px-5 py-2.5 font-display text-xs tracking-[0.2em] transition-colors ${dirty ? 'bg-copper' : 'bg-copper/40 cursor-not-allowed'}`} style={{ color: '#FFFEF2', fontWeight: 700 }}>
               <Save className="w-4 h-4" /> SAVE TARGETS
             </button>
           </div>
@@ -1248,33 +1278,21 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
       </div>
 
       {/* Data Export */}
-      <div className="premium-card p-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 opacity-[0.04]" style={{ background: '#D78433', clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', transform: 'translate(30%, -30%)' }}></div>
-        <div className="flex items-start justify-between gap-6 flex-wrap relative">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 flex items-center justify-center bg-ink">
-              <FileSpreadsheet className="w-6 h-6" style={{ color: '#FDB940' }} />
-            </div>
-            <div>
-              <p className="font-display text-[10px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>BACK-END DATA CAPTURE</p>
-              <h2 className="font-display text-xl ink mt-1" style={{ fontWeight: 700, letterSpacing: '0.08em' }}>EXPORT TO EXCEL</h2>
-              <p className="italic text-sm ocean mt-1 max-w-lg">Download a multi-sheet workbook with everything: client database, every visit, every SKU sold, current targets, this month's performance, and the price catalogue.</p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {['Clients', 'Visits', 'SKU Line Items', 'Targets', 'Performance', 'SKU Catalogue'].map(s => (
-                  <span key={s} className="text-[10px] font-display tracking-wider px-2 py-1 border border-ink/15 ocean" style={{ fontWeight: 600 }}>{s.toUpperCase()}</span>
-                ))}
-              </div>
-            </div>
+      <div className="premium-card p-4 md:p-6 relative overflow-hidden">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-ink">
+            <FileSpreadsheet className="w-5 h-5" style={{ color: '#FDB940' }} />
           </div>
-          <button
-            onClick={exportToExcel}
-            className="flex items-center gap-2 bg-ink hover:bg-copper px-5 py-3 font-display text-xs tracking-[0.25em] transition-colors"
-            style={{ color: '#FFFEF2', fontWeight: 700 }}
-          >
-            <Download className="w-4 h-4" /> DOWNLOAD .XLSX
-          </button>
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-[9px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>DATA EXPORT</p>
+            <h2 className="font-display text-lg ink" style={{ fontWeight: 700 }}>EXPORT TO EXCEL</h2>
+            <p className="italic text-xs ocean mt-0.5">All clients, visits, SKUs, targets &amp; performance in one workbook.</p>
+          </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-ink/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+        <button onClick={exportToExcel} className="w-full flex items-center justify-center gap-2 bg-ink px-4 py-3 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>
+          <Download className="w-4 h-4" /> DOWNLOAD .XLSX
+        </button>
+        <div className="mt-3 pt-3 border-t border-ink/10 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
           <div>
             <p className="font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>CLIENTS IN DB</p>
             <p className="font-display text-lg ink" style={{ fontWeight: 700 }}>{clients.length}</p>
@@ -1316,9 +1334,9 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
       <div>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-2 h-2 bg-copper diamond-clip"></div>
-          <h2 className="font-display text-sm tracking-[0.3em] ink" style={{ fontWeight: 700 }}>INDIVIDUAL REP TARGETS &amp; CHANNEL KPI</h2>
+          <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>INDIVIDUAL REP TARGETS &amp; KPI</h2>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {SALES_REPS.map(rep => (
             <RepTargetCard
               key={rep}
@@ -1332,52 +1350,75 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
         </div>
       </div>
 
-      {/* Quick reference: client distribution */}
-      <div className="premium-card p-6">
-        <div className="flex items-center gap-3 mb-4">
+      {/* Quick reference: client distribution — scrollable on mobile */}
+      <div className="premium-card p-4 md:p-6">
+        <div className="flex items-center gap-3 mb-3">
           <div className="w-2 h-2 bg-copper diamond-clip"></div>
-          <h2 className="font-display text-sm tracking-[0.3em] ink" style={{ fontWeight: 700 }}>CLIENT BOOK DISTRIBUTION</h2>
-          <span className="text-[10px] tracking-[0.2em] font-display ocean ml-auto">FOR REFERENCE WHEN SETTING KPIs</span>
+          <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>CLIENT BOOK DISTRIBUTION</h2>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b-2 border-ink">
-              {['Sales Rep', 'Total Clients', 'Private Sales', 'Trade Retail', 'Suggested Visit/Client Ratio'].map(h => (
-                <th key={h} className="px-3 py-2 text-left font-display text-[10px] tracking-[0.2em] copper" style={{ fontWeight: 600 }}>{h.toUpperCase()}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {SALES_REPS.map(rep => {
-              const b = repBook[rep];
-              const targetVisits = draft[rep]?.visits || 0;
-              const ratio = b.total > 0 ? (targetVisits / b.total).toFixed(2) : '—';
-              return (
-                <tr key={rep} className="border-b border-ink/10">
-                  <td className="px-3 py-3 font-display ink tracking-wider" style={{ fontWeight: 700 }}>{rep.toUpperCase()}</td>
-                  <td className="px-3 py-3 ink">{b.total}</td>
-                  <td className="px-3 py-3 ink">{b.privateSales} <span className="ocean italic text-xs">venues</span></td>
-                  <td className="px-3 py-3 ink">{b.tradeRetail} <span className="ocean italic text-xs">venues</span></td>
-                  <td className="px-3 py-3 copper" style={{ fontWeight: 700 }}>{ratio}<span className="text-xs ocean italic"> visits per client / month</span></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {/* Mobile: cards */}
+        <div className="md:hidden space-y-3">
+          {SALES_REPS.map(rep => {
+            const b = repBook[rep];
+            const targetVisits = draft[rep]?.visits || 0;
+            const ratio = b.total > 0 ? (targetVisits / b.total).toFixed(2) : '—';
+            return (
+              <div key={rep} className="border border-ink/10 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-display ink text-sm tracking-wider" style={{ fontWeight: 700 }}>{rep.toUpperCase()}</span>
+                  <span className="font-display text-xs copper" style={{ fontWeight: 700 }}>{ratio}× visits/client</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div><p className="font-display text-[9px] ocean tracking-wider" style={{ fontWeight: 600 }}>TOTAL</p><p className="ink font-display" style={{ fontWeight: 700 }}>{b.total}</p></div>
+                  <div><p className="font-display text-[9px] ocean tracking-wider" style={{ fontWeight: 600 }}>PRIVATE</p><p className="ink font-display" style={{ fontWeight: 700 }}>{b.privateSales}</p></div>
+                  <div><p className="font-display text-[9px] ocean tracking-wider" style={{ fontWeight: 600 }}>RETAIL</p><p className="ink font-display" style={{ fontWeight: 700 }}>{b.tradeRetail}</p></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Desktop: table */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-ink">
+                {['Sales Rep', 'Total', 'Private Sales', 'Trade Retail', 'Visit/Client Ratio'].map(h => (
+                  <th key={h} className="px-3 py-2 text-left font-display text-[10px] tracking-[0.2em] copper" style={{ fontWeight: 600 }}>{h.toUpperCase()}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {SALES_REPS.map(rep => {
+                const b = repBook[rep];
+                const targetVisits = draft[rep]?.visits || 0;
+                const ratio = b.total > 0 ? (targetVisits / b.total).toFixed(2) : '—';
+                return (
+                  <tr key={rep} className="border-b border-ink/10">
+                    <td className="px-3 py-3 font-display ink tracking-wider" style={{ fontWeight: 700 }}>{rep.toUpperCase()}</td>
+                    <td className="px-3 py-3 ink">{b.total}</td>
+                    <td className="px-3 py-3 ink">{b.privateSales} <span className="ocean italic text-xs">venues</span></td>
+                    <td className="px-3 py-3 ink">{b.tradeRetail} <span className="ocean italic text-xs">venues</span></td>
+                    <td className="px-3 py-3 copper" style={{ fontWeight: 700 }}>{ratio}<span className="text-xs ocean italic"> per client / mo</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Save reminder bar (sticky-feel) */}
+      {/* Save reminder bar — sits above mobile bottom nav */}
       {dirty && (
-        <div className="sticky bottom-4 z-30 max-w-2xl mx-auto">
-          <div className="flex items-center justify-between gap-4 p-4 border-2 border-copper shadow-2xl" style={{ background: '#003553' }}>
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-gold diamond-clip animate-pulse"></div>
-              <p className="font-display text-xs tracking-[0.2em]" style={{ color: '#FFFEF2', fontWeight: 600 }}>YOU HAVE UNSAVED CHANGES</p>
+        <div className="sticky bottom-20 md:bottom-4 z-30 max-w-2xl mx-auto">
+          <div className="flex items-center justify-between gap-3 p-3 md:p-4 border-2 border-copper shadow-2xl" style={{ background: '#003553' }}>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-gold diamond-clip animate-pulse flex-shrink-0"></div>
+              <p className="font-display text-[9px] md:text-xs tracking-[0.15em]" style={{ color: '#FFFEF2', fontWeight: 600 }}>UNSAVED CHANGES</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={handleRevert} className="px-3 py-2 font-display text-[10px] tracking-[0.2em] text-white/70 hover:text-white" style={{ fontWeight: 600 }}>REVERT</button>
-              <button onClick={handleSave} className="flex items-center gap-2 bg-copper hover:bg-gold px-4 py-2 font-display text-[10px] tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>
-                <Save className="w-3.5 h-3.5" /> SAVE NOW
+              <button onClick={handleRevert} className="px-2 md:px-3 py-2 font-display text-[9px] tracking-[0.15em] text-white/70 hover:text-white" style={{ fontWeight: 600 }}>REVERT</button>
+              <button onClick={handleSave} className="flex items-center gap-1.5 bg-copper px-3 md:px-4 py-2 font-display text-[9px] md:text-[10px] tracking-[0.2em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>
+                <Save className="w-3.5 h-3.5" /> SAVE
               </button>
             </div>
           </div>
@@ -1402,28 +1443,28 @@ function AggregateCard({ label, value, icon: Icon, color }) {
 
 function RepTargetCard({ rep, draft, perf, book, onChange }) {
   const fields = [
-    { key: 'revenue', label: 'Revenue Target', icon: DollarSign, prefix: 'R', perfKey: 'revenue', isCurrency: true, hint: 'Monthly Rand sales target' },
-    { key: 'visits', label: 'Total Visits', icon: Activity, perfKey: 'visits', hint: 'Total venue visits this month' },
-    { key: 'privateSales', label: 'Private Sales Visits', icon: Wine, perfKey: 'privateSales', hint: 'On-con channel KPI' },
-    { key: 'tradeRetail', label: 'Trade Retail Visits', icon: Briefcase, perfKey: 'tradeRetail', hint: 'Off-con channel KPI' },
+    { key: 'revenue', label: 'Revenue Target', icon: DollarSign, prefix: 'R', perfKey: 'revenue', isCurrency: true, hint: 'Monthly Rand target' },
+    { key: 'visits', label: 'Total Visits', icon: Activity, perfKey: 'visits', hint: 'Total venue visits' },
+    { key: 'privateSales', label: 'Private Sales', icon: Wine, perfKey: 'privateSales', hint: 'On-con visits KPI' },
+    { key: 'tradeRetail', label: 'Trade Retail', icon: Briefcase, perfKey: 'tradeRetail', hint: 'Off-con visits KPI' },
   ];
 
   return (
-    <div className="premium-card p-6 relative">
-      <div className="flex items-center justify-between pb-4 mb-4 border-b border-ink/10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 flex items-center justify-center bg-ink relative">
-            <span className="font-display text-base" style={{ color: '#FDB940', fontWeight: 700 }}>{rep[0]}</span>
+    <div className="premium-card p-4 md:p-6 relative">
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-ink/10">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 flex items-center justify-center bg-ink">
+            <span className="font-display text-sm" style={{ color: '#FDB940', fontWeight: 700 }}>{rep[0]}</span>
           </div>
           <div>
-            <h3 className="font-display text-lg tracking-[0.15em] ink" style={{ fontWeight: 700 }}>{rep.toUpperCase()}</h3>
-            <p className="text-[10px] italic ocean">{book.total} clients in book</p>
+            <h3 className="font-display text-base tracking-[0.1em] ink" style={{ fontWeight: 700 }}>{rep.toUpperCase()}</h3>
+            <p className="text-[10px] italic ocean">{book.total} clients</p>
           </div>
         </div>
-        <Target className="w-5 h-5 copper" />
+        <Target className="w-4 h-4 copper" />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {fields.map(f => {
           const Icon = f.icon;
           const val = draft?.[f.key] || 0;
@@ -1431,29 +1472,24 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
           const pct = val > 0 ? Math.min(100, Math.round((actual / val) * 100)) : 0;
           return (
             <div key={f.key}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <Icon className="w-3.5 h-3.5 copper" />
-                <label className="font-display text-[10px] tracking-[0.25em] copper" style={{ fontWeight: 600 }}>{f.label.toUpperCase()}</label>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Icon className="w-3 h-3 copper" />
+                <label className="font-display text-[9px] tracking-[0.2em] copper" style={{ fontWeight: 600 }}>{f.label.toUpperCase()}</label>
               </div>
               <div className="flex items-center gap-2">
-                {f.prefix && <span className="font-display ink text-sm" style={{ fontWeight: 700 }}>{f.prefix}</span>}
+                {f.prefix && <span className="font-display ink text-sm flex-shrink-0" style={{ fontWeight: 700 }}>{f.prefix}</span>}
                 <input
                   type="number"
                   min="0"
                   value={val}
                   onChange={(e) => onChange(f.key, e.target.value)}
-                  className="flex-1 px-3 py-2 border border-ink/20 bg-cream font-display text-sm focus:outline-none focus:border-copper ink"
+                  className="flex-1 px-2 py-1.5 border border-ink/20 bg-cream font-display text-sm focus:outline-none focus:border-copper ink"
                   style={{ fontWeight: 700 }}
                 />
               </div>
-              <p className="text-[10px] italic ocean mt-1">{f.hint}</p>
-              <div className="flex items-center justify-between mt-2 text-[10px]">
-                <span className="ocean">
-                  This month: <span className="ink font-display" style={{ fontWeight: 700 }}>
-                    {f.isCurrency ? ZAR(actual) : actual}
-                  </span>
-                </span>
-                <span className="font-display tracking-wider copper" style={{ fontWeight: 700 }}>{pct}%</span>
+              <div className="flex items-center justify-between mt-1.5 text-[10px]">
+                <span className="ocean italic">{f.hint} · actual: <span className="ink font-display" style={{ fontWeight: 700 }}>{f.isCurrency ? ZAR(actual) : actual}</span></span>
+                <span className="font-display tracking-wider copper flex-shrink-0" style={{ fontWeight: 700 }}>{pct}%</span>
               </div>
               <div className="h-1 bg-ink/10 mt-1">
                 <div className="h-full bg-copper transition-all duration-500" style={{ width: `${pct}%` }}></div>
@@ -1488,37 +1524,39 @@ function LeadsPage({ clients, visits, updateClient, onSelect }) {
   }, [clients, filterRep, filterChannel, filterStatus, search]);
 
   return (
-    <div className="space-y-6 fade-up">
-      <div className="pb-4 border-b border-ink/15">
-        <p className="font-display text-[10px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>CLIENT DATABASE</p>
-        <h1 className="font-display text-4xl mt-1 ink" style={{ fontWeight: 700 }}>ALL LEADS &amp; CLIENTS</h1>
-        <p className="italic text-sm ocean mt-1">{clients.length} venues across the trade — every relationship, tracked.</p>
+    <div className="space-y-4 fade-up">
+      {/* Page header */}
+      <div className="pb-3 border-b border-ink/15">
+        <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>CLIENT DATABASE</p>
+        <h1 className="font-display text-2xl md:text-4xl mt-1 ink" style={{ fontWeight: 700 }}>LEADS &amp; CLIENTS</h1>
+        <p className="italic text-xs md:text-sm ocean mt-0.5">{clients.length} venues tracked</p>
       </div>
 
-      <div className="premium-card p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="md:col-span-2 relative">
+      {/* Filters */}
+      <div className="space-y-2">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ocean" />
-          <input type="text" placeholder="Search venue, contact, location..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+          <input type="text" placeholder="Search venue, contact, location..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-3 py-3 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
         </div>
-        <FilterSelect label="Rep" value={filterRep} onChange={setFilterRep} options={['All', ...SALES_REPS, 'Unassigned']} />
-        <FilterSelect label="Channel" value={filterChannel} onChange={setFilterChannel} options={['All', ...CHANNELS]} />
+        <div className="grid grid-cols-2 gap-2">
+          <FilterSelect label="Rep" value={filterRep} onChange={setFilterRep} options={['All', ...SALES_REPS, 'Unassigned']} />
+          <FilterSelect label="Channel" value={filterChannel} onChange={setFilterChannel} options={['All', ...CHANNELS]} />
+        </div>
+        {/* Status pills — horizontal scroll on mobile */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+          {['All', ...STATUSES].map(s => (
+            <button key={s} onClick={() => setFilterStatus(s)}
+              className={`flex-shrink-0 px-2.5 py-1 text-[10px] font-display tracking-wider transition-colors ${filterStatus === s ? 'bg-ink' : 'border border-ink/20'}`}
+              style={{ color: filterStatus === s ? '#FFFEF2' : '#003553', fontWeight: 600 }}>
+              {s.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] italic ocean">{filtered.length} of {clients.length} clients</p>
       </div>
 
-      <div className="flex items-center justify-between text-xs flex-wrap gap-2">
-        <span className="ocean italic">{filtered.length} of {clients.length} clients</span>
-        <div className="flex items-center gap-2">
-          <span className="font-display tracking-[0.2em] ocean text-[10px]" style={{ fontWeight: 600 }}>STATUS:</span>
-          <div className="flex flex-wrap gap-1">
-            {['All', ...STATUSES].map(s => (
-              <button key={s} onClick={() => setFilterStatus(s)} className={`px-2.5 py-1 text-[10px] font-display tracking-wider transition-colors ${filterStatus === s ? 'bg-ink' : 'border border-ink/20 hover:bg-ink/5'}`} style={{ color: filterStatus === s ? '#FFFEF2' : '#003553', fontWeight: 600 }}>
-                {s.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="premium-card overflow-hidden">
+      {/* Desktop table — hidden on mobile */}
+      <div className="hidden md:block premium-card overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin max-h-[640px] overflow-y-auto">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10" style={{ background: '#003553' }}>
@@ -1562,6 +1600,46 @@ function LeadsPage({ clients, visits, updateClient, onSelect }) {
           </table>
         </div>
       </div>
+
+      {/* Mobile card list — hidden on desktop */}
+      <div className="md:hidden space-y-2">
+        {filtered.length === 0 && (
+          <div className="premium-card p-6 text-center">
+            <p className="italic ocean text-sm">No clients match your filters.</p>
+          </div>
+        )}
+        {filtered.map(c => (
+          <div key={c.id} className="premium-card p-4 active:bg-gold/10 cursor-pointer border-l-4 transition-colors"
+            style={{ borderLeftColor: c.channel === 'Private Sales' ? '#D78433' : '#006C90' }}
+            onClick={() => onSelect(c)}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-display text-sm ink truncate" style={{ fontWeight: 700 }}>{c.venue}</span>
+                  <StatusBadge status={c.status} />
+                </div>
+                <p className="text-[11px] ocean italic mt-0.5 truncate">
+                  {[c.firstName, c.lastName].filter(Boolean).join(' ')}
+                  {c.location ? (c.firstName || c.lastName ? ' · ' : '') + c.location : ''}
+                </p>
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <span className="text-[9px] font-display tracking-wider px-1.5 py-0.5 border"
+                    style={{ borderColor: c.channel === 'Private Sales' ? '#D78433' : '#006C90', color: c.channel === 'Private Sales' ? '#D78433' : '#006C90', fontWeight: 600 }}>
+                    {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : '—'}
+                  </span>
+                  {c.accountManager && c.accountManager !== 'Unassigned' && (
+                    <span className="text-[10px] font-display ink" style={{ fontWeight: 600 }}>{c.accountManager}</span>
+                  )}
+                  {c.lastContacted && <span className="text-[10px] ocean italic">{c.lastContacted}</span>}
+                  {c.totalSales > 0 && <span className="text-[10px] font-display copper" style={{ fontWeight: 700 }}>{ZAR(c.totalSales)}</span>}
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 copper flex-shrink-0 mt-1" />
+            </div>
+            {c.notes && <p className="text-[10px] italic ocean mt-2 truncate">"{c.notes}"</p>}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1601,98 +1679,62 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete }) {
 
   return (
     <div className="space-y-6 fade-up">
-      <div className="flex items-end justify-between flex-wrap gap-4 pb-4 border-b border-ink/15">
-        <div>
-          <p className="font-display text-[10px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>VISIT HISTORY</p>
-          <h1 className="font-display text-4xl mt-1 ink" style={{ fontWeight: 700 }}>VISIT LOG</h1>
-          <p className="italic text-sm ocean mt-1">Every conversation, every order — strategic execution recorded.</p>
-        </div>
-        <div className="flex items-center gap-3">
+      {/* Page header */}
+      <div className="pb-3 border-b border-ink/15">
+        <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>VISIT HISTORY</p>
+        <div className="flex items-center justify-between gap-3 mt-1 flex-wrap">
+          <h1 className="font-display text-2xl md:text-4xl ink" style={{ fontWeight: 700 }}>VISIT LOG</h1>
           <RepToggle active={filterRep} onChange={setFilterRep} />
-          <button onClick={onLog} className="flex items-center gap-2 bg-copper hover:bg-gold text-white px-4 py-2.5 font-display text-xs tracking-[0.25em]" style={{ fontWeight: 700 }}>
-            <Plus className="w-4 h-4" /> NEW VISIT
-          </button>
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="premium-card p-12 text-center">
-          <ClipboardList className="w-12 h-12 mx-auto mb-4 ocean opacity-40" />
+        <div className="premium-card p-10 text-center">
+          <ClipboardList className="w-10 h-10 mx-auto mb-3 ocean opacity-40" />
           <p className="font-display text-sm tracking-[0.2em] ink mb-2" style={{ fontWeight: 700 }}>NO VISITS LOGGED YET</p>
-          <p className="italic text-sm ocean mb-6">Begin tracking your team's call cycle. Each visit is a step toward the goal.</p>
-          <button onClick={onLog} className="bg-copper hover:bg-gold text-white px-6 py-3 font-display text-xs tracking-[0.25em]" style={{ fontWeight: 700 }}>LOG YOUR FIRST VISIT</button>
+          <p className="italic text-sm ocean mb-5">Start tracking your call cycle.</p>
+          <button onClick={onLog} className="bg-copper px-6 py-3 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>LOG YOUR FIRST VISIT</button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filtered.map(v => {
             const c = clients.find(c => c.id === v.clientId);
             const outcomeColor = v.outcome === 'Sold In' ? '#2d8659' : v.outcome === 'Rejected' ? '#9c2c2c' : '#D78433';
             return (
-              <div key={v.id} className="premium-card p-5 border-l-4 relative" style={{ borderLeftColor: outcomeColor }}>
-                {/* Edit / Delete actions — always visible */}
-                <div className="absolute top-3 right-3 flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(v)}
-                    title="Edit visit & adjust order"
-                    className="p-2 hover:bg-ink/10 transition-colors border border-ink/15"
-                  >
-                    <Edit2 className="w-3.5 h-3.5 ocean" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(v.id)}
-                    title="Delete visit"
-                    className="p-2 hover:bg-red-50 transition-colors border border-ink/15"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" style={{ color: '#9c2c2c' }} />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pr-16">
-                  <div>
-                    <p className="font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>DATE</p>
-                    <p className="font-display ink text-sm" style={{ fontWeight: 700 }}>{v.date}</p>
-                    <p className="text-xs ocean italic mt-1">{v.salesRep}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <p className="font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>VENUE</p>
-                    <p className="font-display ink text-base" style={{ fontWeight: 700 }}>{c?.venue || 'Unknown'}</p>
-                    <p className="text-xs ocean italic">{c?.location} · {c?.channel}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="inline-block px-3 py-1 text-[10px] font-display tracking-wider" style={{ background: outcomeColor, color: '#FFFEF2', fontWeight: 600 }}>{v.outcome.toUpperCase()}</span>
-                    {v.saleAmount > 0 && <p className="font-display copper text-lg mt-1" style={{ fontWeight: 700 }}>{ZAR(v.saleAmount)}</p>}
-                  </div>
-                </div>
-                {(v.notes || v.followUp || v.orderPlaced || (v.items && v.items.length > 0)) && (
-                  <div className="mt-4 pt-4 border-t border-ink/10 space-y-3">
-                    {v.items && v.items.length > 0 && (
-                      <div>
-                        <p className="font-display text-[10px] tracking-[0.2em] ocean mb-2" style={{ fontWeight: 600 }}>ORDER PLACED ({v.items.length} {v.items.length === 1 ? 'SKU' : 'SKUS'})</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-                          {v.items.map((it, idx) => {
-                            const discounted = Number(it.unitPrice) < Number(it.listPrice);
-                            return (
-                              <div key={idx} className="flex items-center justify-between text-xs px-2 py-1 bg-ink/5">
-                                <span className="ink">
-                                  <span className="font-display tracking-wider" style={{ fontWeight: 700 }}>{it.qty}×</span> {it.name}
-                                  {discounted && <span className="copper italic"> · disc.</span>}
-                                </span>
-                                <span className="ocean">{ZAR(it.lineTotal)}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {v.notes && <div><p className="font-display text-[10px] tracking-[0.2em] ocean mb-1" style={{ fontWeight: 600 }}>VISIT NOTES</p><p className="text-xs ink italic">{v.notes}</p></div>}
-                      {v.followUp && <div><p className="font-display text-[10px] tracking-[0.2em] ocean mb-1" style={{ fontWeight: 600 }}>FOLLOW UP</p><p className="text-xs ink italic">{v.followUp}</p></div>}
-                      {v.orderPlaced && (!v.items || v.items.length === 0) && <div><p className="font-display text-[10px] tracking-[0.2em] ocean mb-1" style={{ fontWeight: 600 }}>ORDER PLACED</p><p className="text-xs ink italic">{v.orderPlaced}</p></div>}
+              <div key={v.id} className="premium-card border-l-4" style={{ borderLeftColor: outcomeColor }}>
+                {/* Main row — always visible */}
+                <div className="p-3 md:p-5 flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    {/* Venue + outcome */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-display ink text-sm truncate" style={{ fontWeight: 700 }}>{c?.venue || 'Unknown'}</span>
+                      <span className="text-[9px] font-display tracking-wider px-1.5 py-0.5 flex-shrink-0" style={{ background: outcomeColor, color: '#FFFEF2', fontWeight: 600 }}>{v.outcome.toUpperCase()}</span>
                     </div>
+                    {/* Meta line */}
+                    <p className="text-[11px] ocean italic mt-0.5">
+                      {v.date} · {v.salesRep}{c?.location ? ' · ' + c.location : ''}
+                    </p>
+                    {/* Sale amount */}
+                    {v.saleAmount > 0 && (
+                      <p className="font-display copper text-base mt-1" style={{ fontWeight: 700 }}>{ZAR(v.saleAmount)}</p>
+                    )}
+                    {/* SKU summary on mobile */}
+                    {v.items && v.items.length > 0 && (
+                      <p className="text-[10px] ocean mt-1">{v.items.length} SKU{v.items.length > 1 ? 's' : ''}: {v.items.map(it => `${it.qty}× ${it.name}`).join(', ').slice(0, 60)}{v.items.map(it => `${it.qty}× ${it.name}`).join(', ').length > 60 ? '…' : ''}</p>
+                    )}
+                    {/* Notes preview */}
+                    {v.notes && <p className="text-[10px] italic ink/70 mt-1 truncate">"{v.notes}"</p>}
                   </div>
-                )}
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button type="button" onClick={() => onEdit(v)} className="p-2 hover:bg-ink/10 border border-ink/15">
+                      <Edit2 className="w-3.5 h-3.5 ocean" />
+                    </button>
+                    <button type="button" onClick={() => onDelete(v.id)} className="p-2 hover:bg-red-50 border border-ink/15">
+                      <Trash2 className="w-3.5 h-3.5" style={{ color: '#9c2c2c' }} />
+                    </button>
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -1924,31 +1966,31 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-4 bg-ink/70 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
-      <div className="bg-cream max-w-3xl w-full my-4 border-2 border-copper relative" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 bg-ink/70 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+      <div className="bg-cream w-full md:max-w-3xl md:my-4 border-t-2 md:border-2 border-copper relative max-h-[95vh] md:max-h-none overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="absolute top-0 left-0 right-0 h-1 bg-copper z-10"></div>
         {/* Header */}
-        <div className="p-6 relative overflow-hidden" style={{ background: '#003553' }}>
+        <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#003553' }}>
           <RaysBackdrop opacity={0.06} />
           <div className="flex items-center justify-between gap-4 relative">
-            <div className="flex items-center gap-4">
-              <AvanteLogo size={48} />
+            <div className="flex items-center gap-3">
+              <AvanteLogo size={36} />
               <div>
-                <p className="font-display text-[10px] tracking-[0.4em]" style={{ color: '#FDB940', fontWeight: 600 }}>{isEdit ? 'AMEND RECORD' : 'DARE TO FORWARD'}</p>
-                <h2 className="font-display text-2xl mt-1" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.1em' }}>{isEdit ? 'EDIT VISIT' : 'LOG A VISIT'}</h2>
+                <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>{isEdit ? 'AMEND RECORD' : 'DARE TO FORWARD'}</p>
+                <h2 className="font-display text-xl md:text-2xl mt-0.5" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.08em' }}>{isEdit ? 'EDIT VISIT' : 'LOG A VISIT'}</h2>
               </div>
             </div>
             <button onClick={onClose} className="p-2 hover:opacity-70" style={{ color: '#FFFEF2' }}><X className="w-5 h-5" /></button>
           </div>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-4 md:p-6 space-y-4">
           {/* Sales rep */}
           <div>
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>SALES MEMBER</label>
             <div className="grid grid-cols-3 gap-2">
               {SALES_REPS.map(r => (
-                <button key={r} type="button" onClick={() => { setSalesRep(r); setClientId(''); }} className={`py-2.5 font-display text-xs tracking-[0.2em] border transition-all ${salesRep === r ? 'bg-ink border-ink' : 'bg-cream border-ink/20 hover:border-copper'}`} style={{ color: salesRep === r ? '#FFFEF2' : '#003553', fontWeight: 700 }}>
+                <button key={r} type="button" onClick={() => { setSalesRep(r); setClientId(''); }} className={`py-3 font-display text-xs tracking-[0.2em] border transition-all ${salesRep === r ? 'bg-ink border-ink' : 'bg-cream border-ink/20 hover:border-copper'}`} style={{ color: salesRep === r ? '#FFFEF2' : '#003553', fontWeight: 700 }}>
                   {r.toUpperCase()}
                 </button>
               ))}
@@ -1958,39 +2000,38 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
           {/* Client picker */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>CLIENT — {salesRep.toUpperCase()}'S BOOK ({repClients.length})</label>
-              <button type="button" onClick={requestAddClient} className="flex items-center gap-1.5 text-[10px] font-display tracking-[0.2em] copper hover:gold" style={{ fontWeight: 700 }}>
-                <UserPlus className="w-3.5 h-3.5" /> ADD NEW CLIENT
+              <label className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>CLIENT ({repClients.length})</label>
+              <button type="button" onClick={requestAddClient} className="flex items-center gap-1.5 text-[10px] font-display tracking-[0.2em] copper" style={{ fontWeight: 700 }}>
+                <UserPlus className="w-3.5 h-3.5" /> ADD NEW
               </button>
             </div>
             <div className="relative mb-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ocean" />
               <input type="text" placeholder="Filter venues..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-3 py-2 border border-ink/20 bg-cream text-sm focus:outline-none focus:border-copper" />
             </div>
-            <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
+            <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full px-3 py-3 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
               <option value="">— Select a venue —</option>
               {repClients.map(c => (
-                <option key={c.id} value={c.id}>{c.venue} · {c.location || 'No location'} · {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : 'NO CHANNEL'}</option>
+                <option key={c.id} value={c.id}>{c.venue}{c.location ? ' · ' + c.location : ''}</option>
               ))}
             </select>
             {selectedClient && (
               <div className="mt-2 p-3 bg-gold/10 border-l-2 border-copper text-xs">
-                <p className="ink"><span className="font-display tracking-wider copper" style={{ fontWeight: 600 }}>SELECTED:</span> <strong>{selectedClient.venue}</strong></p>
-                <p className="ocean italic">{selectedClient.location} · {selectedClient.channel || 'No channel set'} · Status: {selectedClient.status}</p>
-                {selectedClient.notes && <p className="ocean italic mt-1">"{selectedClient.notes}"</p>}
+                <p className="ink font-display" style={{ fontWeight: 700 }}>{selectedClient.venue}</p>
+                <p className="ocean italic">{selectedClient.location} · {selectedClient.channel || 'No channel'} · {selectedClient.status}</p>
               </div>
             )}
           </div>
 
-          {/* Date + Outcome */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Date + Outcome — side by side on all screens */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>DATE</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-3 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper" />
             </div>
             <div>
               <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>OUTCOME</label>
-              <select value={outcome} onChange={(e) => setOutcome(e.target.value)} className="w-full px-3 py-2.5 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
+              <select value={outcome} onChange={(e) => setOutcome(e.target.value)} className="w-full px-3 py-3 border border-ink/20 bg-cream font-body text-sm focus:outline-none focus:border-copper">
                 <option>Met / Discussion</option>
                 <option>Sold In</option>
                 <option>Sample Drop</option>
@@ -2007,28 +2048,25 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
             <div className="flex items-center justify-between mb-2">
               <label className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>ORDER PLACED</label>
               <div className="relative">
-                <button type="button" onClick={() => setSkuPickerOpen(!skuPickerOpen)} className="flex items-center gap-1.5 text-[10px] font-display tracking-[0.2em] copper hover:gold" style={{ fontWeight: 700 }}>
+                <button type="button" onClick={() => setSkuPickerOpen(!skuPickerOpen)} className="flex items-center gap-1.5 text-[10px] font-display tracking-[0.2em] copper" style={{ fontWeight: 700 }}>
                   <Plus className="w-3.5 h-3.5" /> ADD SKU
                 </button>
                 {skuPickerOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-72 bg-cream border-2 border-copper shadow-xl z-20 max-h-72 overflow-y-auto scrollbar-thin">
-                    <div className="sticky top-0 bg-ink px-3 py-2">
+                  <div className="fixed md:absolute right-0 md:right-0 bottom-0 md:bottom-auto md:top-full md:mt-1 left-0 md:left-auto w-full md:w-80 bg-cream border-t-2 md:border-2 border-copper shadow-2xl z-30 max-h-[60vh] md:max-h-80 overflow-y-auto scrollbar-thin">
+                    <div className="sticky top-0 bg-ink px-3 py-2.5 flex items-center justify-between">
                       <p className="font-display text-[10px] tracking-[0.25em]" style={{ color: '#FDB940', fontWeight: 600 }}>AVANTE CATALOGUE</p>
+                      <button type="button" onClick={() => setSkuPickerOpen(false)} style={{ color: '#FFFEF2' }}><X className="w-4 h-4" /></button>
                     </div>
                     {SKU_CATALOGUE.map(sku => {
                       const inOrder = items.find(it => it.skuId === sku.id);
                       return (
-                        <button
-                          key={sku.id}
-                          type="button"
-                          onClick={() => addSku(sku)}
-                          className="w-full text-left px-3 py-2 hover:bg-gold/20 border-b border-ink/10 flex items-center justify-between"
-                        >
+                        <button key={sku.id} type="button" onClick={() => addSku(sku)}
+                          className="w-full text-left px-4 py-3 hover:bg-gold/20 border-b border-ink/10 flex items-center justify-between active:bg-gold/30">
                           <div>
-                            <p className="ink text-xs font-display" style={{ fontWeight: 700 }}>{sku.name}</p>
-                            <p className="ocean text-[10px] italic">{ZAR(sku.price)} per unit</p>
+                            <p className="ink text-sm font-display" style={{ fontWeight: 700 }}>{sku.name}</p>
+                            <p className="ocean text-xs italic">{ZAR(sku.price)} per unit</p>
                           </div>
-                          {inOrder ? <span className="text-[9px] copper font-display tracking-wider" style={{ fontWeight: 700 }}>+1</span> : <Plus className="w-3 h-3 copper" />}
+                          {inOrder ? <span className="text-[9px] copper font-display tracking-wider" style={{ fontWeight: 700 }}>IN ORDER</span> : <Plus className="w-4 h-4 copper" />}
                         </button>
                       );
                     })}
@@ -2038,66 +2076,98 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
             </div>
 
             {items.length === 0 ? (
-              <div className="border-2 border-dashed border-ink/20 p-6 text-center bg-cream">
-                <p className="text-xs italic ocean">No SKUs added. Click "Add SKU" to start building the order.</p>
+              <div className="border-2 border-dashed border-ink/20 p-5 text-center bg-cream">
+                <p className="text-xs italic ocean">No SKUs added. Tap "ADD SKU" to start building the order.</p>
               </div>
             ) : (
               <div className="border border-ink/20">
-                <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-ink/5 border-b border-ink/10">
-                  <div className="col-span-5 font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>SKU</div>
-                  <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-center" style={{ fontWeight: 600 }}>QTY</div>
-                  <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>UNIT R</div>
-                  <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>LINE</div>
-                  <div className="col-span-1"></div>
+                {/* Mobile: stacked item rows */}
+                <div className="md:hidden divide-y divide-ink/10">
+                  {items.map(it => {
+                    const lineTotal = (Number(it.unitPrice) || 0) * (Number(it.qty) || 0);
+                    const discounted = Number(it.unitPrice) < Number(it.listPrice);
+                    return (
+                      <div key={it.skuId} className="p-3">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <p className="ink text-sm font-display" style={{ fontWeight: 700 }}>{it.name}</p>
+                            {discounted && <p className="text-[10px] copper italic">disc. from {ZAR(it.listPrice)}</p>}
+                          </div>
+                          <button type="button" onClick={() => removeItem(it.skuId)} className="p-1 text-ink/40 hover:text-red-700 flex-shrink-0">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>QTY</p>
+                            <input type="number" min="0" step="1" value={it.qty}
+                              onChange={(e) => updateItem(it.skuId, 'qty', e.target.value)}
+                              className="w-full px-2 py-2 border border-ink/20 bg-cream text-sm text-center focus:outline-none focus:border-copper" />
+                          </div>
+                          <div>
+                            <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>UNIT R</p>
+                            <input type="number" min="0" step="0.01" value={it.unitPrice}
+                              onChange={(e) => updateItem(it.skuId, 'unitPrice', e.target.value)}
+                              className="w-full px-2 py-2 border border-ink/20 bg-cream text-sm text-right focus:outline-none focus:border-copper"
+                              style={{ color: discounted ? '#D78433' : '#003553' }} />
+                          </div>
+                          <div>
+                            <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>TOTAL</p>
+                            <p className="font-display text-sm ink py-2 text-right" style={{ fontWeight: 700 }}>{ZAR(lineTotal)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                {items.map(it => {
-                  const lineTotal = (Number(it.unitPrice) || 0) * (Number(it.qty) || 0);
-                  const discounted = Number(it.unitPrice) < Number(it.listPrice);
-                  return (
-                    <div key={it.skuId} className="grid grid-cols-12 gap-2 px-3 py-2 border-b border-ink/10 items-center">
-                      <div className="col-span-5">
-                        <p className="ink text-xs font-display" style={{ fontWeight: 700 }}>{it.name}</p>
-                        {discounted && <p className="text-[9px] copper italic">discounted from {ZAR(it.listPrice)}</p>}
+                {/* Desktop: compact grid */}
+                <div className="hidden md:block">
+                  <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-ink/5 border-b border-ink/10">
+                    <div className="col-span-5 font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>SKU</div>
+                    <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-center" style={{ fontWeight: 600 }}>QTY</div>
+                    <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>UNIT R</div>
+                    <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>LINE</div>
+                    <div className="col-span-1"></div>
+                  </div>
+                  {items.map(it => {
+                    const lineTotal = (Number(it.unitPrice) || 0) * (Number(it.qty) || 0);
+                    const discounted = Number(it.unitPrice) < Number(it.listPrice);
+                    return (
+                      <div key={it.skuId} className="grid grid-cols-12 gap-2 px-3 py-2 border-b border-ink/10 items-center">
+                        <div className="col-span-5">
+                          <p className="ink text-xs font-display" style={{ fontWeight: 700 }}>{it.name}</p>
+                          {discounted && <p className="text-[9px] copper italic">from {ZAR(it.listPrice)}</p>}
+                        </div>
+                        <div className="col-span-2">
+                          <input type="number" min="0" step="1" value={it.qty}
+                            onChange={(e) => updateItem(it.skuId, 'qty', e.target.value)}
+                            className="w-full px-2 py-1 border border-ink/20 bg-cream text-xs text-center focus:outline-none focus:border-copper" />
+                        </div>
+                        <div className="col-span-2">
+                          <input type="number" min="0" step="0.01" value={it.unitPrice}
+                            onChange={(e) => updateItem(it.skuId, 'unitPrice', e.target.value)}
+                            className="w-full px-2 py-1 border border-ink/20 bg-cream text-xs text-right focus:outline-none focus:border-copper"
+                            style={{ color: discounted ? '#D78433' : '#003553' }} />
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="font-display text-xs ink" style={{ fontWeight: 700 }}>{ZAR(lineTotal)}</span>
+                        </div>
+                        <div className="col-span-1 text-right">
+                          <button type="button" onClick={() => removeItem(it.skuId)} className="text-ink/40 hover:text-red-700">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={it.qty}
-                          onChange={(e) => updateItem(it.skuId, 'qty', e.target.value)}
-                          className="w-full px-2 py-1 border border-ink/20 bg-cream text-xs text-center focus:outline-none focus:border-copper"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={it.unitPrice}
-                          onChange={(e) => updateItem(it.skuId, 'unitPrice', e.target.value)}
-                          className="w-full px-2 py-1 border border-ink/20 bg-cream text-xs text-right focus:outline-none focus:border-copper"
-                          style={{ color: discounted ? '#D78433' : '#003553' }}
-                        />
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="font-display text-xs ink" style={{ fontWeight: 700 }}>{ZAR(lineTotal)}</span>
-                      </div>
-                      <div className="col-span-1 text-right">
-                        <button type="button" onClick={() => removeItem(it.skuId)} className="text-ink/40 hover:text-red-700">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="grid grid-cols-12 gap-2 px-3 py-3 bg-ink" style={{ background: '#003553' }}>
-                  <div className="col-span-9 font-display text-[10px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>ORDER TOTAL (EX VAT)</div>
-                  <div className="col-span-3 text-right font-display text-base" style={{ color: '#FFFEF2', fontWeight: 700 }}>{ZAR(orderTotal)}</div>
+                    );
+                  })}
+                </div>
+                <div className="grid grid-cols-12 gap-2 px-3 py-3" style={{ background: '#003553' }}>
+                  <div className="col-span-8 font-display text-[10px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>ORDER TOTAL (EX VAT)</div>
+                  <div className="col-span-4 text-right font-display text-base" style={{ color: '#FFFEF2', fontWeight: 700 }}>{ZAR(orderTotal)}</div>
                 </div>
               </div>
             )}
-            <p className="text-[10px] italic ocean mt-1.5">Edit any unit price for discounts. Order total auto-calculates from qty × unit price.</p>
+            <p className="text-[10px] italic ocean mt-1.5">Edit unit price for discounts. Total auto-calculates.</p>
           </div>
 
           {/* Notes */}
@@ -2117,22 +2187,17 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
               <span className="font-display tracking-wider" style={{ fontWeight: 700 }}>ERROR:</span> {validationError}
             </div>
           )}
-          <div className="flex items-center justify-between gap-3 pt-4 border-t border-ink/10 flex-wrap">
-            <button
-              type="button"
-              onClick={handleEmailOrder}
-              title={selectedClient?.email ? `Email to ${selectedClient.email}` : 'Email order details (recipient blank — fill in your client)'}
-              className="flex items-center gap-2 px-4 py-2.5 font-display text-xs tracking-[0.25em] border border-ocean hover:bg-ocean transition-colors"
-              style={{ color: '#006C90', fontWeight: 700, borderColor: '#006C90' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#FFFEF2'; e.currentTarget.style.background = '#006C90'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#006C90'; e.currentTarget.style.background = 'transparent'; }}
-            >
+          {/* Mobile: stacked full-width buttons. Desktop: row layout */}
+          <div className="pt-4 border-t border-ink/10 space-y-2 md:space-y-0 md:flex md:items-center md:justify-between md:gap-3 md:flex-wrap">
+            <button type="button" onClick={handleEmailOrder}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.25em] border"
+              style={{ color: '#006C90', fontWeight: 700, borderColor: '#006C90' }}>
               <Mail className="w-4 h-4" /> EMAIL ORDER
             </button>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={onClose} className="px-5 py-2.5 font-display text-xs tracking-[0.25em] ink hover:bg-ink/5" style={{ fontWeight: 700 }}>CANCEL</button>
-              <button type="button" onClick={handleSave} className="bg-ink hover:bg-copper px-6 py-2.5 font-display text-xs tracking-[0.25em] flex items-center gap-2" style={{ color: '#FFFEF2', fontWeight: 700 }}>
-                {isEdit ? 'UPDATE VISIT' : 'SAVE VISIT'} <ArrowUpRight className="w-4 h-4" />
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={onClose} className="flex-1 md:flex-none px-5 py-3 font-display text-xs tracking-[0.25em] ink border border-ink/20" style={{ fontWeight: 700 }}>CANCEL</button>
+              <button type="button" onClick={handleSave} className="flex-1 md:flex-none bg-ink px-6 py-3 font-display text-xs tracking-[0.25em] flex items-center justify-center gap-2" style={{ color: '#FFFEF2', fontWeight: 700 }}>
+                {isEdit ? 'UPDATE' : 'SAVE'} <ArrowUpRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -2631,28 +2696,26 @@ function ClientDetailModal({ client, visits, onClose, onUpdate }) {
   }, [client.lastContacted]);
 
   return (
-    // Backdrop: items-start lets content sit at the top so even tall modals scroll;
-    // overflow-y-auto on the BACKDROP makes the whole modal page-scroll cleanly on any device.
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-ink/70 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
-      <div className="bg-cream max-w-3xl w-full my-4 border-2 border-copper" onClick={(e) => e.stopPropagation()}>
-        <div className="p-6 relative overflow-hidden" style={{ background: '#003553' }}>
+    <div className="fixed inset-0 z-50 flex items-end md:items-start justify-center md:p-4 bg-ink/70 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+      <div className="bg-cream w-full md:max-w-3xl md:my-4 border-t-2 md:border-2 border-copper max-h-[95vh] md:max-h-none overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#003553' }}>
           <RaysBackdrop opacity={0.06} />
           <div className="flex items-start justify-between gap-4 relative">
-            <div className="flex items-start gap-4">
-              <AvanteLogo size={48} />
+            <div className="flex items-start gap-3">
+              <AvanteLogo size={36} />
               <div>
-                <p className="font-display text-[10px] tracking-[0.4em]" style={{ color: '#FDB940', fontWeight: 600 }}>{client.channel?.toUpperCase() || 'NO CHANNEL'}</p>
-                <h2 className="font-display text-3xl mt-1" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.05em' }}>{client.venue}</h2>
-                <p className="italic text-sm mt-1" style={{ color: '#FDB940' }}>{client.location || 'No location'}</p>
+                <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>{client.channel?.toUpperCase() || 'NO CHANNEL'}</p>
+                <h2 className="font-display text-xl md:text-3xl mt-0.5" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.05em' }}>{client.venue}</h2>
+                <p className="italic text-xs mt-0.5" style={{ color: '#FDB940' }}>{client.location || 'No location'}</p>
               </div>
             </div>
             <button type="button" onClick={onClose} className="p-2 hover:opacity-70" style={{ color: '#FFFEF2' }}><X className="w-5 h-5" /></button>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Quick stats — 4 columns now incl. days since last */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-5 border-b border-ink/10">
+        <div className="p-4 md:p-6 space-y-5">
+          {/* Quick stats — 2 col on mobile, 4 on desktop */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-4 border-b border-ink/10">
             <div>
               <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>TOTAL SALES TD</p>
               <p className="font-display text-xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(client.totalSales || 0)}</p>
