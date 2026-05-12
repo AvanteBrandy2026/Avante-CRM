@@ -1714,138 +1714,115 @@ function LeadsPage({ clients, visits, updateClient, onSelect }) {
   const [search, setSearch] = useState('');
   const [filterRep, setFilterRep] = useState('All');
   const [filterChannel, setFilterChannel] = useState('All');
-  const [filterStatus, setFilterStatus] = useState('All');
 
+  // Alphabetically sorted + filtered list
   const filtered = useMemo(() => {
-    return clients.filter(c => {
-      if (filterRep !== 'All' && c.accountManager !== filterRep) return false;
-      if (filterChannel !== 'All' && c.channel !== filterChannel) return false;
-      if (filterStatus !== 'All' && c.status !== filterStatus) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        const hay = `${c.venue} ${c.firstName} ${c.lastName} ${c.location} ${c.email} ${c.phone}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [clients, filterRep, filterChannel, filterStatus, search]);
+    return clients
+      .filter(c => {
+        if (filterRep !== 'All' && c.accountManager !== filterRep) return false;
+        if (filterChannel !== 'All' && c.channel !== filterChannel) return false;
+        if (search.trim()) {
+          const q = search.trim().toLowerCase();
+          const hay = [c.venue, c.firstName, c.lastName, c.location, c.email, c.phone, c.notes]
+            .filter(Boolean).join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => (a.venue || '').localeCompare(b.venue || ''));
+  }, [clients, filterRep, filterChannel, search]);
 
   return (
     <div className="space-y-4 fade-up">
       {/* Page header */}
       <div className="pb-3 border-b border">
         <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>CLIENT DATABASE</p>
-        <h1 className="font-display text-2xl md:text-4xl mt-1 ink" style={{ fontWeight: 700 }}>LEADS &amp; CLIENTS</h1>
-        <p className="italic text-xs md:text-sm ocean mt-0.5">{clients.length} venues tracked</p>
+        <h1 className="font-display mt-1 ink" style={{ fontWeight: 700, fontSize: 28 }}>LEADS &amp; CLIENTS</h1>
+        <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>{clients.length} venues tracked</p>
       </div>
 
-      {/* Filters */}
-      <div className="space-y-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ocean" />
-          <input type="text" placeholder="Search venue, contact, location..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+      {/* Search + filters */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Search bar — plain input, no absolute positioning */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', padding: '0 12px' }}>
+          <Search style={{ width: 16, height: 16, color: '#006C90', flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Search venue, contact, location..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ flex: 1, border: 'none', background: 'transparent', padding: '12px 0', fontFamily: "'Libre Baskerville', Georgia, serif", fontSize: 14, color: '#003553', outline: 'none' }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006C90', fontSize: 18, lineHeight: 1 }}>×</button>
+          )}
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        {/* Rep + Channel filters */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <FilterSelect label="Rep" value={filterRep} onChange={setFilterRep} options={['All', ...SALES_REPS, 'Unassigned']} />
           <FilterSelect label="Channel" value={filterChannel} onChange={setFilterChannel} options={['All', ...CHANNELS]} />
         </div>
-        {/* Status pills — horizontal scroll on mobile */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-          {['All', ...STATUSES].map(s => (
-            <button key={s} onClick={() => setFilterStatus(s)}
-              className={`flex-shrink-0 px-2.5 py-1 text-[10px] font-display tracking-wider transition-colors ${filterStatus === s ? 'bg-ink' : 'border border'}`}
-              style={{ color: filterStatus === s ? '#FFFEF2' : '#003553', fontWeight: 600 }}>
-              {s.toUpperCase()}
-            </button>
-          ))}
-        </div>
-        <p className="text-[10px] italic ocean">{filtered.length} of {clients.length} clients</p>
+        <p style={{ fontSize: 11, fontStyle: 'italic', color: '#006C90', margin: 0 }}>
+          {filtered.length} of {clients.length} clients{search ? ` matching "${search}"` : ''}
+        </p>
       </div>
 
-      {/* Desktop table — hidden on mobile */}
-      <div className="hidden md:block premium-card overflow-hidden">
-        <div className="overflow-x-auto scrollbar-thin max-h-[640px] overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10" style={{ background: '#003553' }}>
-              <tr>
-                {['Venue', 'Channel', 'Contact', 'Location', 'Rep', 'Status', 'Last Visit', 'Sales TD', ''].map(h => (
-                  <th key={h} className="px-3 py-3 text-left font-display text-[10px] tracking-[0.2em]" style={{ color: '#FDB940', fontWeight: 600 }}>{h.toUpperCase()}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(c => (
-                <tr key={c.id} className="border-t border hover: cursor-pointer transition-colors" onClick={() => onSelect(c)}>
-                  <td className="px-3 py-3">
-                    <div className="font-display ink text-sm" style={{ fontWeight: 700 }}>{c.venue}</div>
-                    {c.notes && <div className="text-[10px] italic ocean truncate max-w-[200px]">{c.notes}</div>}
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className="text-[10px] font-display tracking-wider px-2 py-0.5 border" style={{ borderColor: c.channel === 'Private Sales' ? '#D78433' : '#006C90', color: c.channel === 'Private Sales' ? '#D78433' : '#006C90', fontWeight: 600 }}>
-                      {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : '—'}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-xs">
-                    {(c.firstName || c.lastName) && <div className="ink">{c.firstName} {c.lastName}</div>}
-                    {c.phone && <div className="ocean text-[10px]">{c.phone}</div>}
-                    {c.email && <div className="ocean text-[10px] truncate max-w-[180px]">{c.email}</div>}
-                  </td>
-                  <td className="px-3 py-3 text-xs ink">{c.location}</td>
-                  <td className="px-3 py-3 text-xs">
-                    <span className="font-display tracking-wider ink" style={{ fontWeight: 700 }}>{c.accountManager === 'Unassigned' ? '—' : c.accountManager}</span>
-                  </td>
-                  <td className="px-3 py-3"><StatusBadge status={c.status} /></td>
-                  <td className="px-3 py-3 text-xs ocean italic">{c.lastContacted || '—'}</td>
-                  <td className="px-3 py-3 text-xs ink font-display" style={{ fontWeight: 700 }}>{c.totalSales > 0 ? ZAR(c.totalSales) : '—'}</td>
-                  <td className="px-3 py-3"><ChevronRight className="w-4 h-4 copper" /></td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan="9" className="px-3 py-12 text-center italic ocean">No clients match your filters.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Mobile card list — hidden on desktop */}
-      <div className="md:hidden space-y-2">
-        {filtered.length === 0 && (
-          <div className="premium-card p-6 text-center">
-            <p className="italic ocean text-sm">No clients match your filters.</p>
+      {/* Client list — single unified view, works on all screen sizes */}
+      <div className="premium-card" style={{ overflow: 'hidden' }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center' }}>
+            <p style={{ fontStyle: 'italic', color: '#006C90', fontSize: 14 }}>
+              {search ? `No clients found matching "${search}"` : 'No clients match your filters.'}
+            </p>
+            {search && (
+              <button onClick={() => setSearch('')}
+                style={{ marginTop: 12, padding: '8px 20px', background: '#D78433', color: '#FFFEF2', border: 'none', cursor: 'pointer', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700 }}>
+                CLEAR SEARCH
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ maxHeight: 640, overflowY: 'auto' }}>
+            {filtered.map((c, i) => (
+              <div key={c.id} onClick={() => onSelect(c)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+                  borderTop: i === 0 ? 'none' : '1px solid rgba(0,53,83,0.1)',
+                  borderLeft: `3px solid ${c.channel === 'Private Sales' ? '#D78433' : '#006C90'}`,
+                  cursor: 'pointer', transition: 'background 0.12s',
+                  background: '#FFFEF2',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.04)'}
+                onMouseLeave={e => e.currentTarget.style.background = '#FFFEF2'}
+              >
+                {/* Venue + notes */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span className="font-display ink" style={{ fontWeight: 700, fontSize: 13 }}>{c.venue}</span>
+                    <StatusBadge status={c.status} />
+                  </div>
+                  <p style={{ fontSize: 11, color: '#006C90', fontStyle: 'italic', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {[c.firstName, c.lastName].filter(Boolean).join(' ')}
+                    {c.location ? ((c.firstName || c.lastName) ? ' · ' : '') + c.location : ''}
+                  </p>
+                </div>
+                {/* Channel badge */}
+                <span style={{ fontSize: 9, fontFamily: "'Cinzel', serif", fontWeight: 600, letterSpacing: '0.15em', padding: '2px 6px', border: `1px solid ${c.channel === 'Private Sales' ? '#D78433' : '#006C90'}`, color: c.channel === 'Private Sales' ? '#D78433' : '#006C90', flexShrink: 0 }}>
+                  {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : '—'}
+                </span>
+                {/* Rep */}
+                <span className="font-display" style={{ fontSize: 11, fontWeight: 700, color: '#003553', flexShrink: 0, minWidth: 48, textAlign: 'right' }}>
+                  {c.accountManager === 'Unassigned' ? '—' : c.accountManager}
+                </span>
+                {/* Sales */}
+                {c.totalSales > 0 && (
+                  <span className="font-display copper" style={{ fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{ZAR(c.totalSales)}</span>
+                )}
+                <ChevronRight style={{ width: 16, height: 16, color: '#D78433', flexShrink: 0 }} />
+              </div>
+            ))}
           </div>
         )}
-        {filtered.map(c => (
-          <div key={c.id} className="premium-card p-4 active: cursor-pointer border-l-4 transition-colors"
-            style={{ borderLeftColor: c.channel === 'Private Sales' ? '#D78433' : '#006C90' }}
-            onClick={() => onSelect(c)}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-display text-sm ink truncate" style={{ fontWeight: 700 }}>{c.venue}</span>
-                  <StatusBadge status={c.status} />
-                </div>
-                <p className="text-[11px] ocean italic mt-0.5 truncate">
-                  {[c.firstName, c.lastName].filter(Boolean).join(' ')}
-                  {c.location ? (c.firstName || c.lastName ? ' · ' : '') + c.location : ''}
-                </p>
-                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                  <span className="text-[9px] font-display tracking-wider px-1.5 py-0.5 border"
-                    style={{ borderColor: c.channel === 'Private Sales' ? '#D78433' : '#006C90', color: c.channel === 'Private Sales' ? '#D78433' : '#006C90', fontWeight: 600 }}>
-                    {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : '—'}
-                  </span>
-                  {c.accountManager && c.accountManager !== 'Unassigned' && (
-                    <span className="text-[10px] font-display ink" style={{ fontWeight: 600 }}>{c.accountManager}</span>
-                  )}
-                  {c.lastContacted && <span className="text-[10px] ocean italic">{c.lastContacted}</span>}
-                  {c.totalSales > 0 && <span className="text-[10px] font-display copper" style={{ fontWeight: 700 }}>{ZAR(c.totalSales)}</span>}
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 copper flex-shrink-0 mt-1" />
-            </div>
-            {c.notes && <p className="text-[10px] italic ocean mt-2 truncate">"{c.notes}"</p>}
-          </div>
-        ))}
       </div>
     </div>
   );
