@@ -2496,7 +2496,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
   };
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:70, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" } onClick={onClose}>
+    <div style={{ position:"fixed", inset:0, zIndex:70, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
       <div className="bg-cream max-w-2xl w-full my-4 border-2 border-copper" onClick={(e) => e.stopPropagation()}>
         <div className="p-5 flex items-center justify-between gap-4" style={{ background: '#003553' }}>
           <div className="flex items-center gap-3">
@@ -2773,7 +2773,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
   };
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" } onClick={onClose}>
+    <div style={{ position:"fixed", inset:0, zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ background:"#FFFEF2", width:"100%", maxWidth:672, maxHeight:"92vh", overflowY:"auto", border:"2px solid #D78433" }}>
 
         {/* Header */}
@@ -2985,7 +2985,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate }) {
   }, [client.lastContacted]);
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" } onClick={onClose}>
+    <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
       <div className="bg-cream w-full md:max-w-3xl md:my-4 border-t-2 md:border-2 border-copper max-h-[95vh] md:max-h-none overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#003553' }}>
           <RaysBackdrop opacity={0.06} />
