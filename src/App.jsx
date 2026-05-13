@@ -49,6 +49,10 @@ const SKU_CATALOGUE = [
   { id: 'custom_xv', name: 'Custom XV', price: 694.78 },
 ];
 
+// Get effective SKU catalogue with any price overrides applied
+const getEffectiveSkus = (overrides = {}) =>
+  SKU_CATALOGUE.map(s => ({ ...s, price: overrides[s.id] ?? s.price }));
+
 const ZAR = (n) => 'R ' + Math.round(n || 0).toLocaleString('en-ZA');
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const monthISO = () => new Date().toISOString().slice(0, 7);
@@ -60,7 +64,7 @@ const AvanteLogo = ({ className = '', height = 52 }) => (
     src={LOGO_URL}
     alt="Avante Cape Brandy"
     className={className}
-    style={{ height: height, width: 'auto', objectFit: 'contain', display: 'block', maxWidth: height * 1.8 }}
+    style={{ height: height, width: 'auto', objectFit: 'contain', display: 'block', maxWidth: height * 1.8, mixBlendMode: 'multiply', filter: 'contrast(1.1)' }}
     onError={(e) => { e.target.style.display = 'none'; }}
   />
 );
@@ -205,6 +209,7 @@ export default function AvanteCRM() {
   const [clients, setClients] = useState([]);
   const [visits, setVisits] = useState([]);
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
+  const [skuPrices, setSkuPrices] = useState({});  // overrides for SKU prices set in Manager Portal
   const [activeRep, setActiveRep] = useState('All');
   const [showLogModal, setShowLogModal] = useState(false);
   const [editingVisit, setEditingVisit] = useState(null); // visit object being edited, or null
@@ -589,7 +594,7 @@ export default function AvanteCRM() {
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
         .grid-6 { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
         @media (min-width: 640px) {
-          .grid-kpi { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+          .grid-kpi { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
           .grid-6 { grid-template-columns: repeat(6,1fr); }
           .grid-lb { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
           .grid-repcard { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
@@ -735,6 +740,7 @@ export default function AvanteCRM() {
             visits={visits}
             updateClient={updateClient}
             onSelect={setSelectedClient}
+            onAddNew={() => setNewClientCtx({ defaultRep: activeRep === 'All' ? 'Alex' : activeRep, onCreated: null })}
           />
         )}
         {view === 'visits' && (
@@ -776,6 +782,7 @@ export default function AvanteCRM() {
       {showLogModal && (
         <LogVisitModal
           clients={clients}
+          skuOverrides={skuPrices}
           onClose={() => setShowLogModal(false)}
           onSubmit={async (v) => {
             await addVisit(v);
@@ -953,11 +960,32 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
   const filteredClients = clients.filter(c => repFilter(c));
   const filteredVisits = visits.filter(v => repFilter(v, 'salesRep'));
 
-  const totalSales = filteredClients.reduce((s, c) => s + (c.totalSales || 0), 0);
   const monthSales = filteredVisits.reduce((s, v) => s + (v.saleAmount || 0), 0);
   const visitCount = filteredVisits.length;
   const sold = filteredVisits.filter(v => v.outcome === 'Sold In').length;
   const conversionRate = visitCount > 0 ? Math.round((sold / visitCount) * 100) : 0;
+
+  // Daily data for line graphs — current month
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const todayDay = now.getDate();
+  const dailySales = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = String(i + 1).padStart(2, '0');
+    const dateStr = `${now.toISOString().slice(0, 7)}-${day}`;
+    return filteredVisits.filter(v => v.date === dateStr).reduce((s, v) => s + (v.saleAmount || 0), 0);
+  });
+  const dailyVisits = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = String(i + 1).padStart(2, '0');
+    const dateStr = `${now.toISOString().slice(0, 7)}-${day}`;
+    return filteredVisits.filter(v => v.date === dateStr).length;
+  });
+  const dailyConversion = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = String(i + 1).padStart(2, '0');
+    const dateStr = `${now.toISOString().slice(0, 7)}-${day}`;
+    const dayVisits = filteredVisits.filter(v => v.date === dateStr);
+    const daySold = dayVisits.filter(v => v.outcome === 'Sold In').length;
+    return dayVisits.length > 0 ? Math.round((daySold / dayVisits.length) * 100) : 0;
+  });
 
   const activeTargets = useMemo(() => {
     if (activeRep === 'All') {
@@ -994,10 +1022,9 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
 
       {/* ── KPI CARDS ── */}
       <div className="grid-kpi">
-        <KPICard label="Month Sales" value={ZAR(monthSales)} target={activeTargets.revenue} targetValue={ZAR(activeTargets.revenue)} progress={pct(monthSales, activeTargets.revenue)} icon={DollarSign} accent="copper" />
-        <KPICard label="Visits" value={visitCount} target={activeTargets.visits} targetValue={`${activeTargets.visits} visits`} progress={pct(visitCount, activeTargets.visits)} icon={Activity} accent="ocean" />
-        <KPICard label="Conversion" value={`${conversionRate}%`} subtitle={`${sold} of ${visitCount} sold`} progress={conversionRate} icon={TrendingUp} accent="gold" />
-        <KPICard label="Total TD" value={ZAR(totalSales)} subtitle="All-time" icon={Award} accent="ink" />
+        <KPICard label="Month Sales" value={ZAR(monthSales)} target={activeTargets.revenue} targetValue={ZAR(activeTargets.revenue)} progress={pct(monthSales, activeTargets.revenue)} icon={DollarSign} accent="copper" sparkData={dailySales} todayDay={todayDay} />
+        <KPICard label="Visits" value={visitCount} target={activeTargets.visits} targetValue={`${activeTargets.visits} visits`} progress={pct(visitCount, activeTargets.visits)} icon={Activity} accent="ocean" sparkData={dailyVisits} todayDay={todayDay} />
+        <KPICard label="Conversion" value={`${conversionRate}%`} subtitle={`${sold} of ${visitCount} sold`} progress={conversionRate} icon={TrendingUp} accent="gold" sparkData={dailyConversion} todayDay={todayDay} />
       </div>
 
       {/* ── LEADERBOARD + RECENT VISITS ── */}
@@ -1259,8 +1286,42 @@ function PipelineGrid({ clients }) {
 }
 
 // =================== MANAGER PORTAL ===================
-function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
+function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuPrices, saveSkuPrices }) {
+  const [authed, setAuthed] = useState(false);
+  const [pwInput, setPwInput] = useState('');
+  const [pwError, setPwError] = useState(false);
+  const MANAGER_PW = 'Avante2026!';
+
+  if (!authed) {
+    return (
+      <div className="fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
+        <div className="premium-card" style={{ padding: 40, maxWidth: 380, width: '100%', textAlign: 'center' }}>
+          <AvanteLogo height={60} style={{ margin: '0 auto 20px' }} />
+          <p className="font-display" style={{ fontSize: 9, letterSpacing: '0.4em', color: '#D78433', fontWeight: 600, marginBottom: 4 }}>RESTRICTED ACCESS</p>
+          <h2 className="font-display" style={{ fontSize: 18, fontWeight: 700, color: '#003553', marginBottom: 24 }}>MANAGER PORTAL</h2>
+          <input
+            type="password"
+            value={pwInput}
+            onChange={e => { setPwInput(e.target.value); setPwError(false); }}
+            onKeyDown={e => { if (e.key === 'Enter') { if (pwInput === MANAGER_PW) setAuthed(true); else { setPwError(true); setPwInput(''); } } }}
+            placeholder="Enter password"
+            style={{ width: '100%', padding: '12px 14px', border: `2px solid ${pwError ? '#9c2c2c' : 'rgba(0,53,83,0.2)'}`, background: '#FFFEF2', fontFamily: 'Georgia, serif', fontSize: 14, color: '#003553', outline: 'none', marginBottom: 8, textAlign: 'center', letterSpacing: '0.2em' }}
+          />
+          {pwError && <p style={{ fontSize: 11, color: '#9c2c2c', marginBottom: 8 }}>Incorrect password</p>}
+          <button
+            onClick={() => { if (pwInput === MANAGER_PW) setAuthed(true); else { setPwError(true); setPwInput(''); } }}
+            style={{ width: '100%', padding: '12px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.25em', fontWeight: 700, cursor: 'pointer', marginTop: 4 }}>
+            UNLOCK
+          </button>
+          <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 16 }}>Authorised personnel only</p>
+        </div>
+      </div>
+    );
+  }
+
   const [draft, setDraft] = useState(targets);
+  const [skuDraftPrices, setSkuDraftPrices] = useState(skuPrices || {});
+  const showToastMsg = (msg) => { /* handled by parent */ };
   const [savedFlash, setSavedFlash] = useState(false);
 
   // Sync if targets change externally
@@ -1504,9 +1565,6 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
             <button onClick={handleReset} className="flex items-center justify-center gap-1.5 px-3 py-2.5 font-display text-[10px] tracking-[0.15em] border border-white/30" style={{ color: '#FFFEF2', fontWeight: 600 }}>
               <RotateCcw className="w-3.5 h-3.5" /> RESET
             </button>
-            <button onClick={handleRevert} disabled={!dirty} className={`px-3 py-2.5 font-display text-[10px] tracking-[0.15em] border transition-colors ${dirty ? 'border-white/30' : 'border-white/10 opacity-30 cursor-not-allowed'}`} style={{ color: '#FFFEF2', fontWeight: 600 }}>
-              REVERT
-            </button>
             <button onClick={handleSave} disabled={!dirty} className={`col-span-2 md:col-span-1 flex items-center justify-center gap-2 px-5 py-2.5 font-display text-xs tracking-[0.2em] transition-colors ${dirty ? 'bg-copper' : 'bg-copper/40 cursor-not-allowed'}`} style={{ color: '#FFFEF2', fontWeight: 700 }}>
               <Save className="w-4 h-4" /> SAVE TARGETS
             </button>
@@ -1529,28 +1587,7 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
         <button onClick={exportToExcel} className="w-full flex items-center justify-center gap-2 bg-ink px-4 py-3 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>
           <Download className="w-4 h-4" /> DOWNLOAD .XLSX
         </button>
-        <div className="mt-3 pt-3 border-t border grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-          <div>
-            <p className="font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>CLIENTS IN DB</p>
-            <p className="font-display text-lg ink" style={{ fontWeight: 700 }}>{clients.length}</p>
-          </div>
-          <div>
-            <p className="font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>TOTAL VISITS</p>
-            <p className="font-display text-lg ink" style={{ fontWeight: 700 }}>{visits.length}</p>
-          </div>
-          <div>
-            <p className="font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>SKU LINES SOLD</p>
-            <p className="font-display text-lg ink" style={{ fontWeight: 700 }}>
-              {visits.reduce((s, v) => s + (v.items?.length || 0), 0)}
-            </p>
-          </div>
-          <div>
-            <p className="font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>ALL-TIME REVENUE</p>
-            <p className="font-display text-lg copper" style={{ fontWeight: 700 }}>
-              {ZAR(visits.reduce((s, v) => s + (v.saleAmount || 0), 0))}
-            </p>
-          </div>
-        </div>
+
       </div>
 
       {/* Team aggregate cards */}
@@ -1564,6 +1601,45 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
           <AggregateCard label="Total Visits Target" value={teamTotals.visits} icon={Activity} color="#006C90" />
           <AggregateCard label="Private Sales Visits" value={teamTotals.privateSales} icon={Wine} color="#FDB940" />
           <AggregateCard label="Trade Retail Visits" value={teamTotals.tradeRetail} icon={Briefcase} color="#003553" />
+        </div>
+      </div>
+
+      {/* SKU Price Editor */}
+      <div className="premium-card p-4 md:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-copper diamond-clip"></div>
+            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>SKU PRICE MANAGEMENT</h2>
+          </div>
+          <p className="italic ocean" style={{ fontSize: 10 }}>Prices update immediately in Log Visit</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+          {SKU_CATALOGUE.map(sku => (
+            <div key={sku.id} style={{ padding: '10px 12px', border: '1px solid rgba(0,53,83,0.15)', background: '#FFFEF2' }}>
+              <p className="font-display" style={{ fontSize: 9, letterSpacing: '0.2em', color: '#D78433', fontWeight: 600, marginBottom: 4 }}>{sku.name.toUpperCase()}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="font-display ink" style={{ fontSize: 12, fontWeight: 700, flexShrink: 0 }}>R</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={skuDraftPrices[sku.id] ?? sku.price}
+                  onChange={e => setSkuDraftPrices(prev => ({ ...prev, [sku.id]: parseFloat(e.target.value) || 0 }))}
+                  style={{ flex: 1, padding: '6px 8px', border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 13, fontWeight: 700, color: '#003553', outline: 'none', width: '100%' }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8 }}>
+          <button onClick={() => setSkuDraftPrices({})}
+            style={{ padding: '8px 16px', border: '1px solid rgba(0,53,83,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', color: '#003553', cursor: 'pointer', fontWeight: 600 }}>
+            RESET TO DEFAULT
+          </button>
+          <button onClick={() => { saveSkuPrices(skuDraftPrices); showToastMsg('SKU prices saved!'); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
+            <Save style={{ width: 14, height: 14 }} /> SAVE PRICES
+          </button>
         </div>
       </div>
 
@@ -1587,63 +1663,6 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
         </div>
       </div>
 
-      {/* Quick reference: client distribution — scrollable on mobile */}
-      <div className="premium-card p-4 md:p-6">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-2 h-2 bg-copper diamond-clip"></div>
-          <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>CLIENT BOOK DISTRIBUTION</h2>
-        </div>
-        {/* Mobile: cards */}
-        <div className="md:hidden space-y-3">
-          {SALES_REPS.map(rep => {
-            const b = repBook[rep];
-            const targetVisits = draft[rep]?.visits || 0;
-            const ratio = b.total > 0 ? (targetVisits / b.total).toFixed(2) : '—';
-            return (
-              <div key={rep} className="border border p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-display ink text-sm tracking-wider" style={{ fontWeight: 700 }}>{rep.toUpperCase()}</span>
-                  <span className="font-display text-xs copper" style={{ fontWeight: 700 }}>{ratio}× visits/client</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div><p className="font-display text-[9px] ocean tracking-wider" style={{ fontWeight: 600 }}>TOTAL</p><p className="ink font-display" style={{ fontWeight: 700 }}>{b.total}</p></div>
-                  <div><p className="font-display text-[9px] ocean tracking-wider" style={{ fontWeight: 600 }}>PRIVATE</p><p className="ink font-display" style={{ fontWeight: 700 }}>{b.privateSales}</p></div>
-                  <div><p className="font-display text-[9px] ocean tracking-wider" style={{ fontWeight: 600 }}>RETAIL</p><p className="ink font-display" style={{ fontWeight: 700 }}>{b.tradeRetail}</p></div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {/* Desktop: table */}
-        <div className="hidden md:block overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-ink">
-                {['Sales Rep', 'Total', 'Private Sales', 'Trade Retail', 'Visit/Client Ratio'].map(h => (
-                  <th key={h} className="px-3 py-2 text-left font-display text-[10px] tracking-[0.2em] copper" style={{ fontWeight: 600 }}>{h.toUpperCase()}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {SALES_REPS.map(rep => {
-                const b = repBook[rep];
-                const targetVisits = draft[rep]?.visits || 0;
-                const ratio = b.total > 0 ? (targetVisits / b.total).toFixed(2) : '—';
-                return (
-                  <tr key={rep} className="border-b border">
-                    <td className="px-3 py-3 font-display ink tracking-wider" style={{ fontWeight: 700 }}>{rep.toUpperCase()}</td>
-                    <td className="px-3 py-3 ink">{b.total}</td>
-                    <td className="px-3 py-3 ink">{b.privateSales} <span className="ocean italic text-xs">venues</span></td>
-                    <td className="px-3 py-3 ink">{b.tradeRetail} <span className="ocean italic text-xs">venues</span></td>
-                    <td className="px-3 py-3 copper" style={{ fontWeight: 700 }}>{ratio}<span className="text-xs ocean italic"> per client / mo</span></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* Save reminder bar — sits above mobile bottom nav */}
       {dirty && (
         <div className="sticky bottom-20 md:bottom-4 z-30 max-w-2xl mx-auto">
@@ -1653,7 +1672,6 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm }) {
               <p className="font-display text-[9px] md:text-xs tracking-[0.15em]" style={{ color: '#FFFEF2', fontWeight: 600 }}>UNSAVED CHANGES</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={handleRevert} className="px-2 md:px-3 py-2 font-display text-[9px] tracking-[0.15em]  " style={{ fontWeight: 600 }}>REVERT</button>
               <button onClick={handleSave} className="flex items-center gap-1.5 bg-copper px-3 md:px-4 py-2 font-display text-[9px] md:text-[10px] tracking-[0.2em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>
                 <Save className="w-3.5 h-3.5" /> SAVE
               </button>
@@ -1740,7 +1758,7 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
 }
 
 // =================== Leads Page ===================
-function LeadsPage({ clients, visits, updateClient, onSelect }) {
+function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew }) {
   const [search, setSearch] = useState('');
   const [filterRep, setFilterRep] = useState('All');
   const [filterChannel, setFilterChannel] = useState('All');
@@ -1767,8 +1785,16 @@ function LeadsPage({ clients, visits, updateClient, onSelect }) {
       {/* Page header */}
       <div className="pb-3 border-b border">
         <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>CLIENT DATABASE</p>
-        <h1 className="font-display mt-1 ink" style={{ fontWeight: 700, fontSize: 28 }}>LEADS &amp; CLIENTS</h1>
-        <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>{clients.length} venues tracked</p>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
+          <div>
+            <h1 className="font-display mt-1 ink" style={{ fontWeight: 700, fontSize: 28 }}>LEADS &amp; CLIENTS</h1>
+            <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>{clients.length} venues tracked</p>
+          </div>
+          <button onClick={() => onAddNew && onAddNew()}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+            <span style={{ fontSize: 16, fontWeight: 300 }}>+</span> ADD NEW CLIENT
+          </button>
+        </div>
       </div>
 
       {/* Search + filters */}
@@ -1972,7 +1998,8 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete }) {
 }
 
 // =================== Log Visit Modal ===================
-function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existingVisit }) {
+function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existingVisit, skuOverrides = {} }) {
+  const effectiveSkus = SKU_CATALOGUE.map(s => ({ ...s, price: skuOverrides[s.id] ?? s.price }));
   const isEdit = !!existingVisit;
   const [salesRep, setSalesRep] = useState(existingVisit?.salesRep || 'Alex');
   const [clientId, setClientId] = useState(existingVisit?.clientId ? String(existingVisit.clientId) : '');
@@ -2278,14 +2305,14 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                 <select
                   value=""
                   onChange={(e) => {
-                    const sku = SKU_CATALOGUE.find(s => s.id === e.target.value);
+                    const sku = effectiveSkus.find(s => s.id === e.target.value);
                     if (sku) addSku(sku);
                     e.target.value = '';
                   }}
                   style={{ padding: '6px 10px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.12em', color: '#003553', cursor: 'pointer', fontWeight: 700 }}
                 >
                   <option value="">+ ADD SKU</option>
-                  {SKU_CATALOGUE.map(sku => (
+                  {effectiveSkus.map(sku => (
                     <option key={sku.id} value={sku.id}>
                       {sku.name} — {ZAR(sku.price)}
                     </option>
@@ -2790,7 +2817,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
               <h2 className="font-display text-lg" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.06em' }}>ADD TO {defaultRep.toUpperCase()}'S BOOK</h2>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-2 hover:opacity-70 flex-shrink-0" style={{ color: '#FFFEF2' }}><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', padding: '4px', lineHeight: 1, fontSize: 22, fontWeight: 300 }}>✕</button>
         </div>
 
         <div className="p-4 space-y-4">
