@@ -449,6 +449,14 @@ export default function AvanteCRM() {
     return newClient;
   };
 
+  const deleteClient = async (id) => {
+    const { error } = await supabase.from('clients').delete().eq('id', id);
+    if (error) { console.error('[deleteClient] error:', error); throw new Error(error.message); }
+    setClients(prev => prev.filter(c => c.id !== id));
+    // Also remove associated visits from local state (they stay in DB for history)
+    setVisits(prev => prev.filter(v => v.clientId !== id));
+  };
+
   const monthVisits = useMemo(() => {
     const m = monthISO();
     return visits.filter(v => v.date && v.date.startsWith(m));
@@ -834,6 +842,11 @@ export default function AvanteCRM() {
             setSelectedClient({ ...selectedClient, ...patch });
             showToast(`Client updated: ${patch.venue || selectedClient.venue}`);
           }}
+          onDelete={async () => {
+            await deleteClient(selectedClient.id);
+            setSelectedClient(null);
+            showToast(`Client removed: ${selectedClient.venue}`);
+          }}
           onPlaceOrder={(c) => {
             setSelectedClient(null);
             setPlaceOrderClient(c);
@@ -991,6 +1004,86 @@ function Header({ view, setView, onLog }) {
 }
 
 // =================== Dashboard ===================
+// ── OVERDUE CLIENTS WIDGET ──────────────────────────────────────────────────
+function OverdueClients({ clients, visits, activeRep, onNavigate }) {
+  const today = new Date();
+
+  // Find clients not visited in 30+ days — filter by rep if selected
+  const overdue = useMemo(() => {
+    const repClients = activeRep === 'All' ? clients : clients.filter(c => c.accountManager === activeRep);
+
+    return repClients
+      .map(c => {
+        // Find latest visit date for this client
+        const clientVisits = visits.filter(v => v.clientId === c.id);
+        const latestVisit = clientVisits.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+        const lastDate = latestVisit?.date || c.lastContacted || null;
+        const daysAgo = lastDate
+          ? Math.floor((today.getTime() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
+          : 999; // never contacted = most overdue
+        return { ...c, lastDate, daysAgo };
+      })
+      .filter(c => c.daysAgo >= 30 && c.status !== 'Lost')
+      .sort((a, b) => b.daysAgo - a.daysAgo)
+      .slice(0, 10);
+  }, [clients, visits, activeRep]);
+
+  const statusColors = { New: '#006C90', Contacted: '#FDB940', Converted: '#2d8659', Lost: '#9c2c2c' };
+
+  return (
+    <div className="premium-card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 diamond-clip" style={{ background: '#9c2c2c' }}></div>
+          <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
+            OVERDUE FOLLOW-UPS {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
+          </h2>
+        </div>
+        <span className="font-display text-[9px] tracking-[0.15em]" style={{ color: '#9c2c2c', fontWeight: 600 }}>
+          {overdue.length} client{overdue.length !== 1 ? 's' : ''} &gt;30 days
+        </span>
+      </div>
+
+      {overdue.length === 0 ? (
+        <div style={{ padding: '16px 0', textAlign: 'center' }}>
+          <p className="italic ocean" style={{ fontSize: 12 }}>
+            {activeRep === 'All' ? 'All clients contacted within 30 days 🎉' : `${activeRep} is up to date 🎉`}
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {overdue.map((c, i) => (
+            <div key={c.id}
+              onClick={() => onNavigate && onNavigate('leads', c.id)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 8px', borderBottom: i < overdue.length - 1 ? '1px solid rgba(0,53,83,0.08)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.04)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <span style={{ fontSize: 10, color: 'rgba(0,53,83,0.3)', fontFamily: 'monospace', fontWeight: 600, width: 16, flexShrink: 0 }}>{i + 1}</span>
+                <div style={{ minWidth: 0 }}>
+                  <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.venue}</p>
+                  <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>
+                    {c.accountManager} · {c.lastDate ? c.lastDate : 'Never contacted'}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <span style={{ padding: '2px 8px', background: statusColors[c.status] || '#006C90', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>
+                  {c.status?.toUpperCase()}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: c.daysAgo >= 60 ? '#9c2c2c' : '#D78433', fontFamily: 'Cinzel, serif', minWidth: 52, textAlign: 'right' }}>
+                  {c.daysAgo === 999 ? 'Never' : `${c.daysAgo}d`}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, onNavigate }) {
   const repFilter = (rec, key = 'accountManager') => activeRep === 'All' || rec[key] === activeRep;
   const filteredClients = clients.filter(c => repFilter(c));
@@ -1062,6 +1155,9 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         <KPICard label="Visits" value={visitCount} target={activeTargets.visits} targetValue={`${activeTargets.visits} visits`} progress={pct(visitCount, activeTargets.visits)} icon={Activity} accent="ocean" sparkData={dailyVisits} todayDay={todayDay} />
         <KPICard label="Conversion" value={`${conversionRate}%`} subtitle={`${sold} of ${visitCount} sold`} progress={conversionRate} icon={TrendingUp} accent="gold" sparkData={dailyConversion} todayDay={todayDay} />
       </div>
+
+      {/* ── OVERDUE CLIENTS ── */}
+      <OverdueClients clients={clients} visits={allVisits} activeRep={activeRep} onNavigate={onNavigate} />
 
       {/* ── LEADERBOARD + RECENT VISITS ── */}
       <div className="grid-lb">
@@ -3220,10 +3316,11 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
 }
 
 // =================== Client Detail Modal ===================
-function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder }) {
+function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, onDelete }) {
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState(client);
   const [showUnsaved, setShowUnsaved] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isDirty = edit && JSON.stringify(form) !== JSON.stringify(client);
 
@@ -3317,6 +3414,27 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder }) 
           </div>
         )}
 
+        {/* Delete confirmation */}
+        {showDeleteConfirm && (
+          <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,53,83,0.85)', padding:20 }}>
+            <div className="premium-card" style={{ maxWidth:360, width:'100%', padding:28, textAlign:'center' }}>
+              <p className="font-display" style={{ fontSize:11, letterSpacing:'0.3em', color:'#9c2c2c', fontWeight:600, marginBottom:8 }}>DELETE CLIENT</p>
+              <p style={{ fontSize:14, color:'#003553', marginBottom:6 }}>Remove <strong>{client.venue}</strong>?</p>
+              <p style={{ fontSize:11, color:'#9c2c2c', fontStyle:'italic', marginBottom:20 }}>This cannot be undone.</p>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={() => setShowDeleteConfirm(false)}
+                  style={{ flex:1, padding:'11px', border:'1px solid rgba(0,53,83,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#003553', cursor:'pointer', fontWeight:600 }}>
+                  CANCEL
+                </button>
+                <button onClick={async () => { setShowDeleteConfirm(false); await onDelete(); }}
+                  style={{ flex:1, padding:'11px', background:'#9c2c2c', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FFFEF2', cursor:'pointer', fontWeight:700 }}>
+                  DELETE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#003553' }}>
           <RaysBackdrop opacity={0.06} />
           <div className="flex items-start justify-between gap-4 relative">
@@ -3333,6 +3451,13 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder }) 
                 <button type="button" onClick={() => onPlaceOrder(client)}
                   style={{ padding:'7px 14px', background:'#D78433', border:'none', color:'#FFFEF2', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
                   <span style={{ fontSize:13, fontWeight:300 }}>+</span> PLACE ORDER
+                </button>
+              )}
+              {onDelete && (
+                <button type="button" onClick={() => setShowDeleteConfirm(true)}
+                  style={{ padding:'7px 10px', background:'none', border:'1px solid rgba(255,255,255,0.25)', color:'rgba(255,100,100,0.8)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}
+                  title="Delete client">
+                  <Trash2 style={{ width:14, height:14 }} />
                 </button>
               )}
               <button type="button" onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', padding: '4px 8px', fontSize: 22, fontWeight: 200, lineHeight: 1 }}>✕</button>
