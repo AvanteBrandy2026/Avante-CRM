@@ -22,7 +22,7 @@ const DEFAULT_ORDER_RECIPIENTS = [
   'melanie@redbev.co.za',
 ];
 const CHANNELS = ['Private Sales', 'Trade Retail'];
-const STATUSES = ['New', 'Contacted', 'Qualified', 'Prospect', 'Converted', 'Lost'];
+const STATUSES = ['New', 'Contacted', 'Converted', 'Lost'];
 const LEAD_SOURCES = ['Cold Call', 'Referral', 'Walk into Store', 'Email', 'Event', 'Networking', 'Call-cycle', 'Website', 'Online'];
 const PRIORITIES = ['Low', 'Medium', 'High'];
 
@@ -1014,9 +1014,9 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
   const pct = (a, b) => b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0;
 
   // Stage counts for pipeline summary
-  const stages = ['New', 'Contacted', 'Qualified', 'Prospect', 'Converted', 'Lost'];
+  const stages = ['New', 'Contacted', 'Converted', 'Lost'];
   const stageCounts = Object.fromEntries(stages.map(s => [s, filteredClients.filter(c => c.status === s).length]));
-  const stageColors = { New: '#006C90', Contacted: '#FDB940', Qualified: '#D78433', Prospect: '#003553', Converted: '#2d8659', Lost: '#9c2c2c' };
+  const stageColors = { New: '#006C90', Contacted: '#FDB940', Converted: '#2d8659', Lost: '#9c2c2c' };
 
   return (
     <div className="space-y-4 md:space-y-6 fade-up">
@@ -1298,10 +1298,10 @@ function RecentVisits({ visits, clients }) {
 }
 
 function PipelineGrid({ clients }) {
-  const stages = ['New', 'Contacted', 'Qualified', 'Prospect', 'Converted', 'Lost'];
+  const stages = ['New', 'Contacted', 'Converted', 'Lost'];
   const counts = stages.map(s => ({ stage: s, count: clients.filter(c => c.status === s).length }));
   const max = Math.max(...counts.map(c => c.count), 1);
-  const colors = { New: '#006C90', Contacted: '#FDB940', Qualified: '#D78433', Prospect: '#003553', Converted: '#2d8659', Lost: '#9c2c2c' };
+  const colors = { New: '#006C90', Contacted: '#FDB940', Converted: '#2d8659', Lost: '#9c2c2c' };
   return (
     <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
       {counts.map(c => (
@@ -1750,10 +1750,7 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
                 <Save className="w-3.5 h-3.5" /> SAVED
               </span>
             )}
-            <button onClick={handleReset} className="flex items-center justify-center gap-1.5 px-3 py-2.5 font-display text-[10px] tracking-[0.15em] border border-white/30" style={{ color: '#FFFEF2', fontWeight: 600 }}>
-              <RotateCcw className="w-3.5 h-3.5" /> RESET
-            </button>
-            <button onClick={handleSave} disabled={!dirty} className={`col-span-2 md:col-span-1 flex items-center justify-center gap-2 px-5 py-2.5 font-display text-xs tracking-[0.2em] transition-colors ${dirty ? 'bg-copper' : 'bg-copper/40 cursor-not-allowed'}`} style={{ color: '#FFFEF2', fontWeight: 700 }}>
+<button onClick={handleSave} disabled={!dirty} className={`col-span-2 md:col-span-1 flex items-center justify-center gap-2 px-5 py-2.5 font-display text-xs tracking-[0.2em] transition-colors ${dirty ? 'bg-copper' : 'bg-copper/40 cursor-not-allowed'}`} style={{ color: '#FFFEF2', fontWeight: 700 }}>
               <Save className="w-4 h-4" /> SAVE TARGETS
             </button>
           </div>
@@ -1775,6 +1772,9 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
         <button onClick={exportToExcel} className="w-full flex items-center justify-center gap-2 bg-ink px-4 py-3 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>
           <Download className="w-4 h-4" /> DOWNLOAD .XLSX
         </button>
+        <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 6, textAlign: 'center' }}>
+          Download weekly and email to matthew@breakfreebeverages.com
+        </p>
 
       </div>
 
@@ -3258,14 +3258,25 @@ function ClientDetailModal({ client, visits, onClose, onUpdate }) {
             </div>
             <div>
               <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>LAST VISIT</p>
-              <p className="font-display text-base ink mt-1" style={{ fontWeight: 700 }}>{client.lastContacted || '—'}</p>
-              {daysSinceLast !== null && (
-                <p className="text-[10px] italic ocean mt-0.5">{daysSinceLast === 0 ? 'today' : daysSinceLast === 1 ? '1 day ago' : `${daysSinceLast} days ago`}</p>
-              )}
+              <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 2 }}>Last contact</p>
+              <p className="font-display text-base ink mt-1" style={{ fontWeight: 700 }}>
+                {client.lastContacted ? client.lastContacted + (daysSinceLast !== null ? ` (${daysSinceLast}d ago)` : '') : '—'}
+              </p>
+
             </div>
             <div>
               <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>STATUS</p>
-              <div className="mt-2"><StatusBadge status={client.status} /></div>
+              <select
+                value={form.status || client.status}
+                onChange={async (e) => {
+                  const newStatus = e.target.value;
+                  setForm(f => ({ ...f, status: newStatus }));
+                  await onUpdate(client.id, { status: newStatus });
+                }}
+                style={{ marginTop: 8, padding: '6px 10px', border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, color: '#003553', cursor: 'pointer', outline: 'none' }}
+              >
+                {STATUSES.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+              </select>
             </div>
           </div>
 
