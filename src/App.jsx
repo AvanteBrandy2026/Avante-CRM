@@ -220,6 +220,7 @@ export default function AvanteCRM() {
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
   const [skuPrices, setSkuPrices] = useState({});  // overrides for SKU prices set in Manager Portal
   const [managerAuthed, setManagerAuthed] = useState(false); // persists across tab changes
+  const [placeOrderClient, setPlaceOrderClient] = useState(null); // client to place order for
   const [activeRep, setActiveRep] = useState('All');
   const [showLogModal, setShowLogModal] = useState(false);
   const [editingVisit, setEditingVisit] = useState(null); // visit object being edited, or null
@@ -833,6 +834,10 @@ export default function AvanteCRM() {
             setSelectedClient({ ...selectedClient, ...patch });
             showToast(`Client updated: ${patch.venue || selectedClient.venue}`);
           }}
+          onPlaceOrder={(c) => {
+            setSelectedClient(null);
+            setPlaceOrderClient(c);
+          }}
         />
       )}
 
@@ -861,6 +866,25 @@ export default function AvanteCRM() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Place Order modal — pre-filled with the client from ClientDetailModal */}
+      {placeOrderClient && (
+        <LogVisitModal
+          clients={clients}
+          skuOverrides={skuPrices}
+          preselectedClientId={placeOrderClient.id}
+          onClose={() => setPlaceOrderClient(null)}
+          onSubmit={async (v) => {
+            await addVisit(v);
+            setPlaceOrderClient(null);
+            showToast(`Order logged for ${placeOrderClient.venue}`);
+          }}
+          onRequestNewClient={(rep, cb) => {
+            setPlaceOrderClient(null);
+            setNewClientCtx({ defaultRep: rep, onCreated: cb });
+          }}
+        />
       )}
 
       {confirmCtx && (
@@ -2209,11 +2233,11 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete }) {
 }
 
 // =================== Log Visit Modal ===================
-function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existingVisit, skuOverrides = {} }) {
+function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existingVisit, skuOverrides = {}, preselectedClientId = null }) {
   const effectiveSkus = SKU_CATALOGUE.map(s => ({ ...s, price: skuOverrides[s.id] ?? s.price }));
   const isEdit = !!existingVisit;
   const [salesRep, setSalesRep] = useState(existingVisit?.salesRep || 'Alex');
-  const [clientId, setClientId] = useState(existingVisit?.clientId ? String(existingVisit.clientId) : '');
+  const [clientId, setClientId] = useState(existingVisit?.clientId ? String(existingVisit.clientId) : preselectedClientId ? String(preselectedClientId) : '');
   const [date, setDate] = useState(existingVisit?.date || todayISO());
   const [outcome, setOutcome] = useState(existingVisit?.outcome || 'Met / Discussion');
   const [items, setItems] = useState(existingVisit?.items ? existingVisit.items.map(it => ({ ...it })) : []);
@@ -2689,7 +2713,12 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
 function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCount, composeOrderEmail, buildMailtoUrl, onClose, onSend }) {
   // Build initial recipient list: defaults + client's email if on file (deduped, in order)
   const initialRecipients = useMemo(() => {
-    const list = [...DEFAULT_ORDER_RECIPIENTS];
+    // Route by channel: Private Sales → matthew, Trade Retail → lauren + melanie
+    const isPrivate = client?.channel === 'Private Sales';
+    const list = isPrivate
+      ? ['matthew@breakfreebeverages.com']
+      : ['lauren@redbev.co.za', 'melanie@redbev.co.za'];
+    // Always add the client's own email if on file
     if (client?.email && !list.includes(client.email)) list.push(client.email);
     return list.join(', ');
   }, [client]);
@@ -2790,7 +2819,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
               className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none"
               autoFocus
             />
-            <p className="text-[10px] italic ocean mt-1">Separate multiple addresses with commas. Defaults: {DEFAULT_ORDER_RECIPIENTS.join(', ')}.</p>
+            <p className="text-[10px] italic ocean mt-1">Private clients → matthew@breakfreebeverages.com · Trade clients → lauren@redbev.co.za, melanie@redbev.co.za</p>
             {client?.venue && (
               <p className="text-[11px] italic ocean mt-1.5">
                 Order for <strong className="ink">{client.venue}</strong>
@@ -3162,9 +3191,12 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
 }
 
 // =================== Client Detail Modal ===================
-function ClientDetailModal({ client, visits, onClose, onUpdate }) {
+function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder }) {
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState(client);
+  const [showUnsaved, setShowUnsaved] = useState(false);
+
+  const isDirty = edit && JSON.stringify(form) !== JSON.stringify(client);
 
   const save = () => {
     console.log('[ClientDetail] saving', form);
@@ -3175,6 +3207,11 @@ function ClientDetailModal({ client, visits, onClose, onUpdate }) {
       console.error('[ClientDetail] save threw:', err);
       alert('Could not save client: ' + (err?.message || err));
     }
+  };
+
+  const handleClose = () => {
+    if (isDirty) { setShowUnsaved(true); }
+    else { onClose(); }
   };
 
   // Build the visit timeline. We merge two sources:
@@ -3228,8 +3265,29 @@ function ClientDetailModal({ client, visits, onClose, onUpdate }) {
   }, [client.lastContacted]);
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
+    <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={handleClose}>
       <div className="bg-cream w-full md:max-w-3xl md:my-4 border-t-2 md:border-2 border-copper max-h-[95vh] md:max-h-none overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+
+        {/* Unsaved changes warning */}
+        {showUnsaved && (
+          <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,53,83,0.85)', padding:20 }}>
+            <div className="premium-card" style={{ maxWidth:340, width:'100%', padding:28, textAlign:'center' }}>
+              <p className="font-display" style={{ fontSize:11, letterSpacing:'0.3em', color:'#D78433', fontWeight:600, marginBottom:8 }}>UNSAVED CHANGES</p>
+              <p style={{ fontSize:13, color:'#003553', marginBottom:20 }}>You have unsaved edits on <strong>{client.venue}</strong>. Save before leaving?</p>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={() => { setShowUnsaved(false); onClose(); }}
+                  style={{ flex:1, padding:'10px', border:'1px solid rgba(0,53,83,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#003553', cursor:'pointer', fontWeight:600 }}>
+                  DISCARD
+                </button>
+                <button onClick={() => { save(); setShowUnsaved(false); onClose(); }}
+                  style={{ flex:1, padding:'10px', background:'#D78433', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FFFEF2', cursor:'pointer', fontWeight:700 }}>
+                  SAVE & CLOSE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#003553' }}>
           <RaysBackdrop opacity={0.06} />
           <div className="flex items-start justify-between gap-4 relative">
@@ -3241,7 +3299,15 @@ function ClientDetailModal({ client, visits, onClose, onUpdate }) {
                 <p className="italic text-xs mt-0.5" style={{ color: '#FDB940' }}>{client.location || 'No location'}</p>
               </div>
             </div>
-            <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', padding: '4px 8px', fontSize: 22, fontWeight: 200, lineHeight: 1, flexShrink: 0 }}>✕</button>
+            <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+              {onPlaceOrder && (
+                <button type="button" onClick={() => onPlaceOrder(client)}
+                  style={{ padding:'7px 14px', background:'#D78433', border:'none', color:'#FFFEF2', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                  <span style={{ fontSize:13, fontWeight:300 }}>+</span> PLACE ORDER
+                </button>
+              )}
+              <button type="button" onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', padding: '4px 8px', fontSize: 22, fontWeight: 200, lineHeight: 1 }}>✕</button>
+            </div>
           </div>
         </div>
 
