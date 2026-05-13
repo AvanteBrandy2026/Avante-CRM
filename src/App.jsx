@@ -875,6 +875,16 @@ export default function AvanteCRM() {
             setSelectedClient(null);
             showToast(`Client removed: ${selectedClient.venue}`);
           }}
+          onDeleteVisit={(visitId) => {
+            const v = visits.find(x => x.id === visitId);
+            const saleNote = v?.saleAmount > 0 ? `\nSale of ${ZAR(Math.round(v.saleAmount))} will be removed.` : '';
+            askConfirm({
+              title: 'Delete this visit?',
+              message: `${selectedClient.venue} · ${v?.date || ''}${saleNote}\n\nThis cannot be undone.`,
+              confirmLabel: 'DELETE VISIT',
+              onConfirm: async () => { await deleteVisit(visitId); showToast('Visit deleted'); },
+            });
+          }}
           onPlaceOrder={(c) => {
             setSelectedClient(null);
             setPlaceOrderClient(c);
@@ -2895,7 +2905,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
 
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.78)", backdropFilter:"blur(4px)", overflowY:"auto" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background:"#FFFEF2", width:"100%", maxWidth:768, maxHeight:"92vh", overflowY:"auto", border:"2px solid #D78433", position:"relative" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background:"#FFFEF2", width:"100%", maxWidth:560, maxHeight:"94vh", overflowY:"auto", border:"2px solid #D78433", position:"relative" }}>
         <div className="absolute top-0 left-0 right-0 h-1 bg-copper z-10"></div>
         {/* Header */}
         <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#003553' }}>
@@ -3236,7 +3246,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
 
   return (
     <div style={{ position:"fixed", inset:0, zIndex:70, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
-      <div className="bg-cream max-w-2xl w-full my-4 border-2 border-copper" onClick={(e) => e.stopPropagation()}>
+      <div style={{ background:"#FFFEF2", width:"100%", maxWidth:520, margin:"16px 0", border:"2px solid #D78433" }} onClick={(e) => e.stopPropagation()}>
         <div className="p-5 flex items-center justify-between gap-4" style={{ background: '#003553' }}>
           <div className="flex items-center gap-3">
             <Mail className="w-5 h-5" style={{ color: '#FDB940' }} />
@@ -3658,7 +3668,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
 }
 
 // =================== Client Detail Modal ===================
-function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, onDelete }) {
+function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, onDelete, onDeleteVisit }) {
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState(client);
   const [showUnsaved, setShowUnsaved] = useState(false);
@@ -3734,7 +3744,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
 
   return (
     <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={handleClose}>
-      <div className="bg-cream w-full md:max-w-3xl md:my-4 border-t-2 md:border-2 border-copper max-h-[95vh] md:max-h-none overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div style={{ background:"#FFFEF2", width:"100%", maxWidth:580, margin:"16px 0", border:"2px solid #D78433", maxHeight:"95vh", overflowY:"auto" }} onClick={(e) => e.stopPropagation()}>
 
         {/* Unsaved changes warning */}
         {showUnsaved && (
@@ -3935,11 +3945,21 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                             {isLatest && <span className="text-[9px] font-display tracking-[0.2em] px-1.5 py-0.5" style={{ background: '#FDB940', color: '#003553', fontWeight: 700 }}>LATEST</span>}
                             {isHistorical && <span className="text-[9px] font-display tracking-[0.2em] px-1.5 py-0.5 border" style={{ borderColor: '#006C90', color: '#006C90', fontWeight: 700 }}>IMPORTED</span>}
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             <span className="text-[10px] font-display tracking-wider px-2 py-0.5" style={{ background: outcomeColor, color: '#FFFEF2', fontWeight: 600 }}>
                               {(v.outcome || 'VISIT').toUpperCase()}
                             </span>
                             {v.saleAmount > 0 && <span className="font-display text-sm copper" style={{ fontWeight: 700 }}>{ZAR(v.saleAmount)}</span>}
+                            {!isHistorical && onDeleteVisit && (
+                              <button type="button"
+                                onClick={() => onDeleteVisit(v.id)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'rgba(0,53,83,0.25)', flexShrink: 0, lineHeight: 1 }}
+                                onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.25)'}
+                                title="Delete this visit">
+                                <Trash2 style={{ width: 12, height: 12 }} />
+                              </button>
+                            )}
                           </div>
                         </div>
                         <div className="px-3 py-2 space-y-2">
