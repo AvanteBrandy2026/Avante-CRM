@@ -760,6 +760,11 @@ export default function AvanteCRM() {
             updateClient={updateClient}
             onSelect={setSelectedClient}
             onAddNew={() => setNewClientCtx({ defaultRep: activeRep === 'All' ? 'Alex' : activeRep, onCreated: null })}
+            onDelete={async (id) => {
+              const c = clients.find(cl => cl.id === id);
+              await deleteClient(id);
+              showToast(`Client removed: ${c?.venue || id}`);
+            }}
           />
         )}
         {view === 'visits' && (
@@ -2089,10 +2094,11 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
 }
 
 // =================== Leads Page ===================
-function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew }) {
+function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete }) {
   const [search, setSearch] = useState('');
   const [filterRep, setFilterRep] = useState('All');
   const [filterChannel, setFilterChannel] = useState('All');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   // Alphabetically sorted + filtered list
   const filtered = useMemo(() => {
@@ -2171,41 +2177,72 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew }) {
         ) : (
           <div style={{ maxHeight: 640, overflowY: 'auto' }}>
             {filtered.map((c, i) => (
-              <div key={c.id} onClick={() => onSelect(c)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-                  borderTop: i === 0 ? 'none' : '1px solid rgba(0,53,83,0.1)',
-                  borderLeft: `3px solid ${c.channel === 'Private Sales' ? '#D78433' : '#006C90'}`,
-                  cursor: 'pointer', transition: 'background 0.12s',
-                  background: '#FFFEF2',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.04)'}
-                onMouseLeave={e => e.currentTarget.style.background = '#FFFEF2'}
-              >
-                {/* Venue + notes */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span className="font-display ink" style={{ fontWeight: 700, fontSize: 13 }}>{c.venue}</span>
-                    <StatusBadge status={c.status} />
+              <div key={c.id}>
+                {/* Confirm delete inline banner */}
+                {confirmDeleteId === c.id && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#fdf0f0', borderTop: i === 0 ? 'none' : '1px solid rgba(156,44,44,0.2)', borderLeft: '3px solid #9c2c2c' }}>
+                    <p style={{ fontSize: 12, color: '#9c2c2c', fontStyle: 'italic', margin: 0 }}>Remove <strong>{c.venue}</strong>? This cannot be undone.</p>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                        style={{ padding: '5px 12px', border: '1px solid rgba(0,53,83,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#003553', cursor: 'pointer', fontWeight: 600 }}>
+                        CANCEL
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); onDelete && onDelete(c.id); }}
+                        style={{ padding: '5px 12px', background: '#9c2c2c', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#FFFEF2', cursor: 'pointer', fontWeight: 700 }}>
+                        DELETE
+                      </button>
+                    </div>
                   </div>
-                  <p style={{ fontSize: 11, color: '#006C90', fontStyle: 'italic', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {[c.firstName, c.lastName].filter(Boolean).join(' ')}
-                    {c.location ? ((c.firstName || c.lastName) ? ' · ' : '') + c.location : ''}
-                  </p>
-                </div>
-                {/* Channel badge */}
-                <span style={{ fontSize: 9, fontFamily: "'Cinzel', serif", fontWeight: 600, letterSpacing: '0.15em', padding: '2px 6px', border: `1px solid ${c.channel === 'Private Sales' ? '#D78433' : '#006C90'}`, color: c.channel === 'Private Sales' ? '#D78433' : '#006C90', flexShrink: 0 }}>
-                  {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : '—'}
-                </span>
-                {/* Rep */}
-                <span className="font-display" style={{ fontSize: 11, fontWeight: 700, color: '#003553', flexShrink: 0, minWidth: 48, textAlign: 'right' }}>
-                  {c.accountManager === 'Unassigned' ? '—' : c.accountManager}
-                </span>
-                {/* Sales */}
-                {c.totalSales > 0 && (
-                  <span className="font-display copper" style={{ fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{ZAR(c.totalSales)}</span>
                 )}
-                <ChevronRight style={{ width: 16, height: 16, color: '#D78433', flexShrink: 0 }} />
+                <div onClick={() => onSelect(c)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+                    borderTop: i === 0 ? 'none' : '1px solid rgba(0,53,83,0.1)',
+                    borderLeft: `3px solid ${c.channel === 'Private Sales' ? '#D78433' : '#006C90'}`,
+                    cursor: 'pointer', transition: 'background 0.12s',
+                    background: '#FFFEF2',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.04)'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#FFFEF2'}
+                >
+                  {/* Venue + notes */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span className="font-display ink" style={{ fontWeight: 700, fontSize: 13 }}>{c.venue}</span>
+                      <StatusBadge status={c.status} />
+                    </div>
+                    <p style={{ fontSize: 11, color: '#006C90', fontStyle: 'italic', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {[c.firstName, c.lastName].filter(Boolean).join(' ')}
+                      {c.location ? ((c.firstName || c.lastName) ? ' · ' : '') + c.location : ''}
+                    </p>
+                  </div>
+                  {/* Channel badge */}
+                  <span style={{ fontSize: 9, fontFamily: "'Cinzel', serif", fontWeight: 600, letterSpacing: '0.15em', padding: '2px 6px', border: `1px solid ${c.channel === 'Private Sales' ? '#D78433' : '#006C90'}`, color: c.channel === 'Private Sales' ? '#D78433' : '#006C90', flexShrink: 0 }}>
+                    {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : '—'}
+                  </span>
+                  {/* Rep */}
+                  <span className="font-display" style={{ fontSize: 11, fontWeight: 700, color: '#003553', flexShrink: 0, minWidth: 48, textAlign: 'right' }}>
+                    {c.accountManager === 'Unassigned' ? '—' : c.accountManager}
+                  </span>
+                  {/* Sales */}
+                  {c.totalSales > 0 && (
+                    <span className="font-display copper" style={{ fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{ZAR(c.totalSales)}</span>
+                  )}
+                  {/* Delete button */}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(confirmDeleteId === c.id ? null : c.id); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: confirmDeleteId === c.id ? '#9c2c2c' : 'rgba(0,53,83,0.25)', flexShrink: 0, transition: 'color 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
+                      onMouseLeave={e => e.currentTarget.style.color = confirmDeleteId === c.id ? '#9c2c2c' : 'rgba(0,53,83,0.25)'}
+                      title="Delete client"
+                    >
+                      <Trash2 style={{ width: 14, height: 14 }} />
+                    </button>
+                  )}
+                  <ChevronRight style={{ width: 16, height: 16, color: '#D78433', flexShrink: 0 }} />
+                </div>
               </div>
             ))}
           </div>
