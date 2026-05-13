@@ -1517,53 +1517,48 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
   const [draft, setDraft] = useState(targets);
   const [skuDraftPrices, setSkuDraftPrices] = useState({});
   const [savedFlash, setSavedFlash] = useState(false);
-  const MANAGER_PW = 'Avante2026!';
 
   useEffect(() => { setDraft(targets); }, [targets]);
   useEffect(() => { if (skuPrices) setSkuDraftPrices(skuPrices); }, [skuPrices]);
 
-  const tryUnlock = () => {
-    if (pwInput.trim() === MANAGER_PW) {
-      setPwError(false);
-      setPwInput('');
-      onAuth(); // lift auth state to parent so it persists across tab changes
-    } else {
-      setPwError(true);
-      setPwInput('');
-    }
-  };
-
-  // ── PASSWORD GATE ──
+  // PASSWORD GATE — authed state lives in parent so survives tab changes
   if (!authed) {
+    const pw = 'Avante2026!';
+    const check = () => {
+      const typed = document.getElementById('mgr-pw-input')?.value || '';
+      if (typed === pw) { onAuth(); }
+      else { setPwError(true); document.getElementById('mgr-pw-input').value = ''; }
+    };
     return (
-      <div className="fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
-        <div className="premium-card" style={{ padding: 40, maxWidth: 380, width: '100%', textAlign: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:400, padding:20 }}>
+        <div className="premium-card" style={{ padding:40, maxWidth:380, width:'100%', textAlign:'center' }}>
+          <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
             <AvanteLogo height={60} gold={false} />
           </div>
-          <p className="font-display" style={{ fontSize: 9, letterSpacing: '0.4em', color: '#D78433', fontWeight: 600, marginBottom: 4 }}>RESTRICTED ACCESS</p>
-          <h2 className="font-display" style={{ fontSize: 18, fontWeight: 700, color: '#003553', marginBottom: 24 }}>MANAGER PORTAL</h2>
-          <div style={{ position: 'relative', marginBottom: 8 }}>
+          <p className="font-display" style={{ fontSize:9, letterSpacing:'0.4em', color:'#D78433', fontWeight:600, marginBottom:4 }}>RESTRICTED ACCESS</p>
+          <h2 className="font-display" style={{ fontSize:18, fontWeight:700, color:'#003553', marginBottom:24 }}>MANAGER PORTAL</h2>
+          <div style={{ position:'relative', marginBottom:8 }}>
             <input
+              id="mgr-pw-input"
               type={showPw ? 'text' : 'password'}
-              value={pwInput}
-              onChange={e => { setPwInput(e.target.value); setPwError(false); }}
-              onKeyDown={e => e.key === 'Enter' && tryUnlock()}
+              defaultValue=""
+              onKeyDown={e => e.key === 'Enter' && check()}
+              onChange={() => setPwError(false)}
               placeholder="Enter password"
               autoFocus
-              style={{ width: '100%', padding: '12px 44px 12px 14px', border: `2px solid ${pwError ? '#9c2c2c' : 'rgba(0,53,83,0.2)'}`, background: '#FFFEF2', fontFamily: 'Georgia, serif', fontSize: 14, color: '#003553', outline: 'none', textAlign: 'center', letterSpacing: '0.15em', boxSizing: 'border-box' }}
+              style={{ width:'100%', padding:'13px 44px 13px 14px', border:`2px solid ${pwError ? '#9c2c2c' : 'rgba(0,53,83,0.2)'}`, background:'#FFFEF2', fontFamily:'Georgia,serif', fontSize:16, color:'#003553', outline:'none', textAlign:'center', letterSpacing:'0.15em', boxSizing:'border-box' }}
             />
             <button type="button" onClick={() => setShowPw(p => !p)}
-              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#006C90', fontSize: 16, padding: 0 }}>
+              style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#006C90', fontSize:18, padding:0 }}>
               {showPw ? '🙈' : '👁'}
             </button>
           </div>
-          {pwError && <p style={{ fontSize: 11, color: '#9c2c2c', marginBottom: 8 }}>Incorrect password — try again</p>}
-          <button onClick={tryUnlock}
-            style={{ width: '100%', padding: '13px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.3em', fontWeight: 700, cursor: 'pointer', marginTop: 4 }}>
+          {pwError && <p style={{ fontSize:11, color:'#9c2c2c', marginBottom:8 }}>Incorrect password</p>}
+          <button onClick={check}
+            style={{ width:'100%', padding:'14px', background:'#D78433', border:'none', color:'#FFFEF2', fontFamily:"'Cinzel',serif", fontSize:12, letterSpacing:'0.3em', fontWeight:700, cursor:'pointer', marginTop:6 }}>
             UNLOCK
           </button>
-          <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 16 }}>Authorised personnel only</p>
+          <p style={{ fontSize:10, color:'#006C90', fontStyle:'italic', marginTop:16 }}>Authorised personnel only</p>
         </div>
       </div>
     );
