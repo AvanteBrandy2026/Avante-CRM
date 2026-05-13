@@ -959,38 +959,28 @@ export default function AvanteCRM() {
 // =================== Confirm Modal ===================
 function ConfirmModal({ title, message, confirmLabel, danger, onCancel, onConfirm }) {
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:90, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)" }} onClick={onCancel}>
-      <div className="bg-cream max-w-md w-full border-2 border-copper shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="p-5 flex items-center gap-3" style={{ background: '#003553' }}>
-          <div className="w-2.5 h-2.5 diamond-clip" style={{ background: danger ? '#9c2c2c' : '#FDB940' }}></div>
+    <div style={{ position:"fixed", inset:0, zIndex:90, display:"flex", alignItems:"center", justifyContent:"center", padding:20, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)" }} onClick={onCancel}>
+      <div style={{ background:'#FFFEF2', maxWidth:360, width:'100%', border:'2px solid #D78433', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ padding:'12px 16px', background:'#003553', display:'flex', alignItems:'center', gap:10 }}>
+          <div className="w-2 h-2 diamond-clip" style={{ background: danger ? '#9c2c2c' : '#FDB940', flexShrink:0 }}></div>
           <div>
-            <p className="font-display text-[10px] tracking-[0.4em]" style={{ color: '#FDB940', fontWeight: 600 }}>{danger ? 'DESTRUCTIVE ACTION' : 'CONFIRM'}</p>
-            <h2 className="font-display text-lg mt-0.5" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.06em' }}>{title}</h2>
+            <p className="font-display" style={{ fontSize:8, letterSpacing:'0.4em', color:'#FDB940', fontWeight:600 }}>{danger ? 'DESTRUCTIVE ACTION' : 'CONFIRM'}</p>
+            <h2 className="font-display" style={{ color:'#FFFEF2', fontWeight:700, fontSize:14, letterSpacing:'0.06em', marginTop:2 }}>{title}</h2>
           </div>
         </div>
-        <div className="p-6">
-          <p className="text-sm ink whitespace-pre-line">{message}</p>
+        {/* Body */}
+        <div style={{ padding:'14px 16px' }}>
+          <p style={{ fontSize:12, color:'#003553', lineHeight:1.5, whiteSpace:'pre-line' }}>{message}</p>
         </div>
-        <div className="flex justify-end gap-3 px-6 pb-6">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-5 py-2.5 font-display text-xs tracking-[0.25em] ink hover:"
-            style={{ fontWeight: 700 }}
-          >
+        {/* Actions */}
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'0 16px 14px' }}>
+          <button type="button" onClick={onCancel}
+            style={{ padding:'7px 16px', border:'1px solid rgba(0,53,83,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#003553', cursor:'pointer', fontWeight:600 }}>
             CANCEL
           </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="px-6 py-2.5 font-display text-xs tracking-[0.25em] flex items-center gap-2 hover:opacity-90"
-            style={{
-              background: danger ? '#9c2c2c' : '#003553',
-              color: '#FFFEF2',
-              fontWeight: 700,
-            }}
-            autoFocus
-          >
+          <button type="button" onClick={onConfirm} autoFocus
+            style={{ padding:'7px 16px', background: danger ? '#9c2c2c' : '#003553', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FFFEF2', cursor:'pointer', fontWeight:700 }}>
             {confirmLabel || 'CONFIRM'}
           </button>
         </div>
