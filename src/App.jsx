@@ -2567,19 +2567,20 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                 <div className="md:hidden divide-y divide-ink/10">
                   {items.map(it => {
                     const lineTotal = (Number(it.unitPrice) || 0) * (Number(it.qty) || 0);
+                    const discountPct = it.listPrice > 0 ? Math.round((1 - Number(it.unitPrice) / Number(it.listPrice)) * 100) : 0;
                     const discounted = Number(it.unitPrice) < Number(it.listPrice);
                     return (
                       <div key={it.skuId} className="p-3">
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div>
                             <p className="ink text-sm font-display" style={{ fontWeight: 700 }}>{it.name}</p>
-                            {discounted && <p className="text-[10px] copper italic">disc. from {ZAR(it.listPrice)}</p>}
+                            {discounted && <p className="text-[10px] copper italic">disc. from {ZAR(it.listPrice)} · saving {ZAR(it.listPrice - it.unitPrice)}/unit</p>}
                           </div>
                           <button type="button" onClick={() => removeItem(it.skuId)} className="p-1 text-ink/40 hover:text-red-700 flex-shrink-0">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-4 gap-2">
                           <div>
                             <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>QTY</p>
                             <input type="number" min="0" step="1" value={it.qty}
@@ -2594,6 +2595,19 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                               style={{ color: discounted ? '#D78433' : '#003553' }} />
                           </div>
                           <div>
+                            <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>DISC %</p>
+                            <input type="number" min="0" max="100" step="1"
+                              value={discountPct === 0 ? '' : discountPct}
+                              placeholder="0"
+                              onChange={(e) => {
+                                const pct = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                                const newPrice = Number(it.listPrice) * (1 - pct / 100);
+                                updateItem(it.skuId, 'unitPrice', newPrice.toFixed(2));
+                              }}
+                              className="w-full px-2 py-2 border border bg-cream text-sm text-center focus:outline-none focus:border-copper"
+                              style={{ color: discountPct > 0 ? '#D78433' : '#003553' }} />
+                          </div>
+                          <div>
                             <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>TOTAL</p>
                             <p className="font-display text-sm ink py-2 text-right" style={{ fontWeight: 700 }}>{ZAR(lineTotal)}</p>
                           </div>
@@ -2605,18 +2619,20 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                 {/* Desktop: compact grid */}
                 <div className="hidden md:block">
                   <div className="grid grid-cols-12 gap-2 px-3 py-2  border-b border">
-                    <div className="col-span-5 font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>SKU</div>
+                    <div className="col-span-4 font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>SKU</div>
                     <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-center" style={{ fontWeight: 600 }}>QTY</div>
                     <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>UNIT R</div>
-                    <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>LINE</div>
+                    <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-center" style={{ fontWeight: 600 }}>DISC %</div>
+                    <div className="col-span-1 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>LINE</div>
                     <div className="col-span-1"></div>
                   </div>
                   {items.map(it => {
                     const lineTotal = (Number(it.unitPrice) || 0) * (Number(it.qty) || 0);
+                    const discountPct = it.listPrice > 0 ? Math.round((1 - Number(it.unitPrice) / Number(it.listPrice)) * 100) : 0;
                     const discounted = Number(it.unitPrice) < Number(it.listPrice);
                     return (
                       <div key={it.skuId} className="grid grid-cols-12 gap-2 px-3 py-2 border-b border items-center">
-                        <div className="col-span-5">
+                        <div className="col-span-4">
                           <p className="ink text-xs font-display" style={{ fontWeight: 700 }}>{it.name}</p>
                           {discounted && <p className="text-[9px] copper italic">from {ZAR(it.listPrice)}</p>}
                         </div>
@@ -2631,7 +2647,19 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                             className="w-full px-2 py-1 border border bg-cream text-xs text-right focus:outline-none focus:border-copper"
                             style={{ color: discounted ? '#D78433' : '#003553' }} />
                         </div>
-                        <div className="col-span-2 text-right">
+                        <div className="col-span-2">
+                          <input type="number" min="0" max="100" step="1"
+                            value={discountPct === 0 ? '' : discountPct}
+                            placeholder="0%"
+                            onChange={(e) => {
+                              const pct = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                              const newPrice = Number(it.listPrice) * (1 - pct / 100);
+                              updateItem(it.skuId, 'unitPrice', newPrice.toFixed(2));
+                            }}
+                            className="w-full px-2 py-1 border border bg-cream text-xs text-center focus:outline-none focus:border-copper"
+                            style={{ color: discountPct > 0 ? '#D78433' : '#003553' }} />
+                        </div>
+                        <div className="col-span-1 text-right">
                           <span className="font-display text-xs ink" style={{ fontWeight: 700 }}>{ZAR(lineTotal)}</span>
                         </div>
                         <div className="col-span-1 text-right">
