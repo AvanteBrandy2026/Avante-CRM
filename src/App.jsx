@@ -777,6 +777,17 @@ export default function AvanteCRM() {
           <OrderHistoryPage
             clients={clients}
             visits={visits}
+            onDeleteVisit={(visitId) => {
+              const v = visits.find(x => x.id === visitId);
+              const c = v ? clients.find(cl => cl.id === v.clientId) : null;
+              const saleNote = v?.saleAmount > 0 ? ` Sale of ${ZAR(Math.round(v.saleAmount))} will be removed.` : '';
+              askConfirm({
+                title: 'Delete this order?',
+                message: `${c?.venue || 'Unknown'} · ${v?.date || ''}${saleNote}\n\nThis cannot be undone.`,
+                confirmLabel: 'DELETE ORDER',
+                onConfirm: async () => { await deleteVisit(visitId); showToast('Order deleted'); },
+              });
+            }}
           />
         )}
         {view === 'visits' && (
@@ -1803,7 +1814,38 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
     ];
     XLSX.utils.book_append_sheet(wb, wsLines, 'SKU Line Items');
 
-    // Sheet 4: Targets
+    // Sheet 3b: Client Order History (one row per order, with full SKU detail)
+    const orderHistoryRows = [];
+    visits
+      .filter(v => v.items && v.items.length > 0)
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      .forEach(v => {
+        const c = clients.find(cl => cl.id === v.clientId) || {};
+        const skuSummary = v.items.map(it => `${it.qty}x ${it.name}${Number(it.unitPrice) < Number(it.listPrice) ? ` (disc. ${ZAR(it.unitPrice)})` : ''}`).join(' | ');
+        orderHistoryRows.push({
+          'Date': v.date,
+          'Venue': c.venue || 'Unknown',
+          'Channel': c.channel || '',
+          'Location': c.location || '',
+          'Account Manager': c.accountManager || '',
+          'Sales Rep': v.salesRep || '',
+          'Outcome': v.outcome || '',
+          'SKUs Ordered': skuSummary,
+          'Total SKU Lines': v.items.length,
+          'Total Units': v.items.reduce((s, it) => s + (Number(it.qty) || 0), 0),
+          'Order Total Ex VAT (R)': Number(v.saleAmount || 0).toFixed(2),
+          'Visit Notes': v.notes || '',
+          'Follow-up Notes': v.followUp || '',
+        });
+      });
+    const wsOrders = XLSX.utils.json_to_sheet(orderHistoryRows.length > 0 ? orderHistoryRows : [{ 'Note': 'No orders placed yet.' }]);
+    wsOrders['!cols'] = [
+      { wch: 12 }, { wch: 28 }, { wch: 14 }, { wch: 18 }, { wch: 14 },
+      { wch: 12 }, { wch: 16 }, { wch: 60 }, { wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 40 }, { wch: 40 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsOrders, 'Client Order History');
+
+
     const targetRows = SALES_REPS.map(rep => ({
       'Sales Rep': rep,
       'Revenue Target (R)': Number(targets[rep]?.revenue || 0).toFixed(2),
@@ -2338,10 +2380,11 @@ function StatusBadge({ status }) {
 
 // =================== Visits Page ===================
 // =================== ORDER HISTORY PAGE ===================
-function OrderHistoryPage({ clients, visits }) {
+function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
   const [search, setSearch] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [filterChannel, setFilterChannel] = useState('All');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   // Only visits that have actual orders (items with qty > 0)
   const orders = useMemo(() => {
@@ -2415,39 +2458,70 @@ function OrderHistoryPage({ clients, visits }) {
         <div className="premium-card" style={{ overflow: 'hidden' }}>
           {orders.map((order, i) => {
             const isOpen = expandedOrderId === order.id;
+            const isConfirming = confirmDeleteId === order.id;
             const skuCount = order.items.length;
             const totalQty = order.items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
             return (
               <div key={order.id} style={{ borderTop: i === 0 ? 'none' : '1px solid rgba(0,53,83,0.1)' }}>
-                {/* Order summary row — click to expand */}
-                <div
-                  onClick={() => setExpandedOrderId(isOpen ? null : order.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', cursor: 'pointer', background: isOpen ? 'rgba(0,53,83,0.04)' : '#FFFEF2', transition: 'background 0.12s', borderLeft: `3px solid ${order.clientChannel === 'Private Sales' ? '#D78433' : '#006C90'}` }}
-                  onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'rgba(0,53,83,0.03)'; }}
-                  onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = '#FFFEF2'; }}
-                >
-                  {/* Date */}
-                  <div style={{ flexShrink: 0, minWidth: 80 }}>
-                    <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12 }}>{order.date || '—'}</p>
-                    <p style={{ fontSize: 9, color: '#006C90', fontStyle: 'italic' }}>{order.salesRep}</p>
-                  </div>
-                  {/* Venue */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-display ink" style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.clientName}</p>
-                    <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>
-                      {order.clientLocation || ''}{order.clientLocation && order.clientChannel ? ' · ' : ''}{order.clientChannel === 'Private Sales' ? 'Private' : order.clientChannel === 'Trade Retail' ? 'Retail' : ''}
+
+                {/* Delete confirm banner */}
+                {isConfirming && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#fdf0f0', borderLeft: '3px solid #9c2c2c' }}>
+                    <p style={{ fontSize: 12, color: '#9c2c2c', fontStyle: 'italic', margin: 0 }}>
+                      Delete order for <strong>{order.clientName}</strong> on {order.date}? Cannot be undone.
                     </p>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0, marginLeft: 12 }}>
+                      <button onClick={() => setConfirmDeleteId(null)}
+                        style={{ padding: '5px 12px', border: '1px solid rgba(0,53,83,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#003553', cursor: 'pointer', fontWeight: 600 }}>
+                        CANCEL
+                      </button>
+                      <button onClick={() => { setConfirmDeleteId(null); onDeleteVisit && onDeleteVisit(order.id); }}
+                        style={{ padding: '5px 12px', background: '#9c2c2c', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#FFFEF2', cursor: 'pointer', fontWeight: 700 }}>
+                        DELETE
+                      </button>
+                    </div>
                   </div>
-                  {/* SKU summary */}
-                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                    <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>{skuCount} SKU{skuCount !== 1 ? 's' : ''} · {totalQty} units</p>
+                )}
+
+                {/* Order summary row */}
+                <div style={{ display: 'flex', alignItems: 'center', background: isOpen ? 'rgba(0,53,83,0.04)' : '#FFFEF2', borderLeft: `3px solid ${order.clientChannel === 'Private Sales' ? '#D78433' : '#006C90'}`, transition: 'background 0.12s' }}>
+                  <div
+                    onClick={() => { setExpandedOrderId(isOpen ? null : order.id); setConfirmDeleteId(null); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 12px 13px 16px', cursor: 'pointer', flex: 1, minWidth: 0 }}
+                  >
+                    {/* Date */}
+                    <div style={{ flexShrink: 0, minWidth: 80 }}>
+                      <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12 }}>{order.date || '—'}</p>
+                      <p style={{ fontSize: 9, color: '#006C90', fontStyle: 'italic' }}>{order.salesRep}</p>
+                    </div>
+                    {/* Venue */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p className="font-display ink" style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.clientName}</p>
+                      <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>
+                        {order.clientLocation || ''}{order.clientLocation && order.clientChannel ? ' · ' : ''}{order.clientChannel === 'Private Sales' ? 'Private' : order.clientChannel === 'Trade Retail' ? 'Retail' : ''}
+                      </p>
+                    </div>
+                    {/* SKU summary */}
+                    <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                      <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>{skuCount} SKU{skuCount !== 1 ? 's' : ''} · {totalQty} units</p>
+                    </div>
+                    {/* Total */}
+                    <div style={{ flexShrink: 0, minWidth: 72, textAlign: 'right' }}>
+                      <p className="font-display copper" style={{ fontWeight: 700, fontSize: 13 }}>{ZAR(order.saleAmount || 0)}</p>
+                    </div>
+                    <ChevronDown style={{ width: 16, height: 16, color: '#D78433', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                   </div>
-                  {/* Total */}
-                  <div style={{ flexShrink: 0, minWidth: 72, textAlign: 'right' }}>
-                    <p className="font-display copper" style={{ fontWeight: 700, fontSize: 13 }}>{ZAR(order.saleAmount || 0)}</p>
-                  </div>
-                  {/* Expand icon */}
-                  <ChevronDown style={{ width: 16, height: 16, color: '#D78433', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    onClick={() => { setConfirmDeleteId(isConfirming ? null : order.id); setExpandedOrderId(null); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '13px 14px', color: isConfirming ? '#9c2c2c' : 'rgba(0,53,83,0.2)', flexShrink: 0, transition: 'color 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
+                    onMouseLeave={e => e.currentTarget.style.color = isConfirming ? '#9c2c2c' : 'rgba(0,53,83,0.2)'}
+                    title="Delete order"
+                  >
+                    <Trash2 style={{ width: 14, height: 14 }} />
+                  </button>
                 </div>
 
                 {/* Expanded SKU breakdown */}
