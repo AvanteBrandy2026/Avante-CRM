@@ -88,8 +88,7 @@ import { supabase } from './supabase.js';
 
 // Map camelCase JS fields to snake_case DB columns and back
 function clientToDb(c) {
-  return {
-    id: c.id,
+  const obj = {
     venue: c.venue || '',
     channel: c.channel || '',
     first_name: c.firstName || '',
@@ -106,6 +105,8 @@ function clientToDb(c) {
     notes: c.notes || '',
     total_sales: c.totalSales || 0,
   };
+  if (c.id !== undefined) obj.id = c.id;
+  return obj;
 }
 
 function clientFromDb(r) {
@@ -236,7 +237,7 @@ export default function AvanteCRM() {
         let loadedClients;
         if (!clientRows || clientRows.length === 0) {
           // First run — seed the database with the 278 venues
-          const seedRows = SEED_CLIENTS.map(clientToDb);
+          const seedRows = SEED_CLIENTS.map(c => clientToDb({ ...c, id: undefined }));
           // Insert in batches of 50 to avoid request size limits
           for (let i = 0; i < seedRows.length; i += 50) {
             const { error } = await supabase.from('clients').insert(seedRows.slice(i, i + 50));
@@ -417,7 +418,7 @@ export default function AvanteCRM() {
       totalSales: 0, channel: '',
       ...client,
     };
-    const dbData = clientToDb({ id: undefined, ...newClientData });
+    const dbData = clientToDb({ ...newClientData, id: undefined });
     console.log('[addClient] inserting:', dbData);
     const { data: inserted, error } = await supabase
       .from('clients').insert(dbData)
