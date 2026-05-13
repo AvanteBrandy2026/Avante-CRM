@@ -2303,7 +2303,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     const subject = `Avante Cape Brandy — Order Confirmation${venueLine ? ' · ' + venueLine : ''}${date ? ' · ' + date : ''}`;
 
     const lines = [];
-    lines.push(`Dear ${contactName || 'Sir / Madam'},`);
+    lines.push('Dear,');
     lines.push('');
     lines.push(`Thank you for your order with Avante Cape Brandy. Please find the details below for your records:`);
     lines.push('');
@@ -2316,6 +2316,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     lines.push(`Date:           ${date || '(not specified)'}`);
     lines.push(`Outcome:        ${outcome}`);
     lines.push(`Sales Rep:      ${salesRep} — Avante Cape Brandy`);
+    if (c?.email) lines.push(`Email Invoice:  ${c.email}`);
     lines.push('');
 
     if (items.length > 0) {
@@ -3326,7 +3327,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder }) 
               <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>LAST VISIT</p>
               <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 2 }}>Last contact</p>
               <p className="font-display text-base ink mt-1" style={{ fontWeight: 700 }}>
-                {client.lastContacted ? client.lastContacted + (daysSinceLast !== null ? ` (${daysSinceLast}d ago)` : '') : '—'}
+                {client.lastContacted ? client.lastContacted + (daysSinceLast !== null ? ` (${daysSinceLast} days ago)` : '') : '—'}
               </p>
 
             </div>
