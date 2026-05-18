@@ -191,6 +191,8 @@ function prospectToDb(p) {
     amount: Number(p.amount) || 0,
     expected_date: p.expectedDate || null,
     status: p.status || 'Open',
+    client_id: p.clientId ? Number(p.clientId) : null,
+    items: p.items || [],
   };
 }
 
@@ -199,10 +201,12 @@ function prospectFromDb(r) {
     id: r.id,
     salesRep: r.sales_rep || '',
     clientName: r.client_name || '',
+    clientId: r.client_id || null,
     skuNotes: r.sku_notes || '',
     amount: Number(r.amount) || 0,
     expectedDate: r.expected_date || '',
     status: r.status || 'Open',
+    items: r.items || [],
     createdAt: r.created_at || '',
   };
 }
@@ -823,6 +827,7 @@ export default function AvanteCRM() {
             onAddProspect={addProspect}
             onUpdateProspect={updateProspect}
             onDeleteProspect={deleteProspect}
+            skuOverrides={skuPrices}
             onNavigate={(v, clientId) => {
               setView(v);
               if (clientId) {
@@ -1187,13 +1192,57 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
 }
 
 // =================== Prospect / Pipeline Forecast Widget ===================
-function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDelete }) {
+function ProspectWidget({ prospects, activeRep, targets, clients, skuOverrides, onAdd, onUpdate, onDelete }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ salesRep: 'Alex', clientName: '', skuNotes: '', amount: '', expectedDate: '' });
+  const emptyForm = () => ({
+    salesRep: activeRep === 'All' ? 'Alex' : activeRep,
+    clientId: '',
+    expectedDate: '',
+    items: [],  // [{ skuId, name, qty, unitPrice, listPrice }]
+  });
+  const [form, setForm] = useState(emptyForm());
+  const [clientSearch, setClientSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Filter by rep if one is selected
+  const effectiveSkus = useMemo(
+    () => SKU_CATALOGUE.map(s => ({ ...s, price: skuOverrides?.[s.id] ?? s.price })),
+    [skuOverrides]
+  );
+
+  // Clients for the selected rep (sorted A-Z)
+  const repClients = useMemo(() => {
+    let list = clients.filter(c => c.accountManager === form.salesRep);
+    if (clientSearch.trim()) {
+      const q = clientSearch.toLowerCase();
+      list = list.filter(c => `${c.venue} ${c.location}`.toLowerCase().includes(q));
+    }
+    return list.sort((a, b) => (a.venue || '').localeCompare(b.venue || ''));
+  }, [clients, form.salesRep, clientSearch]);
+
+  const selectedClient = clients.find(c => c.id === Number(form.clientId));
+
+  // Computed order total from SKU items
+  const orderTotal = useMemo(
+    () => form.items.reduce((s, it) => s + (Number(it.unitPrice) || 0) * (Number(it.qty) || 0), 0),
+    [form.items]
+  );
+
+  // SKU helpers
+  const addSku = (sku) => {
+    setForm(f => {
+      if (f.items.find(it => it.skuId === sku.id)) {
+        return { ...f, items: f.items.map(it => it.skuId === sku.id ? { ...it, qty: it.qty + 1 } : it) };
+      }
+      return { ...f, items: [...f.items, { skuId: sku.id, name: sku.name, qty: 1, unitPrice: sku.price, listPrice: sku.price }] };
+    });
+  };
+  const updateItem = (skuId, field, value) =>
+    setForm(f => ({ ...f, items: f.items.map(it => it.skuId === skuId ? { ...it, [field]: value } : it) }));
+  const removeItem = (skuId) =>
+    setForm(f => ({ ...f, items: f.items.filter(it => it.skuId !== skuId) }));
+
+  // Filter by rep
   const filtered = useMemo(() =>
     activeRep === 'All' ? prospects : prospects.filter(p => p.salesRep === activeRep),
     [prospects, activeRep]
@@ -1201,33 +1250,50 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
   const openProspects = filtered.filter(p => p.status === 'Open');
   const totalPipeline = openProspects.reduce((s, p) => s + (p.amount || 0), 0);
 
-  // Monthly revenue target for comparison
   const monthTarget = useMemo(() => {
     if (activeRep === 'All') return SALES_REPS.reduce((s, r) => s + (targets[r]?.revenue || 0), 0);
     return targets[activeRep]?.revenue || 0;
   }, [activeRep, targets]);
-
   const pct = monthTarget > 0 ? Math.min(100, Math.round((totalPipeline / monthTarget) * 100)) : 0;
 
   const openForm = (prospect = null) => {
     if (prospect) {
-      setForm({ salesRep: prospect.salesRep, clientName: prospect.clientName, skuNotes: prospect.skuNotes, amount: prospect.amount, expectedDate: prospect.expectedDate });
+      // Rebuild items array from skuNotes string for legacy entries, or use stored items
+      const items = prospect.items && prospect.items.length > 0
+        ? prospect.items
+        : [];
+      setForm({
+        salesRep: prospect.salesRep,
+        clientId: prospect.clientId ? String(prospect.clientId) : '',
+        expectedDate: prospect.expectedDate || '',
+        items,
+      });
       setEditingId(prospect.id);
     } else {
-      setForm({ salesRep: activeRep === 'All' ? 'Alex' : activeRep, clientName: '', skuNotes: '', amount: '', expectedDate: '' });
+      setForm(emptyForm());
       setEditingId(null);
     }
+    setClientSearch('');
     setModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.clientName.trim()) return;
+    if (!form.clientId) return;
     setSaving(true);
     try {
+      const payload = {
+        salesRep: form.salesRep,
+        clientId: Number(form.clientId),
+        clientName: selectedClient?.venue || '',
+        skuNotes: form.items.map(it => `${it.qty}× ${it.name}`).join(', '),
+        amount: orderTotal,
+        expectedDate: form.expectedDate,
+        items: form.items,
+      };
       if (editingId) {
-        await onUpdate(editingId, { ...form, amount: Number(form.amount) || 0 });
+        await onUpdate(editingId, payload);
       } else {
-        await onAdd({ ...form, amount: Number(form.amount) || 0 });
+        await onAdd(payload);
       }
       setModalOpen(false);
     } finally {
@@ -1236,6 +1302,7 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
   };
 
   const statusColors = { Open: '#D78433', Won: '#2d8659', Lost: '#9c2c2c' };
+  const canSave = form.clientId && form.items.length > 0 && orderTotal > 0;
 
   return (
     <>
@@ -1248,8 +1315,7 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
               PIPELINE FORECAST {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
             </h2>
           </div>
-          <button
-            onClick={() => openForm()}
+          <button onClick={() => openForm()}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
             <Plus style={{ width: 12, height: 12 }} /> ADD PROSPECT
           </button>
@@ -1260,11 +1326,13 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
           <div>
             <p className="font-display text-[10px] tracking-[0.25em] copper" style={{ fontWeight: 600 }}>PROJECTED PIPELINE</p>
             <p className="font-display text-2xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(totalPipeline)}</p>
-            <p className="italic ocean" style={{ fontSize: 10, marginTop: 2 }}>{openProspects.length} open prospect{openProspects.length !== 1 ? 's' : ''}</p>
+            <p className="italic ocean" style={{ fontSize: 10, marginTop: 2 }}>
+              {openProspects.length} open prospect{openProspects.length !== 1 ? 's' : ''}
+            </p>
           </div>
           {monthTarget > 0 && (
-            <div style={{ flex: 1, maxWidth: 200 }}>
-              <div className="flex justify-between text-[9px] mb-1">
+            <div style={{ flex: 1, maxWidth: 220 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginBottom: 4 }}>
                 <span className="italic ocean">vs monthly target {ZAR(monthTarget)}</span>
                 <span className="font-display copper" style={{ fontWeight: 700 }}>{pct}%</span>
               </div>
@@ -1278,39 +1346,32 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
         {/* Prospect rows */}
         {openProspects.length === 0 ? (
           <div style={{ padding: '16px 0', textAlign: 'center', borderTop: '1px solid rgba(0,53,83,0.1)' }}>
-            <p className="italic ocean" style={{ fontSize: 12 }}>No open prospects yet — add one to start forecasting.</p>
+            <p className="italic ocean" style={{ fontSize: 12 }}>No open prospects — add one to start forecasting.</p>
           </div>
         ) : (
           <div style={{ borderTop: '1px solid rgba(0,53,83,0.1)' }}>
             {openProspects.map((p, i) => (
               <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderBottom: i < openProspects.length - 1 ? '1px solid rgba(0,53,83,0.07)' : 'none' }}>
-                {/* Amount bar */}
                 <div style={{ width: 4, alignSelf: 'stretch', background: '#FDB940', flexShrink: 0, borderRadius: 2 }}></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="font-display ink" style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.clientName}</p>
-                  <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 1 }}>
+                  <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.salesRep}{p.expectedDate ? ` · by ${p.expectedDate}` : ''}{p.skuNotes ? ` · ${p.skuNotes}` : ''}
                   </p>
                 </div>
                 <p className="font-display copper" style={{ fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{ZAR(p.amount)}</p>
-                {/* Status toggle */}
-                <select
-                  value={p.status}
-                  onChange={(e) => onUpdate(p.id, { status: e.target.value })}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ padding: '3px 6px', border: `1px solid ${statusColors[p.status]}`, background: 'transparent', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700, color: statusColors[p.status], cursor: 'pointer', outline: 'none' }}>
+                <select value={p.status} onChange={(e) => onUpdate(p.id, { status: e.target.value })}
+                  style={{ padding: '3px 6px', border: `1px solid ${statusColors[p.status]}`, background: 'transparent', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700, color: statusColors[p.status], cursor: 'pointer', outline: 'none', flexShrink: 0 }}>
                   <option value="Open">OPEN</option>
                   <option value="Won">WON</option>
                   <option value="Lost">LOST</option>
                 </select>
-                {/* Edit */}
-                <button onClick={() => openForm(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,53,83,0.3)' }}
+                <button onClick={() => openForm(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,53,83,0.3)', flexShrink: 0 }}
                   onMouseEnter={e => e.currentTarget.style.color = '#D78433'}
                   onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.3)'}>
                   <Edit2 style={{ width: 13, height: 13 }} />
                 </button>
-                {/* Delete */}
-                <button onClick={() => onDelete(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,53,83,0.3)' }}
+                <button onClick={() => onDelete(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,53,83,0.3)', flexShrink: 0 }}
                   onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
                   onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.3)'}>
                   <Trash2 style={{ width: 13, height: 13 }} />
@@ -1320,9 +1381,9 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
           </div>
         )}
 
-        {/* Won / Lost summary if any closed */}
+        {/* Won / Lost summary */}
         {filtered.filter(p => p.status !== 'Open').length > 0 && (
-          <div className="flex gap-4 mt-3 pt-3" style={{ borderTop: '1px solid rgba(0,53,83,0.1)' }}>
+          <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(0,53,83,0.1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
               <div style={{ width: 8, height: 8, background: '#2d8659', borderRadius: 2 }}></div>
               <span className="ink">Won: <strong>{ZAR(filtered.filter(p => p.status === 'Won').reduce((s, p) => s + p.amount, 0))}</strong></span>
@@ -1335,15 +1396,15 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
         )}
       </div>
 
-      {/* Add / Edit Modal */}
+      {/* ── Add / Edit Modal ── */}
       {modalOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,53,83,0.82)', backdropFilter: 'blur(4px)' }}
+        <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12, background: 'rgba(0,53,83,0.82)', backdropFilter: 'blur(4px)', overflowY: 'auto' }}
           onClick={() => setModalOpen(false)}>
-          <div style={{ background: '#FFFEF2', width: '100%', maxWidth: 420, border: '2px solid #D78433' }}
+          <div style={{ background: '#FFFEF2', width: '100%', maxWidth: 500, maxHeight: '92vh', overflowY: 'auto', border: '2px solid #D78433', margin: '8px 0' }}
             onClick={(e) => e.stopPropagation()}>
 
             {/* Header */}
-            <div style={{ padding: '14px 20px', background: '#003553', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '14px 20px', background: '#003553', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
               <div>
                 <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.4em', color: '#FDB940', fontWeight: 600 }}>PIPELINE FORECAST</p>
                 <h2 className="font-display" style={{ color: '#FFFEF2', fontWeight: 700, fontSize: 18, letterSpacing: '0.06em', marginTop: 2 }}>
@@ -1353,15 +1414,15 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
               <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: 22, fontWeight: 200, lineHeight: 1 }}>✕</button>
             </div>
 
-            {/* Form */}
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Sales Rep */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* ── Sales Rep ── */}
               <div>
-                <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>SALES REP</label>
+                <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 8 }}>SALES REP</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
                   {SALES_REPS.map(r => (
                     <button key={r} type="button"
-                      onClick={() => setForm(f => ({ ...f, salesRep: r }))}
+                      onClick={() => { setForm(f => ({ ...f, salesRep: r, clientId: '' })); setClientSearch(''); }}
                       style={{ padding: '9px 4px', fontFamily: "'Cinzel', serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', border: '1px solid', borderColor: form.salesRep === r ? '#003553' : 'rgba(0,53,83,0.2)', background: form.salesRep === r ? '#003553' : '#FFFEF2', color: form.salesRep === r ? '#FFFEF2' : '#003553', cursor: 'pointer' }}>
                       {r.toUpperCase()}
                     </button>
@@ -1369,64 +1430,121 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
                 </div>
               </div>
 
-              {/* Client / Venue Name */}
+              {/* ── Client dropdown ── */}
               <div>
-                <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>CLIENT / VENUE NAME *</label>
+                <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 8 }}>CLIENT / VENUE *</label>
+                {/* Search filter */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', padding: '0 10px', marginBottom: 6 }}>
+                  <Search style={{ width: 14, height: 14, color: '#006C90', flexShrink: 0 }} />
+                  <input
+                    type="text"
+                    placeholder="Filter venues..."
+                    value={clientSearch}
+                    onChange={e => setClientSearch(e.target.value)}
+                    style={{ flex: 1, border: 'none', background: 'transparent', padding: '9px 0', fontFamily: "'Libre Baskerville', serif", fontSize: 13, color: '#003553', outline: 'none' }}
+                  />
+                </div>
+                <select
+                  value={form.clientId}
+                  onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Libre Baskerville', serif", fontSize: 14, color: form.clientId ? '#003553' : 'rgba(0,53,83,0.4)', outline: 'none', boxSizing: 'border-box' }}>
+                  <option value="">— Select a venue —</option>
+                  {repClients.map(c => (
+                    <option key={c.id} value={c.id}>{c.venue}{c.location ? ` · ${c.location}` : ''}</option>
+                  ))}
+                </select>
+                {selectedClient && (
+                  <div style={{ marginTop: 6, padding: '8px 10px', background: 'rgba(0,53,83,0.04)', borderLeft: '2px solid #D78433', fontSize: 11, color: '#006C90', fontStyle: 'italic' }}>
+                    {selectedClient.channel || 'No channel'} · {selectedClient.status} · {selectedClient.location || 'No location'}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Expected Date ── */}
+              <div>
+                <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 8 }}>EXPECTED CLOSE DATE</label>
                 <input
-                  type="text"
-                  value={form.clientName}
-                  onChange={(e) => setForm(f => ({ ...f, clientName: e.target.value }))}
-                  placeholder="e.g. The Roundhouse"
-                  autoFocus
+                  type="date"
+                  value={form.expectedDate}
+                  onChange={e => setForm(f => ({ ...f, expectedDate: e.target.value }))}
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Libre Baskerville', serif", fontSize: 14, color: '#003553', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
-              {/* Projected Amount */}
+              {/* ── SKU Line Items ── */}
               <div>
-                <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>PROJECTED AMOUNT (R)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={form.amount}
-                  onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))}
-                  placeholder="e.g. 15000"
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 16, fontWeight: 700, color: '#003553', outline: 'none', boxSizing: 'border-box' }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600 }}>PROJECTED ORDER — SKUs</label>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const sku = effectiveSkus.find(s => s.id === e.target.value);
+                      if (sku) addSku(sku);
+                      e.target.value = '';
+                    }}
+                    style={{ padding: '6px 10px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.1em', color: '#003553', cursor: 'pointer', fontWeight: 700 }}>
+                    <option value="">+ ADD SKU</option>
+                    {effectiveSkus.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} — {ZAR(s.price)}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {form.items.length === 0 ? (
+                  <div style={{ border: '2px dashed rgba(0,53,83,0.15)', padding: '20px 12px', textAlign: 'center' }}>
+                    <p style={{ fontSize: 11, color: '#006C90', fontStyle: 'italic' }}>No SKUs added yet — use the dropdown above to build the projected order.</p>
+                  </div>
+                ) : (
+                  <div style={{ border: '1px solid rgba(0,53,83,0.15)' }}>
+                    {/* Column headers */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 80px 28px', gap: 6, padding: '7px 10px', background: '#003553' }}>
+                      {['SKU', 'QTY', 'UNIT R', ''].map((h, i) => (
+                        <p key={i} className="font-display" style={{ fontSize: 8, letterSpacing: '0.2em', color: '#FDB940', fontWeight: 600, textAlign: i > 0 ? 'right' : 'left' }}>{h}</p>
+                      ))}
+                    </div>
+                    {/* Item rows */}
+                    {form.items.map((it, idx) => {
+                      const lineTotal = (Number(it.unitPrice) || 0) * (Number(it.qty) || 0);
+                      return (
+                        <div key={it.skuId} style={{ display: 'grid', gridTemplateColumns: '1fr 56px 80px 28px', gap: 6, padding: '8px 10px', borderBottom: idx < form.items.length - 1 ? '1px solid rgba(0,53,83,0.08)' : 'none', alignItems: 'center', background: idx % 2 === 0 ? '#FFFEF2' : 'rgba(0,53,83,0.02)' }}>
+                          <div>
+                            <p className="font-display ink" style={{ fontWeight: 700, fontSize: 11 }}>{it.name}</p>
+                            <p style={{ fontSize: 9, color: '#D78433', fontStyle: 'italic' }}>{ZAR(lineTotal)}</p>
+                          </div>
+                          <input type="number" min="0" step="1" value={it.qty}
+                            onChange={e => updateItem(it.skuId, 'qty', e.target.value)}
+                            style={{ padding: '5px 4px', border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 12, fontWeight: 700, color: '#003553', textAlign: 'center', outline: 'none', width: '100%' }} />
+                          <input type="number" min="0" step="0.01" value={it.unitPrice}
+                            onChange={e => updateItem(it.skuId, 'unitPrice', e.target.value)}
+                            style={{ padding: '5px 6px', border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 11, fontWeight: 700, color: '#003553', textAlign: 'right', outline: 'none', width: '100%' }} />
+                          <button onClick={() => removeItem(it.skuId)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,53,83,0.3)', textAlign: 'right' }}
+                            onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.3)'}>
+                            <Trash2 style={{ width: 12, height: 12 }} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {/* Total row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 80px 28px', gap: 6, padding: '10px 10px', background: '#003553' }}>
+                      <p className="font-display" style={{ fontSize: 9, letterSpacing: '0.2em', color: '#FDB940', fontWeight: 600, gridColumn: '1 / 3' }}>PROJECTED TOTAL EX VAT</p>
+                      <p className="font-display" style={{ fontSize: 14, fontWeight: 700, color: '#FDB940', textAlign: 'right' }}>{ZAR(orderTotal)}</p>
+                      <div></div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* SKU Notes + Expected Date — side by side */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>SKU / NOTES</label>
-                  <input
-                    type="text"
-                    value={form.skuNotes}
-                    onChange={(e) => setForm(f => ({ ...f, skuNotes: e.target.value }))}
-                    placeholder="e.g. VSOP × 6"
-                    style={{ width: '100%', padding: '10px 10px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Libre Baskerville', serif", fontSize: 13, color: '#003553', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>EXPECTED BY</label>
-                  <input
-                    type="date"
-                    value={form.expectedDate}
-                    onChange={(e) => setForm(f => ({ ...f, expectedDate: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 10px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Libre Baskerville', serif", fontSize: 13, color: '#003553', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
+              {/* ── Actions ── */}
               <div style={{ display: 'flex', gap: 10, paddingTop: 6, borderTop: '1px solid rgba(0,53,83,0.12)' }}>
-                <button onClick={() => setModalOpen(false)} style={{ flex: 1, padding: '11px', border: '1px solid rgba(0,53,83,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', color: '#003553', cursor: 'pointer', fontWeight: 600 }}>CANCEL</button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving || !form.clientName.trim()}
-                  style={{ flex: 2, padding: '11px', background: form.clientName.trim() ? '#D78433' : 'rgba(215,132,51,0.4)', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', color: '#FFFEF2', cursor: form.clientName.trim() ? 'pointer' : 'not-allowed', fontWeight: 700 }}>
-                  {saving ? 'SAVING...' : editingId ? 'UPDATE PROSPECT' : 'ADD TO PIPELINE'}
+                <button onClick={() => setModalOpen(false)}
+                  style={{ flex: 1, padding: '11px', border: '1px solid rgba(0,53,83,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', color: '#003553', cursor: 'pointer', fontWeight: 600 }}>
+                  CANCEL
+                </button>
+                <button onClick={handleSave} disabled={saving || !canSave}
+                  style={{ flex: 2, padding: '11px', background: canSave ? '#D78433' : 'rgba(215,132,51,0.35)', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', color: '#FFFEF2', cursor: canSave ? 'pointer' : 'not-allowed', fontWeight: 700 }}>
+                  {saving ? 'SAVING...' : !form.clientId ? 'SELECT A CLIENT FIRST' : form.items.length === 0 ? 'ADD AT LEAST ONE SKU' : editingId ? 'UPDATE PROSPECT' : 'ADD TO PIPELINE'}
                 </button>
               </div>
             </div>
@@ -1438,7 +1556,7 @@ function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDele
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, prospects, onAddProspect, onUpdateProspect, onDeleteProspect, onNavigate }) {
+function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, prospects, onAddProspect, onUpdateProspect, onDeleteProspect, skuOverrides, onNavigate }) {
   const repFilter = (rec, key = 'accountManager') => activeRep === 'All' || rec[key] === activeRep;
   const filteredClients = clients.filter(c => repFilter(c));
   const filteredVisits = visits.filter(v => repFilter(v, 'salesRep'));
@@ -1515,6 +1633,8 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         prospects={prospects || []}
         activeRep={activeRep}
         targets={targets}
+        clients={clients}
+        skuOverrides={skuOverrides}
         onAdd={onAddProspect}
         onUpdate={onUpdateProspect}
         onDelete={onDeleteProspect}
