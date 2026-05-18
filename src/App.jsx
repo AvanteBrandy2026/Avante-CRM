@@ -1254,18 +1254,21 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
     setForm(f => ({ ...f, items: f.items.filter(it => it.skuId !== skuId) }));
 
   // Filter by rep
-  const filtered = useMemo(() =>
-    activeRep === 'All' ? prospects : prospects.filter(p => p.salesRep === activeRep),
-    [prospects, activeRep]
-  );
-  const openProspects = filtered.filter(p => p.status === 'Open');
-  const totalPipeline = openProspects.reduce((s, p) => s + (p.amount || 0), 0);
+  const filtered = useMemo(() => {
+    const list = Array.isArray(prospects) ? prospects : [];
+    return activeRep === 'All' ? list : list.filter(p => p.salesRep === activeRep);
+  }, [prospects, activeRep]);
+
+  const openProspects = useMemo(() => filtered.filter(p => p.status === 'Open'), [filtered]);
+  const totalPipeline = useMemo(() => openProspects.reduce((s, p) => s + (Number(p.amount) || 0), 0), [openProspects]);
 
   const monthTarget = useMemo(() => {
+    if (!targets) return 0;
     if (activeRep === 'All') return SALES_REPS.reduce((s, r) => s + (targets[r]?.revenue || 0), 0);
     return targets[activeRep]?.revenue || 0;
   }, [activeRep, targets]);
-  const pct = monthTarget > 0 ? Math.min(100, Math.round((totalPipeline / monthTarget) * 100)) : 0;
+
+  const pipelinePct = monthTarget > 0 ? Math.min(100, Math.round((totalPipeline / monthTarget) * 100)) : 0;
 
   const openForm = (prospect = null) => {
     if (prospect) {
@@ -1357,10 +1360,10 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
             <div style={{ flex: 1, maxWidth: 220 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginBottom: 4 }}>
                 <span className="italic ocean">vs monthly target {ZAR(monthTarget)}</span>
-                <span className="font-display copper" style={{ fontWeight: 700 }}>{pct}%</span>
+                <span className="font-display copper" style={{ fontWeight: 700 }}>{pipelinePct}%</span>
               </div>
               <div style={{ height: 6, background: 'rgba(0,53,83,0.1)', borderRadius: 3 }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#2d8659' : '#FDB940', borderRadius: 3, transition: 'width 0.6s' }}></div>
+                <div style={{ height: '100%', width: `${pipelinePct}%`, background: pipelinePct >= 100 ? '#2d8659' : '#FDB940', borderRadius: 3, transition: 'width 0.6s' }}></div>
               </div>
             </div>
           )}
