@@ -1415,10 +1415,10 @@ function ProspectWidget({ prospects, activeRep, targets, clients, skuOverrides, 
       {modalOpen && (
         <div
           onClick={() => setModalOpen(false)}
-          style={{ position:'fixed', inset:0, zIndex:70, display:'flex', alignItems:'center', justifyContent:'center', padding:16, background:'rgba(0,53,83,0.85)', backdropFilter:'blur(4px)', overflowY:'auto' }}>
+          style={{ position:'fixed', inset:0, zIndex:70, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'24px 16px', background:'rgba(0,53,83,0.82)', backdropFilter:'blur(3px)', overflowY:'auto', overflowX:'hidden' }}>
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background:'#FFFEF2', width:'100%', maxWidth:480, border:'2px solid #D78433', display:'flex', flexDirection:'column', maxHeight:'92vh', overflowY:'auto' }}>
+            style={{ background:'#FFFEF2', width:'100%', maxWidth:460, border:'2px solid #D78433', flexShrink:0, marginTop:'auto', marginBottom:'auto', position:'relative' }}>
 
             {/* ── Header ── */}
             <div style={{ background:'#003553', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
