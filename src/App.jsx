@@ -1196,18 +1196,25 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
 }
 
 // =================== Prospect / Pipeline Forecast Widget ===================
-function ProspectWidget({ prospects, activeRep, targets, clients, skuOverrides, onAdd, onUpdate, onDelete }) {
+function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clients = [], skuOverrides = {}, onAdd, onUpdate, onDelete }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const emptyForm = () => ({
-    salesRep: activeRep === 'All' ? 'Alex' : activeRep,
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
+  const [form, setForm] = useState({
+    salesRep: 'Alex',
     clientId: '',
     expectedDate: '',
-    items: [],  // [{ skuId, name, qty, unitPrice, listPrice }]
+    items: [],
   });
-  const [form, setForm] = useState(emptyForm());
-  const [clientSearch, setClientSearch] = useState('');
-  const [saving, setSaving] = useState(false);
+
+  // Keep salesRep in sync when rep toggle changes (only when modal is closed)
+  useEffect(() => {
+    if (!modalOpen) {
+      setForm(f => ({ ...f, salesRep: activeRep === 'All' ? 'Alex' : activeRep }));
+    }
+  }, [activeRep, modalOpen]);
 
   const effectiveSkus = useMemo(
     () => SKU_CATALOGUE.map(s => ({ ...s, price: skuOverrides?.[s.id] ?? s.price })),
@@ -1262,26 +1269,26 @@ function ProspectWidget({ prospects, activeRep, targets, clients, skuOverrides, 
 
   const openForm = (prospect = null) => {
     if (prospect) {
-      // Rebuild items array from skuNotes string for legacy entries, or use stored items
-      const items = prospect.items && prospect.items.length > 0
-        ? prospect.items
-        : [];
       setForm({
-        salesRep: prospect.salesRep,
+        salesRep: prospect.salesRep || 'Alex',
         clientId: prospect.clientId ? String(prospect.clientId) : '',
         expectedDate: prospect.expectedDate || '',
-        items,
+        items: Array.isArray(prospect.items) && prospect.items.length > 0 ? prospect.items : [],
       });
       setEditingId(prospect.id);
     } else {
-      setForm(emptyForm());
+      setForm({
+        salesRep: activeRep === 'All' ? 'Alex' : activeRep,
+        clientId: '',
+        expectedDate: '',
+        items: [],
+      });
       setEditingId(null);
     }
+    setSaveError('');
     setClientSearch('');
     setModalOpen(true);
   };
-
-  const [saveError, setSaveError] = useState('');
 
   const handleSave = async () => {
     if (!form.clientId || form.items.length === 0 || orderTotal === 0) return;
