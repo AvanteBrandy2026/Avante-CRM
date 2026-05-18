@@ -21,7 +21,16 @@ const DEFAULT_ORDER_RECIPIENTS = [
   'lauren@redbev.co.za',
   'melanie@redbev.co.za',
 ];
-const CHANNELS = ['Private Sales', 'Trade Retail'];
+const CHANNELS = ['Private Sales', 'Trade Retail', 'On-Con'];
+const PAYMENT_TERMS = ['COD', '30 Days', '60 Days'];
+const CONTACT_METHODS = ['In Person', 'WhatsApp', 'Phone Call / Online Meet', 'Email'];
+const LOCATIONS = [
+  'CBD', 'Sea Point', 'Camps Bay', 'Blouberg', 'Milnerton', 'Tableview', 'Parklands',
+  'Waterfront', 'Green Point', 'De Waterkant', 'Woodstock', 'Observatory', 'Mowbray',
+  'Claremont', 'Constantia', 'Tokai', 'Hout Bay', 'Stellenbosch', 'Franschhoek',
+  'Paarl', 'Somerset West', 'Strand', 'Hermanus', 'Overberg', 'Cape Winelands',
+  'West-Coast', 'Durban', "Jo'Burg", 'Pretoria', 'Other',
+];
 const STATUSES = ['New', 'Contacted', 'Converted', 'Lost'];
 const LEAD_SOURCES = ['Cold Call', 'Referral', 'Walk into Store', 'Email', 'Event', 'Networking', 'Call-cycle', 'Website', 'Online'];
 const PRIORITIES = ['Low', 'Medium', 'High'];
@@ -117,6 +126,7 @@ function clientToDb(c) {
     status: c.status || 'New',
     notes: c.notes || '',
     total_sales: c.totalSales || 0,
+    payment_terms: c.paymentTerms || '',
   };
   if (c.id !== undefined) obj.id = c.id;
   return obj;
@@ -140,6 +150,7 @@ function clientFromDb(r) {
     status: r.status || 'New',
     notes: r.notes || '',
     totalSales: Number(r.total_sales) || 0,
+    paymentTerms: r.payment_terms || '',
   };
 }
 
@@ -152,7 +163,7 @@ function visitToDb(v) {
     sale_amount: v.saleAmount || 0,
     items: v.items || [],
     notes: v.notes || '',
-    follow_up_notes: v.followUpNotes || '',
+    follow_up_notes: v.followUpNotes || v.followUp || '',
     order_placed: v.orderPlaced || '',
   };
 }
@@ -419,6 +430,7 @@ export default function AvanteCRM() {
     if (patch.channel !== undefined) dbPatch.channel = patch.channel;
     if (patch.totalSales !== undefined) dbPatch.total_sales = patch.totalSales;
     if (patch.lastContacted !== undefined) dbPatch.last_contacted = patch.lastContacted;
+    if (patch.paymentTerms !== undefined) dbPatch.payment_terms = patch.paymentTerms;
     if (Object.keys(dbPatch).length > 0) {
       await supabase.from('clients').update(dbPatch).eq('id', id);
     }
@@ -796,6 +808,7 @@ export default function AvanteCRM() {
             clients={clients}
             onLog={() => setShowLogModal(true)}
             onEdit={(visit) => setEditingVisit(visit)}
+            onEmail={(visit) => setEditingVisit({ ...visit, _emailOnly: true })}
             onDelete={(visitId) => {
               const v = visits.find(x => x.id === visitId);
               const c = v ? clients.find(cl => cl.id === v.clientId) : null;
@@ -2190,6 +2203,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
   const [search, setSearch] = useState('');
   const [filterRep, setFilterRep] = useState('All');
   const [filterChannel, setFilterChannel] = useState('All');
+  const [filterLocation, setFilterLocation] = useState('All');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   // Alphabetically sorted + filtered list
@@ -2198,6 +2212,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
       .filter(c => {
         if (filterRep !== 'All' && c.accountManager !== filterRep) return false;
         if (filterChannel !== 'All' && c.channel !== filterChannel) return false;
+        if (filterLocation !== 'All' && c.location !== filterLocation) return false;
         if (search.trim()) {
           const q = search.trim().toLowerCase();
           const hay = [c.venue, c.firstName, c.lastName, c.location, c.email, c.phone, c.notes]
@@ -2207,7 +2222,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
         return true;
       })
       .sort((a, b) => (a.venue || '').localeCompare(b.venue || ''));
-  }, [clients, filterRep, filterChannel, search]);
+  }, [clients, filterRep, filterChannel, filterLocation, search]);
 
   return (
     <div className="space-y-4 fade-up">
@@ -2242,10 +2257,11 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
             <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006C90', fontSize: 18, lineHeight: 1 }}>×</button>
           )}
         </div>
-        {/* Rep + Channel filters */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {/* Rep + Channel + Location filters */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           <FilterSelect label="Rep" value={filterRep} onChange={setFilterRep} options={['All', ...SALES_REPS, 'Unassigned']} />
           <FilterSelect label="Channel" value={filterChannel} onChange={setFilterChannel} options={['All', ...CHANNELS]} />
+          <FilterSelect label="Location" value={filterLocation} onChange={setFilterLocation} options={['All', ...LOCATIONS]} />
         </div>
         <p style={{ fontSize: 11, fontStyle: 'italic', color: '#006C90', margin: 0 }}>
           {filtered.length} of {clients.length} clients{search ? ` matching "${search}"` : ''}
@@ -2592,7 +2608,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
   );
 }
 
-function VisitsPage({ visits, clients, onLog, onEdit, onDelete }) {
+function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
   const [filterRep, setFilterRep] = useState('All');
   const filtered = visits.filter(v => filterRep === 'All' || v.salesRep === filterRep).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
@@ -2653,6 +2669,9 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete }) {
                   </div>
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <button type="button" onClick={() => onEmail(v)} className="p-2 hover: border border" title="Email order">
+                      <Mail className="w-3.5 h-3.5" style={{ color: '#006C90' }} />
+                    </button>
                     <button type="button" onClick={() => onEdit(v)} className="p-2 hover: border border">
                       <Edit2 className="w-3.5 h-3.5 ocean" />
                     </button>
@@ -2674,13 +2693,18 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete }) {
 function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existingVisit, skuOverrides = {}, preselectedClientId = null }) {
   const effectiveSkus = SKU_CATALOGUE.map(s => ({ ...s, price: skuOverrides[s.id] ?? s.price }));
   const isEdit = !!existingVisit;
+  const isEmailOnly = existingVisit?._emailOnly === true;
   const [salesRep, setSalesRep] = useState(existingVisit?.salesRep || 'Alex');
   const [clientId, setClientId] = useState(existingVisit?.clientId ? String(existingVisit.clientId) : preselectedClientId ? String(preselectedClientId) : '');
   const [date, setDate] = useState(existingVisit?.date || todayISO());
   const [outcome, setOutcome] = useState(existingVisit?.outcome || 'Met / Discussion');
+  const [contactMethod, setContactMethod] = useState(existingVisit?.contactMethod || 'In Person');
+  const [followUpDate, setFollowUpDate] = useState(existingVisit?.followUpDate || '');
   const [items, setItems] = useState(existingVisit?.items ? existingVisit.items.map(it => ({ ...it })) : []);
   const [notes, setNotes] = useState(existingVisit?.notes || '');
   const [followUp, setFollowUp] = useState(existingVisit?.followUp || '');
+  // Auto-open email modal when opened in emailOnly mode
+  const [emailModalOpen, setEmailModalOpen] = useState(isEmailOnly);
   const [search, setSearch] = useState('');
   const [skuPickerOpen, setSkuPickerOpen] = useState(false);
 
@@ -2752,9 +2776,13 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     if (c?.location) lines.push(`Location:       ${c.location}`);
     if (contactName) lines.push(`Contact:        ${contactName}`);
     lines.push(`Date:           ${date || '(not specified)'}`);
+    lines.push(`Contact Method: ${contactMethod || 'In Person'}`);
     lines.push(`Outcome:        ${outcome}`);
     lines.push(`Sales Rep:      ${salesRep} — Avante Cape Brandy`);
     if (c?.email) lines.push(`Email Invoice:  ${c.email}`);
+    const terms = c?.paymentTerms || 'COD';
+    lines.push(`Payment Terms:  ${terms === 'COD' ? 'Cash on Delivery (COD)' : terms === '30 Days' ? '30 Days from Invoice' : terms === '60 Days' ? '60 Days from Invoice' : terms}`);
+    if (followUpDate) lines.push(`Follow-up Due:  ${followUpDate}`);
     lines.push('');
 
     if (items.length > 0) {
@@ -2807,9 +2835,6 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
 
     return { subject, body: lines.join('\n'), defaultRecipient: c?.email || '', orderTotal };
   };
-
-  // State for the email-recipient modal
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const handleEmailOrder = () => {
     setValidationError('');
@@ -2867,7 +2892,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
       salesRep,
       clientId: Number(clientId),
       channel: selectedClient?.channel || '',
-      date, outcome,
+      date, outcome, contactMethod, followUpDate,
       items: items.map(it => ({
         skuId: it.skuId,
         name: it.name,
@@ -2894,8 +2919,8 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
   };
 
   return (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.78)", backdropFilter:"blur(4px)", overflowY:"auto" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background:"#FFFEF2", width:"100%", maxWidth:560, maxHeight:"94vh", overflowY:"auto", border:"2px solid #D78433", position:"relative" }}>
+    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:'8px', background:"rgba(0,53,83,0.78)", backdropFilter:"blur(4px)", overflowY:"auto", overflowX:"hidden" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background:"#FFFEF2", width:"100%", maxWidth:560, maxHeight:"94vh", overflowY:"auto", overflowX:"hidden", border:"2px solid #D78433", position:"relative", margin:"8px 0", flexShrink:0 }}>
         <div className="absolute top-0 left-0 right-0 h-1 bg-copper z-10"></div>
         {/* Header */}
         <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#003553' }}>
@@ -2968,6 +2993,20 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                 <option>Rejected</option>
                 <option>No Show</option>
               </select>
+            </div>
+          </div>
+
+          {/* Contact Method + Follow-up Date */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>CONTACT METHOD</label>
+              <select value={contactMethod} onChange={(e) => setContactMethod(e.target.value)} className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
+                {CONTACT_METHODS.map(m => <option key={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>FOLLOW-UP DATE</label>
+              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper" style={{ color: followUpDate ? '#003553' : 'rgba(0,53,83,0.4)' }} />
             </div>
           </div>
 
@@ -3483,6 +3522,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
     accountManager: defaultRep,
     status: 'New',
     notes: '',
+    paymentTerms: 'COD',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -3592,6 +3632,19 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
               <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>PRIORITY</label>
               <select value={form.priority} onChange={(e) => setF('priority', e.target.value)} className="w-full px-3 py-2.5 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
                 {PRIORITIES.map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>LOCATION</label>
+              <select value={form.location} onChange={(e) => setF('location', e.target.value)} className="w-full px-3 py-2.5 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
+                <option value="">— Select area —</option>
+                {LOCATIONS.map(l => <option key={l}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>PAYMENT TERMS</label>
+              <select value={form.paymentTerms} onChange={(e) => setF('paymentTerms', e.target.value)} className="w-full px-3 py-2.5 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
+                {PAYMENT_TERMS.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
           </div>
@@ -3824,22 +3877,27 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               <p className="font-display text-base ink mt-1" style={{ fontWeight: 700 }}>
                 {client.lastContacted ? client.lastContacted + (daysSinceLast !== null ? ` (${daysSinceLast} days ago)` : '') : '—'}
               </p>
-
             </div>
             <div>
-              <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>STATUS</p>
-              <select
-                value={form.status || client.status}
-                onChange={async (e) => {
-                  const newStatus = e.target.value;
-                  setForm(f => ({ ...f, status: newStatus }));
-                  await onUpdate(client.id, { status: newStatus });
-                }}
-                style={{ marginTop: 8, padding: '6px 10px', border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, color: '#003553', cursor: 'pointer', outline: 'none' }}
-              >
-                {STATUSES.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
-              </select>
+              <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>PAYMENT TERMS</p>
+              <p className="font-display text-base ink mt-1" style={{ fontWeight: 700 }}>{client.paymentTerms || 'COD'}</p>
             </div>
+          </div>
+
+          {/* Status quick-change — separate row */}
+          <div className="pb-3 border-b border">
+            <p className="font-display text-[10px] tracking-[0.3em] copper mb-2" style={{ fontWeight: 600 }}>STATUS</p>
+            <select
+              value={form.status || client.status}
+              onChange={async (e) => {
+                const newStatus = e.target.value;
+                setForm(f => ({ ...f, status: newStatus }));
+                await onUpdate(client.id, { status: newStatus });
+              }}
+              style={{ padding: '6px 10px', border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, color: '#003553', cursor: 'pointer', outline: 'none' }}
+            >
+              {STATUSES.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+            </select>
           </div>
 
           {/* Contact / classification fields */}
@@ -3856,6 +3914,8 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               <SelectField label="Priority" value={form.priority} edit={edit} onChange={(v) => setForm({ ...form, priority: v })} options={PRIORITIES} />
               <SelectField label="Status" value={form.status} edit={edit} onChange={(v) => setForm({ ...form, status: v })} options={STATUSES} />
               <SelectField label="Channel" value={form.channel} edit={edit} onChange={(v) => setForm({ ...form, channel: v })} options={CHANNELS} />
+              <SelectField label="Location" value={form.location} edit={edit} onChange={(v) => setForm({ ...form, location: v })} options={['', ...LOCATIONS]} />
+              <SelectField label="Payment Terms" value={form.paymentTerms} edit={edit} onChange={(v) => setForm({ ...form, paymentTerms: v })} options={PAYMENT_TERMS} />
             </div>
           </div>
 
@@ -3932,6 +3992,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                           <div className="flex items-baseline gap-3 flex-wrap">
                             <span className="font-display ink text-sm tracking-wide" style={{ fontWeight: 700 }}>{v.date || 'No date'}</span>
                             <span className="text-[10px] font-display tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>BY {v.salesRep?.toUpperCase() || '—'}</span>
+                            {v.contactMethod && <span className="text-[9px] italic ocean">via {v.contactMethod}</span>}
                             {isLatest && <span className="text-[9px] font-display tracking-[0.2em] px-1.5 py-0.5" style={{ background: '#FDB940', color: '#003553', fontWeight: 700 }}>LATEST</span>}
                             {isHistorical && <span className="text-[9px] font-display tracking-[0.2em] px-1.5 py-0.5 border" style={{ borderColor: '#006C90', color: '#006C90', fontWeight: 700 }}>IMPORTED</span>}
                           </div>
@@ -3987,7 +4048,14 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                               <p className="text-xs ink italic">{v.notes}</p>
                             </div>
                           )}
-                          {/* Follow-up */}
+                          {/* Follow-up date */}
+                          {v.followUpDate && (
+                            <div>
+                              <p className="font-display text-[9px] tracking-[0.2em] copper mb-0.5" style={{ fontWeight: 600 }}>FOLLOW-UP DUE</p>
+                              <p className="text-xs ink" style={{ fontWeight: 700 }}>{v.followUpDate}</p>
+                            </div>
+                          )}
+                          {/* Follow-up notes */}
                           {v.followUp && (
                             <div>
                               <p className="font-display text-[9px] tracking-[0.2em] copper mb-0.5" style={{ fontWeight: 600 }}>FOLLOW-UP</p>
