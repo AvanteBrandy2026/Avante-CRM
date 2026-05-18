@@ -183,6 +183,30 @@ function visitFromDb(r) {
   };
 }
 
+function prospectToDb(p) {
+  return {
+    sales_rep: p.salesRep || '',
+    client_name: p.clientName || '',
+    sku_notes: p.skuNotes || '',
+    amount: Number(p.amount) || 0,
+    expected_date: p.expectedDate || null,
+    status: p.status || 'Open',
+  };
+}
+
+function prospectFromDb(r) {
+  return {
+    id: r.id,
+    salesRep: r.sales_rep || '',
+    clientName: r.client_name || '',
+    skuNotes: r.sku_notes || '',
+    amount: Number(r.amount) || 0,
+    expectedDate: r.expected_date || '',
+    status: r.status || 'Open',
+    createdAt: r.created_at || '',
+  };
+}
+
 function targetToDb(rep, t) {
   return {
     rep,
@@ -229,7 +253,8 @@ export default function AvanteCRM() {
   const [clients, setClients] = useState([]);
   const [visits, setVisits] = useState([]);
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
-  const [skuPrices, setSkuPrices] = useState({});  // overrides for SKU prices set in Manager Portal
+  const [skuPrices, setSkuPrices] = useState({});
+  const [prospects, setProspects] = useState([]);  // overrides for SKU prices set in Manager Portal
   const [managerAuthed, setManagerAuthed] = useState(false); // persists across tab changes
   const [placeOrderClient, setPlaceOrderClient] = useState(null); // client to place order for
   const [activeRep, setActiveRep] = useState('All');
@@ -300,6 +325,13 @@ export default function AvanteCRM() {
         setClients(loadedClients);
         setVisits((visitRows || []).map(visitFromDb));
         setTargets(loadedTargets);
+
+        // Load prospects
+        const { data: prospectRows, error: prospectErr } = await supabase
+          .from('prospects').select('*').order('created_at');
+        if (!prospectErr && prospectRows) {
+          setProspects(prospectRows.map(prospectFromDb));
+        }
       } catch (err) {
         console.error('[avante] init error', err);
         // Still load app with seed data so it's usable even if DB is down
@@ -461,8 +493,33 @@ export default function AvanteCRM() {
     return newClient;
   };
 
-  const deleteClient = async (id) => {
-    const { error } = await supabase.from('clients').delete().eq('id', id);
+  // ------- Prospect operations -------
+  const addProspect = async (p) => {
+    const { data: inserted, error } = await supabase
+      .from('prospects').insert(prospectToDb(p)).select().single();
+    if (error) { console.error('[addProspect]', error); throw new Error(error.message); }
+    setProspects(prev => [...prev, prospectFromDb(inserted)]);
+    return prospectFromDb(inserted);
+  };
+
+  const updateProspect = async (id, patch) => {
+    const dbPatch = {};
+    if (patch.clientName !== undefined) dbPatch.client_name = patch.clientName;
+    if (patch.skuNotes !== undefined) dbPatch.sku_notes = patch.skuNotes;
+    if (patch.amount !== undefined) dbPatch.amount = Number(patch.amount) || 0;
+    if (patch.expectedDate !== undefined) dbPatch.expected_date = patch.expectedDate || null;
+    if (patch.status !== undefined) dbPatch.status = patch.status;
+    if (patch.salesRep !== undefined) dbPatch.sales_rep = patch.salesRep;
+    await supabase.from('prospects').update(dbPatch).eq('id', id);
+    setProspects(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
+  };
+
+  const deleteProspect = async (id) => {
+    await supabase.from('prospects').delete().eq('id', id);
+    setProspects(prev => prev.filter(p => p.id !== id));
+  };
+
+  const deleteClient = async (id) => {    const { error } = await supabase.from('clients').delete().eq('id', id);
     if (error) { console.error('[deleteClient] error:', error); throw new Error(error.message); }
     setClients(prev => prev.filter(c => c.id !== id));
     // Also remove associated visits from local state (they stay in DB for history)
@@ -762,6 +819,10 @@ export default function AvanteCRM() {
             targets={targets}
             activeRep={activeRep}
             setActiveRep={setActiveRep}
+            prospects={prospects}
+            onAddProspect={addProspect}
+            onUpdateProspect={updateProspect}
+            onDeleteProspect={deleteProspect}
             onNavigate={(v, clientId) => {
               setView(v);
               if (clientId) {
@@ -1125,8 +1186,259 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
   );
 }
 
+// =================== Prospect / Pipeline Forecast Widget ===================
+function ProspectWidget({ prospects, activeRep, targets, onAdd, onUpdate, onDelete }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ salesRep: 'Alex', clientName: '', skuNotes: '', amount: '', expectedDate: '' });
+  const [saving, setSaving] = useState(false);
+
+  // Filter by rep if one is selected
+  const filtered = useMemo(() =>
+    activeRep === 'All' ? prospects : prospects.filter(p => p.salesRep === activeRep),
+    [prospects, activeRep]
+  );
+  const openProspects = filtered.filter(p => p.status === 'Open');
+  const totalPipeline = openProspects.reduce((s, p) => s + (p.amount || 0), 0);
+
+  // Monthly revenue target for comparison
+  const monthTarget = useMemo(() => {
+    if (activeRep === 'All') return SALES_REPS.reduce((s, r) => s + (targets[r]?.revenue || 0), 0);
+    return targets[activeRep]?.revenue || 0;
+  }, [activeRep, targets]);
+
+  const pct = monthTarget > 0 ? Math.min(100, Math.round((totalPipeline / monthTarget) * 100)) : 0;
+
+  const openForm = (prospect = null) => {
+    if (prospect) {
+      setForm({ salesRep: prospect.salesRep, clientName: prospect.clientName, skuNotes: prospect.skuNotes, amount: prospect.amount, expectedDate: prospect.expectedDate });
+      setEditingId(prospect.id);
+    } else {
+      setForm({ salesRep: activeRep === 'All' ? 'Alex' : activeRep, clientName: '', skuNotes: '', amount: '', expectedDate: '' });
+      setEditingId(null);
+    }
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.clientName.trim()) return;
+    setSaving(true);
+    try {
+      if (editingId) {
+        await onUpdate(editingId, { ...form, amount: Number(form.amount) || 0 });
+      } else {
+        await onAdd({ ...form, amount: Number(form.amount) || 0 });
+      }
+      setModalOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const statusColors = { Open: '#D78433', Won: '#2d8659', Lost: '#9c2c2c' };
+
+  return (
+    <>
+      <div className="premium-card p-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 diamond-clip" style={{ background: '#FDB940' }}></div>
+            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
+              PIPELINE FORECAST {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
+            </h2>
+          </div>
+          <button
+            onClick={() => openForm()}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
+            <Plus style={{ width: 12, height: 12 }} /> ADD PROSPECT
+          </button>
+        </div>
+
+        {/* Total + progress bar */}
+        <div className="flex items-end justify-between gap-4 mb-3">
+          <div>
+            <p className="font-display text-[10px] tracking-[0.25em] copper" style={{ fontWeight: 600 }}>PROJECTED PIPELINE</p>
+            <p className="font-display text-2xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(totalPipeline)}</p>
+            <p className="italic ocean" style={{ fontSize: 10, marginTop: 2 }}>{openProspects.length} open prospect{openProspects.length !== 1 ? 's' : ''}</p>
+          </div>
+          {monthTarget > 0 && (
+            <div style={{ flex: 1, maxWidth: 200 }}>
+              <div className="flex justify-between text-[9px] mb-1">
+                <span className="italic ocean">vs monthly target {ZAR(monthTarget)}</span>
+                <span className="font-display copper" style={{ fontWeight: 700 }}>{pct}%</span>
+              </div>
+              <div style={{ height: 6, background: 'rgba(0,53,83,0.1)', borderRadius: 3 }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#2d8659' : '#FDB940', borderRadius: 3, transition: 'width 0.6s' }}></div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Prospect rows */}
+        {openProspects.length === 0 ? (
+          <div style={{ padding: '16px 0', textAlign: 'center', borderTop: '1px solid rgba(0,53,83,0.1)' }}>
+            <p className="italic ocean" style={{ fontSize: 12 }}>No open prospects yet — add one to start forecasting.</p>
+          </div>
+        ) : (
+          <div style={{ borderTop: '1px solid rgba(0,53,83,0.1)' }}>
+            {openProspects.map((p, i) => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderBottom: i < openProspects.length - 1 ? '1px solid rgba(0,53,83,0.07)' : 'none' }}>
+                {/* Amount bar */}
+                <div style={{ width: 4, alignSelf: 'stretch', background: '#FDB940', flexShrink: 0, borderRadius: 2 }}></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="font-display ink" style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.clientName}</p>
+                  <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 1 }}>
+                    {p.salesRep}{p.expectedDate ? ` · by ${p.expectedDate}` : ''}{p.skuNotes ? ` · ${p.skuNotes}` : ''}
+                  </p>
+                </div>
+                <p className="font-display copper" style={{ fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{ZAR(p.amount)}</p>
+                {/* Status toggle */}
+                <select
+                  value={p.status}
+                  onChange={(e) => onUpdate(p.id, { status: e.target.value })}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ padding: '3px 6px', border: `1px solid ${statusColors[p.status]}`, background: 'transparent', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700, color: statusColors[p.status], cursor: 'pointer', outline: 'none' }}>
+                  <option value="Open">OPEN</option>
+                  <option value="Won">WON</option>
+                  <option value="Lost">LOST</option>
+                </select>
+                {/* Edit */}
+                <button onClick={() => openForm(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,53,83,0.3)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#D78433'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.3)'}>
+                  <Edit2 style={{ width: 13, height: 13 }} />
+                </button>
+                {/* Delete */}
+                <button onClick={() => onDelete(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,53,83,0.3)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.3)'}>
+                  <Trash2 style={{ width: 13, height: 13 }} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Won / Lost summary if any closed */}
+        {filtered.filter(p => p.status !== 'Open').length > 0 && (
+          <div className="flex gap-4 mt-3 pt-3" style={{ borderTop: '1px solid rgba(0,53,83,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
+              <div style={{ width: 8, height: 8, background: '#2d8659', borderRadius: 2 }}></div>
+              <span className="ink">Won: <strong>{ZAR(filtered.filter(p => p.status === 'Won').reduce((s, p) => s + p.amount, 0))}</strong></span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
+              <div style={{ width: 8, height: 8, background: '#9c2c2c', borderRadius: 2 }}></div>
+              <span className="ink">Lost: <strong>{ZAR(filtered.filter(p => p.status === 'Lost').reduce((s, p) => s + p.amount, 0))}</strong></span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Add / Edit Modal */}
+      {modalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,53,83,0.82)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setModalOpen(false)}>
+          <div style={{ background: '#FFFEF2', width: '100%', maxWidth: 420, border: '2px solid #D78433' }}
+            onClick={(e) => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ padding: '14px 20px', background: '#003553', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.4em', color: '#FDB940', fontWeight: 600 }}>PIPELINE FORECAST</p>
+                <h2 className="font-display" style={{ color: '#FFFEF2', fontWeight: 700, fontSize: 18, letterSpacing: '0.06em', marginTop: 2 }}>
+                  {editingId ? 'EDIT PROSPECT' : 'ADD PROSPECT'}
+                </h2>
+              </div>
+              <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: 22, fontWeight: 200, lineHeight: 1 }}>✕</button>
+            </div>
+
+            {/* Form */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Sales Rep */}
+              <div>
+                <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>SALES REP</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
+                  {SALES_REPS.map(r => (
+                    <button key={r} type="button"
+                      onClick={() => setForm(f => ({ ...f, salesRep: r }))}
+                      style={{ padding: '9px 4px', fontFamily: "'Cinzel', serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', border: '1px solid', borderColor: form.salesRep === r ? '#003553' : 'rgba(0,53,83,0.2)', background: form.salesRep === r ? '#003553' : '#FFFEF2', color: form.salesRep === r ? '#FFFEF2' : '#003553', cursor: 'pointer' }}>
+                      {r.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Client / Venue Name */}
+              <div>
+                <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>CLIENT / VENUE NAME *</label>
+                <input
+                  type="text"
+                  value={form.clientName}
+                  onChange={(e) => setForm(f => ({ ...f, clientName: e.target.value }))}
+                  placeholder="e.g. The Roundhouse"
+                  autoFocus
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Libre Baskerville', serif", fontSize: 14, color: '#003553', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {/* Projected Amount */}
+              <div>
+                <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>PROJECTED AMOUNT (R)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={form.amount}
+                  onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))}
+                  placeholder="e.g. 15000"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 16, fontWeight: 700, color: '#003553', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {/* SKU Notes + Expected Date — side by side */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>SKU / NOTES</label>
+                  <input
+                    type="text"
+                    value={form.skuNotes}
+                    onChange={(e) => setForm(f => ({ ...f, skuNotes: e.target.value }))}
+                    placeholder="e.g. VSOP × 6"
+                    style={{ width: '100%', padding: '10px 10px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Libre Baskerville', serif", fontSize: 13, color: '#003553', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label className="font-display" style={{ fontSize: 9, letterSpacing: '0.3em', color: '#D78433', fontWeight: 600, display: 'block', marginBottom: 6 }}>EXPECTED BY</label>
+                  <input
+                    type="date"
+                    value={form.expectedDate}
+                    onChange={(e) => setForm(f => ({ ...f, expectedDate: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 10px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Libre Baskerville', serif", fontSize: 13, color: '#003553', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 10, paddingTop: 6, borderTop: '1px solid rgba(0,53,83,0.12)' }}>
+                <button onClick={() => setModalOpen(false)} style={{ flex: 1, padding: '11px', border: '1px solid rgba(0,53,83,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', color: '#003553', cursor: 'pointer', fontWeight: 600 }}>CANCEL</button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !form.clientName.trim()}
+                  style={{ flex: 2, padding: '11px', background: form.clientName.trim() ? '#D78433' : 'rgba(215,132,51,0.4)', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', color: '#FFFEF2', cursor: form.clientName.trim() ? 'pointer' : 'not-allowed', fontWeight: 700 }}>
+                  {saving ? 'SAVING...' : editingId ? 'UPDATE PROSPECT' : 'ADD TO PIPELINE'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, onNavigate }) {
+function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, prospects, onAddProspect, onUpdateProspect, onDeleteProspect, onNavigate }) {
   const repFilter = (rec, key = 'accountManager') => activeRep === 'All' || rec[key] === activeRep;
   const filteredClients = clients.filter(c => repFilter(c));
   const filteredVisits = visits.filter(v => repFilter(v, 'salesRep'));
@@ -1197,6 +1509,16 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         <KPICard label="Visits" value={visitCount} target={activeTargets.visits} targetValue={`${activeTargets.visits} visits`} progress={pct(visitCount, activeTargets.visits)} icon={Activity} accent="ocean" sparkData={dailyVisits} todayDay={todayDay} />
         <KPICard label="Conversion" value={`${conversionRate}%`} subtitle={`${sold} of ${visitCount} sold`} progress={conversionRate} icon={TrendingUp} accent="gold" sparkData={dailyConversion} todayDay={todayDay} />
       </div>
+
+      {/* ── PIPELINE FORECAST ── */}
+      <ProspectWidget
+        prospects={prospects || []}
+        activeRep={activeRep}
+        targets={targets}
+        onAdd={onAddProspect}
+        onUpdate={onUpdateProspect}
+        onDelete={onDeleteProspect}
+      />
 
       {/* ── OVERDUE CLIENTS ── */}
       <OverdueClients clients={clients} visits={allVisits} activeRep={activeRep} onNavigate={onNavigate} />
