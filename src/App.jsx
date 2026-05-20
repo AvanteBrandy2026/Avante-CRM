@@ -44,18 +44,24 @@ const DEFAULT_TARGETS = {
 // Avante SKU catalogue (Trade Ex VAT prices, ZAR per unit)
 const SKU_CATALOGUE = [
   { id: 'vsop_750_current', name: 'VSOP 750ml (Current)', price: 420.00 },
-  { id: 'vsop_750_new', name: 'VSOP 750ml (New)', price: 579.00 },
-  { id: 'vsop_200', name: 'VSOP 200ml', price: 150.00 },
-  { id: 'xv_750', name: 'XV 750ml', price: 2086.00 },
-  { id: 'vs_500', name: 'VS 500ml', price: 217.00 },
-  { id: 'vs_750', name: 'VS 750ml', price: 296.50 },
-  { id: 'xv_200', name: 'XV 200ml', price: 745.00 },
-  { id: 'xo_750', name: 'XO 750ml', price: 1043.00 },
-  { id: 'vs_200', name: 'VS 200ml', price: 113.00 },
-  { id: 'gift_4x50', name: '4 x 50ml Gift Box', price: 520.00 },
-  { id: 'gift_3x200', name: '3 x 200ml Gift Box', price: 1050.00 },
-  { id: 'custom_vs', name: 'Custom VS', price: 694.78 },
-  { id: 'custom_xv', name: 'Custom XV', price: 694.78 },
+  { id: 'vsop_750_new',     name: 'VSOP 750ml (New)',     price: 579.00 },
+  { id: 'vsop_200',         name: 'VSOP 200ml',           price: 150.00 },
+  { id: 'xv_750',           name: 'XV 750ml',             price: 2086.00 },
+  { id: 'vs_500',           name: 'VS 500ml',             price: 217.00 },
+  { id: 'vs_750',           name: 'VS 750ml',             price: 296.50 },
+  { id: 'xv_200',           name: 'XV 200ml',             price: 745.00 },
+  { id: 'xo_750',           name: 'XO 750ml',             price: 1043.00 },
+  { id: 'vs_200',           name: 'VS 200ml',             price: 113.00 },
+  { id: 'gift_4x50',        name: '4 x 50ml Gift Box',    price: 520.00 },
+  { id: 'gift_3x200',       name: '3 x 200ml Gift Box',   price: 1050.00 },
+  { id: 'custom_vs',        name: 'Custom VS',            price: 694.78 },
+  { id: 'custom_xv',        name: 'Custom XV',            price: 694.78 },
+  // 50ml singles & mixed box
+  { id: 'mixed_50ml_box',   name: 'Mixed 50ml Box',       price: 961.50 },
+  { id: 'vs_50ml',          name: 'VS 50ml',              price: 654.00 },
+  { id: 'vsop_50ml',        name: 'VSOP 50ml',            price: 768.00 },
+  { id: 'xo_50ml',          name: 'XO 50ml',              price: 1080.00 },
+  { id: 'xv_50ml',          name: 'XV 50ml',              price: 1344.00 },
 ];
 
 // Get effective SKU catalogue with any price overrides applied
