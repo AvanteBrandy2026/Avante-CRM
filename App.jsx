@@ -3716,11 +3716,11 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
 function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCount, composeOrderEmail, buildMailtoUrl, onClose, onSend }) {
   // Build initial recipient list: defaults + client's email if on file (deduped, in order)
   const initialRecipients = useMemo(() => {
-    // Route by channel: Private Sales → matthew, Trade Retail → lauren + melanie
+    // Route by channel: Private Sales → matthew, Trade Retail → lauren + melanie + orders
     const isPrivate = client?.channel === 'Private Sales';
     const list = isPrivate
       ? ['matthew@breakfreebeverages.com']
-      : ['lauren@redbev.co.za', 'melanie@redbev.co.za'];
+      : ['lauren@redbev.co.za', 'melanie@redbev.co.za', 'orders@redbev.co.za'];
     // Always add the client's own email if on file
     if (client?.email && !list.includes(client.email)) list.push(client.email);
     return list.join(', ');
@@ -3822,7 +3822,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
               className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none"
               autoFocus
             />
-            <p className="text-[10px] italic ocean mt-1">Private clients → matthew@breakfreebeverages.com · Trade clients → lauren@redbev.co.za, melanie@redbev.co.za</p>
+            <p className="text-[10px] italic ocean mt-1">Private clients → matthew@breakfreebeverages.com · Trade clients → lauren@redbev.co.za, melanie@redbev.co.za, orders@redbev.co.za</p>
             {client?.venue && (
               <p className="text-[11px] italic ocean mt-1.5">
                 Order for <strong className="ink">{client.venue}</strong>
