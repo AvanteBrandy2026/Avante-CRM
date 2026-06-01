@@ -273,6 +273,7 @@ export default function AvanteCRM() {
   const [managerAuthed, setManagerAuthed] = useState(false); // persists across tab changes
   const [placeOrderClient, setPlaceOrderClient] = useState(null); // client to place order for
   const [activeRep, setActiveRep] = useState('All');
+  const [activeMonth, setActiveMonth] = useState(monthISO()); // e.g. "2026-06"
   const [showLogModal, setShowLogModal] = useState(false);
   const [editingVisit, setEditingVisit] = useState(null); // visit object being edited, or null
   const [selectedClient, setSelectedClient] = useState(null);
@@ -545,9 +546,8 @@ export default function AvanteCRM() {
   };
 
   const monthVisits = useMemo(() => {
-    const m = monthISO();
-    return visits.filter(v => v.date && v.date.startsWith(m));
-  }, [visits]);
+    return visits.filter(v => v.date && v.date.startsWith(activeMonth));
+  }, [visits, activeMonth]);
 
   if (loading) {
     return (
@@ -837,6 +837,8 @@ export default function AvanteCRM() {
             targets={targets}
             activeRep={activeRep}
             setActiveRep={setActiveRep}
+            activeMonth={activeMonth}
+            setActiveMonth={setActiveMonth}
             prospects={prospects}
             onAddProspect={addProspect}
             onUpdateProspect={updateProspect}
@@ -1603,8 +1605,14 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, prospects, onAddProspect, onUpdateProspect, onDeleteProspect, skuOverrides, onNavigate }) {
-  const repFilter = (rec, key = 'accountManager') => activeRep === 'All' || rec[key] === activeRep;
+function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, activeMonth, setActiveMonth, prospects, onAddProspect, onUpdateProspect, onDeleteProspect, skuOverrides, onNavigate }) {
+  // Parse activeMonth into a Date for display and daily calculations
+  const [selYear, selMonthIdx] = activeMonth.split('-').map(Number);
+  const selectedDate = new Date(selYear, selMonthIdx - 1, 1);
+  const isCurrentMonth = activeMonth === monthISO();
+
+  const repFilter = (item, key = 'accountManager') =>
+    activeRep === 'All' ? true : item[key] === activeRep;
   const filteredClients = clients.filter(c => repFilter(c));
   const filteredVisits = visits.filter(v => repFilter(v, 'salesRep'));
 
@@ -1613,23 +1621,22 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
   const sold = filteredVisits.filter(v => v.outcome === 'Sold In').length;
   const conversionRate = visitCount > 0 ? Math.round((sold / visitCount) * 100) : 0;
 
-  // Daily data for line graphs — current month
-  const now = new Date();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const todayDay = now.getDate();
+  // Daily data for line graphs — selected month
+  const daysInMonth = new Date(selYear, selMonthIdx, 0).getDate();
+  const todayDay = isCurrentMonth ? new Date().getDate() : daysInMonth;
   const dailySales = Array.from({ length: daysInMonth }, (_, i) => {
     const day = String(i + 1).padStart(2, '0');
-    const dateStr = `${now.toISOString().slice(0, 7)}-${day}`;
+    const dateStr = `${activeMonth}-${day}`;
     return filteredVisits.filter(v => v.date === dateStr).reduce((s, v) => s + (v.saleAmount || 0), 0);
   });
   const dailyVisits = Array.from({ length: daysInMonth }, (_, i) => {
     const day = String(i + 1).padStart(2, '0');
-    const dateStr = `${now.toISOString().slice(0, 7)}-${day}`;
+    const dateStr = `${activeMonth}-${day}`;
     return filteredVisits.filter(v => v.date === dateStr).length;
   });
   const dailyConversion = Array.from({ length: daysInMonth }, (_, i) => {
     const day = String(i + 1).padStart(2, '0');
-    const dateStr = `${now.toISOString().slice(0, 7)}-${day}`;
+    const dateStr = `${activeMonth}-${day}`;
     const dayVisits = filteredVisits.filter(v => v.date === dateStr);
     const daySold = dayVisits.filter(v => v.outcome === 'Sold In').length;
     return dayVisits.length > 0 ? Math.round((daySold / dayVisits.length) * 100) : 0;
@@ -1659,11 +1666,42 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
 
       {/* Page header */}
       <div className="flex items-center justify-between gap-3 flex-wrap pb-3 border-b border">
-        <div>
-          <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>PERFORMANCE OVERVIEW</p>
-          <h1 className="font-display ink mt-0.5" style={{ fontWeight: 700, fontSize: 28 }}>
-            {new Date().toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' }).toUpperCase()}
-          </h1>
+        <div className="flex items-center gap-3">
+          {/* Prev month */}
+          <button
+            onClick={() => {
+              const [y, m] = activeMonth.split('-').map(Number);
+              const d = new Date(y, m - 2, 1);
+              setActiveMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+            }}
+            style={{ background: 'none', border: '1px solid rgba(0,53,83,0.2)', cursor: 'pointer', padding: '4px 10px', color: '#003553', fontFamily: "'Cinzel',serif", fontSize: 14, fontWeight: 700 }}
+            title="Previous month">‹</button>
+
+          <div>
+            <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>PERFORMANCE OVERVIEW</p>
+            <h1 className="font-display ink mt-0.5" style={{ fontWeight: 700, fontSize: 28 }}>
+              {selectedDate.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' }).toUpperCase()}
+            </h1>
+            {!isCurrentMonth && (
+              <button
+                onClick={() => setActiveMonth(monthISO())}
+                style={{ marginTop: 4, background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#D78433', fontWeight: 600, padding: 0 }}>
+                ← BACK TO CURRENT MONTH
+              </button>
+            )}
+          </div>
+
+          {/* Next month — only allow up to current month */}
+          <button
+            onClick={() => {
+              const [y, m] = activeMonth.split('-').map(Number);
+              const next = new Date(y, m, 1);
+              const nextStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+              if (nextStr <= monthISO()) setActiveMonth(nextStr);
+            }}
+            style={{ background: 'none', border: '1px solid rgba(0,53,83,0.2)', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', padding: '4px 10px', color: isCurrentMonth ? 'rgba(0,53,83,0.3)' : '#003553', fontFamily: "'Cinzel',serif", fontSize: 14, fontWeight: 700 }}
+            title="Next month"
+            disabled={isCurrentMonth}>›</button>
         </div>
         <RepToggle active={activeRep} onChange={setActiveRep} />
       </div>
