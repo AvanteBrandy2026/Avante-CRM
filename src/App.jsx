@@ -138,6 +138,7 @@ function clientToDb(c) {
     notes: c.notes || '',
     total_sales: c.totalSales || 0,
     payment_terms: c.paymentTerms || '',
+    client_tags: c.clientTags || [],
   };
   if (c.id !== undefined) obj.id = c.id;
   return obj;
@@ -162,6 +163,7 @@ function clientFromDb(r) {
     notes: r.notes || '',
     totalSales: Number(r.total_sales) || 0,
     paymentTerms: r.payment_terms || '',
+    clientTags: r.client_tags || [],
   };
 }
 
@@ -479,6 +481,7 @@ export default function AvanteCRM() {
     if (patch.totalSales !== undefined) dbPatch.total_sales = patch.totalSales;
     if (patch.lastContacted !== undefined) dbPatch.last_contacted = patch.lastContacted;
     if (patch.paymentTerms !== undefined) dbPatch.payment_terms = patch.paymentTerms;
+    if (patch.clientTags !== undefined) dbPatch.client_tags = patch.clientTags;
     if (Object.keys(dbPatch).length > 0) {
       await supabase.from('clients').update(dbPatch).eq('id', id);
     }
@@ -2935,6 +2938,14 @@ function KanbanView({ filtered, onSelect, onDelete, updateClient }) {
                   <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginBottom: 6 }}>
                     {c.accountManager}{c.location ? ` · ${c.location}` : ''}
                   </p>
+                  {/* Client Tags */}
+                  {c.clientTags && c.clientTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6 }}>
+                      {c.clientTags.map(tag => (
+                        <span key={tag} style={{ padding: '2px 6px', background: 'rgba(0,108,144,0.12)', color: '#006C90', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.1em', fontWeight: 700 }}>@{tag}</span>
+                      ))}
+                    </div>
+                  )}
                   {/* Tags */}
                   {c.tags && c.tags.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6 }}>
@@ -4730,6 +4741,38 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows="3" className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
             ) : (
               <p className="text-sm ink italic">{client.notes || '—'}</p>
+            )}
+          </div>
+
+          {/* === TAG AGENTS === */}
+          <div className="pt-4 border-t border">
+            <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>TAG AGENTS</label>
+            <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginBottom: 10 }}>Tag team members who should follow up or are involved with this client.</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {SALES_REPS.map(rep => {
+                const currentTags = form.clientTags || [];
+                const tagged = currentTags.includes(rep);
+                return (
+                  <button key={rep} type="button"
+                    onClick={() => {
+                      const next = tagged
+                        ? currentTags.filter(r => r !== rep)
+                        : [...currentTags, rep];
+                      setForm(f => ({ ...f, clientTags: next }));
+                      onUpdate(client.id, { clientTags: next });
+                    }}
+                    style={{ padding: '8px 16px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, border: '1px solid', borderColor: tagged ? '#D78433' : 'rgba(0,53,83,0.2)', background: tagged ? '#D78433' : 'transparent', color: tagged ? '#FFFEF2' : '#003553', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s' }}>
+                    {tagged && <span style={{ fontSize: 10 }}>✓</span>} @{rep.toUpperCase()}
+                  </button>
+                );
+              })}
+            </div>
+            {(form.clientTags || []).length > 0 && (
+              <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {(form.clientTags || []).map(r => (
+                  <span key={r} style={{ padding: '3px 10px', background: 'rgba(215,132,51,0.15)', color: '#D78433', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.15em', fontWeight: 700 }}>@{r.toUpperCase()} TAGGED</span>
+                ))}
+              </div>
             )}
           </div>
 
