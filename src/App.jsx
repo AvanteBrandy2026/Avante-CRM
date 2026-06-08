@@ -831,6 +831,7 @@ export default function AvanteCRM() {
 
       <Header view={view} setView={setView} onLog={() => setShowLogModal(true)}
         visits={visits.map(v => ({ ...v, clientName: clients.find(c => c.id === v.clientId)?.venue || '' }))}
+        clients={clients}
         onNavigate={(v, clientId) => {
           setView(v);
           if (clientId) { const c = clients.find(cl => cl.id === clientId); if (c) setSelectedClient(c); }
@@ -1095,35 +1096,69 @@ function ConfirmModal({ title, message, confirmLabel, danger, onCancel, onConfir
 
 // =================== Header ===================
 // =================== Notification Bell ===================
-function NotificationBell({ visits, onNavigate }) {
+function NotificationBell({ visits, clients, onNavigate }) {
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
     try { return JSON.parse(localStorage.getItem('avante_dismissed_tags') || '[]'); } catch { return []; }
   });
-  const ref = useRef(null);
 
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  const saveDismissed = (next) => {
+    setDismissed(next);
+    try { localStorage.setItem('avante_dismissed_tags', JSON.stringify(next)); } catch {}
+  };
 
-  // Build notifications from visits with taggedReps
+  // Build two types of notifications:
+  // 1. Visit-level tags (taggedReps on a visit log)
+  // 2. Client-level tags (clientTags on a client)
   const notifications = useMemo(() => {
-    return visits
-      .filter(v => v.taggedReps && v.taggedReps.length > 0 && !dismissed.includes(v.id))
-      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-      .slice(0, 20);
-  }, [visits, dismissed]);
+    const items = [];
+
+    // Visit tags
+    (visits || []).forEach(v => {
+      if (v.taggedReps && v.taggedReps.length > 0) {
+        const key = `visit-${v.id}`;
+        if (!dismissed.includes(key)) {
+          items.push({
+            key, type: 'visit',
+            clientId: v.clientId,
+            clientName: v.clientName || (clients || []).find(c => c.id === v.clientId)?.venue || `Client #${v.clientId}`,
+            taggedReps: v.taggedReps,
+            date: v.date,
+            subtitle: `Visit · ${v.outcome || ''} · by ${v.salesRep || ''}`,
+            notes: v.notes,
+          });
+        }
+      }
+    });
+
+    // Client tags
+    (clients || []).forEach(c => {
+      if (c.clientTags && c.clientTags.length > 0) {
+        const key = `client-${c.id}`;
+        if (!dismissed.includes(key)) {
+          items.push({
+            key, type: 'client',
+            clientId: c.id,
+            clientName: c.venue,
+            taggedReps: c.clientTags,
+            date: c.lastContacted || '',
+            subtitle: `Client tag · ${c.channel || ''} · ${c.accountManager || ''}`,
+            notes: c.notes,
+          });
+        }
+      }
+    });
+
+    return items.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 30);
+  }, [visits, clients, dismissed]);
 
   // Group by rep
   const byRep = useMemo(() => {
     const map = {};
-    notifications.forEach(v => {
-      (v.taggedReps || []).forEach(rep => {
+    notifications.forEach(item => {
+      (item.taggedReps || []).forEach(rep => {
         if (!map[rep]) map[rep] = [];
-        map[rep].push(v);
+        if (!map[rep].find(x => x.key === item.key)) map[rep].push(item);
       });
     });
     return map;
@@ -1131,25 +1166,15 @@ function NotificationBell({ visits, onNavigate }) {
 
   const totalCount = notifications.length;
 
-  const dismiss = (visitId) => {
-    const next = [...dismissed, visitId];
-    setDismissed(next);
-    try { localStorage.setItem('avante_dismissed_tags', JSON.stringify(next)); } catch {}
-  };
-
-  const dismissAll = () => {
-    const next = [...dismissed, ...notifications.map(v => v.id)];
-    setDismissed(next);
-    try { localStorage.setItem('avante_dismissed_tags', JSON.stringify(next)); } catch {}
-    setOpen(false);
-  };
+  const dismiss = (key) => saveDismissed([...dismissed, key]);
+  const dismissAll = () => { saveDismissed([...dismissed, ...notifications.map(n => n.key)]); setOpen(false); };
 
   return (
-    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
-      {/* Bell button */}
+    <>
+      {/* Bell button — simple toggle, no ref needed */}
       <button
         onClick={() => setOpen(o => !o)}
-        style={{ position: 'relative', background: totalCount > 0 ? 'rgba(253,185,64,0.15)' : 'none', border: totalCount > 0 ? '1px solid #FDB940' : '1px solid rgba(255,255,255,0.2)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: totalCount > 0 ? '#FDB940' : 'rgba(255,255,255,0.5)', transition: 'all 0.2s' }}
+        style={{ position: 'relative', background: totalCount > 0 ? 'rgba(253,185,64,0.15)' : 'none', border: totalCount > 0 ? '1px solid #FDB940' : '1px solid rgba(255,255,255,0.2)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: totalCount > 0 ? '#FDB940' : 'rgba(255,255,255,0.5)', transition: 'all 0.2s', flexShrink: 0 }}
         title="Notifications">
         <Bell style={{ width: 15, height: 15 }} />
         {totalCount > 0 && (
@@ -1159,18 +1184,22 @@ function NotificationBell({ visits, onNavigate }) {
         )}
       </button>
 
-      {/* Dropdown panel */}
+      {/* Panel — portalled to body */}
       {open && createPortal(
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 8888 }} onClick={() => setOpen(false)}>
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ position: 'fixed', top: 60, right: 16, width: 340, maxHeight: '80vh', background: '#FFFEF2', border: '2px solid #D78433', boxShadow: '0 8px 40px rgba(0,53,83,0.25)', zIndex: 8889, display: 'flex', flexDirection: 'column', overflowY:'hidden' }}>
+        <>
+          {/* Backdrop */}
+          <div onClick={() => setOpen(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 8888 }} />
+          {/* Panel */}
+          <div style={{ position: 'fixed', top: 64, right: 16, width: 360, maxHeight: '80vh', background: '#FFFEF2', border: '2px solid #D78433', boxShadow: '0 8px 40px rgba(0,53,83,0.25)', zIndex: 8889, display: 'flex', flexDirection: 'column' }}>
 
             {/* Header */}
             <div style={{ background: '#003553', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div>
                 <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.4em', color: '#FDB940', fontWeight: 600, margin: 0 }}>AGENT TAGS</p>
-                <h3 style={{ fontFamily: "'Cinzel',serif", color: '#FFFEF2', fontWeight: 700, fontSize: 14, margin: '2px 0 0' }}>NOTIFICATIONS</h3>
+                <h3 style={{ fontFamily: "'Cinzel',serif", color: '#FFFEF2', fontWeight: 700, fontSize: 14, margin: '2px 0 0' }}>
+                  NOTIFICATIONS {totalCount > 0 && <span style={{ fontSize: 10, color: '#FDB940' }}>({totalCount})</span>}
+                </h3>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {totalCount > 0 && (
@@ -1180,51 +1209,50 @@ function NotificationBell({ visits, onNavigate }) {
                   </button>
                 )}
                 <button onClick={() => setOpen(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: 18, lineHeight: 1 }}>✕</button>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: 20, lineHeight: 1, padding: '0 4px' }}>✕</button>
               </div>
             </div>
 
             {/* Body */}
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {totalCount === 0 ? (
-                <div style={{ padding: 24, textAlign: 'center' }}>
-                  <Bell style={{ width: 24, height: 24, color: 'rgba(0,53,83,0.2)', margin: '0 auto 8px' }} />
-                  <p style={{ fontSize: 12, color: '#006C90', fontStyle: 'italic' }}>No new tag notifications</p>
+                <div style={{ padding: 32, textAlign: 'center' }}>
+                  <Bell style={{ width: 28, height: 28, color: 'rgba(0,53,83,0.15)', margin: '0 auto 10px', display: 'block' }} />
+                  <p style={{ fontSize: 12, color: '#006C90', fontStyle: 'italic', margin: 0 }}>No tag notifications</p>
                 </div>
               ) : (
-                Object.entries(byRep).map(([rep, repVisits]) => (
+                Object.entries(byRep).map(([rep, items]) => (
                   <div key={rep}>
                     {/* Rep header */}
                     <div style={{ padding: '8px 16px', background: 'rgba(0,53,83,0.06)', borderBottom: '1px solid rgba(0,53,83,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ padding: '2px 8px', background: '#D78433', color: '#FFFEF2', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.15em', fontWeight: 700 }}>@{rep.toUpperCase()}</span>
-                      <span style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>{repVisits.length} mention{repVisits.length !== 1 ? 's' : ''}</span>
+                      <span style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>{items.length} tag{items.length !== 1 ? 's' : ''}</span>
                     </div>
-                    {/* Visit rows */}
-                    {repVisits.map((v, i) => (
-                      <div key={v.id}
+                    {/* Items */}
+                    {items.map(item => (
+                      <div key={item.key}
                         style={{ padding: '10px 16px', borderBottom: '1px solid rgba(0,53,83,0.06)', display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', transition: 'background 0.15s' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.04)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        onClick={() => { onNavigate('leads', v.clientId); setOpen(false); }}>
+                        onClick={() => { onNavigate('leads', item.clientId); setOpen(false); }}>
+                        {/* Type badge */}
+                        <span style={{ flexShrink: 0, marginTop: 2, padding: '2px 6px', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.1em', fontWeight: 700, background: item.type === 'client' ? 'rgba(0,108,144,0.12)' : 'rgba(45,134,89,0.12)', color: item.type === 'client' ? '#006C90' : '#2d8659', border: `1px solid ${item.type === 'client' ? '#006C90' : '#2d8659'}` }}>
+                          {item.type === 'client' ? 'CLIENT' : 'VISIT'}
+                        </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 12, color: '#003553', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {v.clientName || `Client #${v.clientId}`}
+                            {item.clientName}
                           </p>
-                          <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', margin: '2px 0 0' }}>
-                            {v.date} · {v.outcome} · by {v.salesRep}
-                          </p>
-                          {v.notes && (
-                            <p style={{ fontSize: 10, color: '#003553', margin: '3px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              "{v.notes}"
-                            </p>
+                          <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', margin: '2px 0 0' }}>{item.subtitle}</p>
+                          {item.notes && (
+                            <p style={{ fontSize: 10, color: 'rgba(0,53,83,0.6)', margin: '3px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{item.notes}"</p>
                           )}
                         </div>
-                        <button
-                          onClick={e => { e.stopPropagation(); dismiss(v.id); }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(0,53,83,0.25)', flexShrink: 0, padding: '2px 4px', fontSize: 14, lineHeight: 1 }}
-                          title="Dismiss"
+                        <button onClick={e => { e.stopPropagation(); dismiss(item.key); }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(0,53,83,0.25)', flexShrink: 0, padding: '2px 4px', fontSize: 16, lineHeight: 1 }}
                           onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
-                          onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.25)'}>×</button>
+                          onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.25)'}
+                          title="Dismiss">×</button>
                       </div>
                     ))}
                   </div>
@@ -1232,14 +1260,14 @@ function NotificationBell({ visits, onNavigate }) {
               )}
             </div>
           </div>
-        </div>,
+        </>,
         document.body
       )}
-    </div>
+    </>
   );
 }
 
-function Header({ view, setView, onLog, visits, onNavigate }) {
+function Header({ view, setView, onLog, visits, clients, onNavigate }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads & Clients', icon: Users },
@@ -1273,7 +1301,7 @@ function Header({ view, setView, onLog, visits, onNavigate }) {
         </nav>
         {/* Right side — Bell + Log Visit */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <NotificationBell visits={visits || []} onNavigate={onNavigate} />
+          <NotificationBell visits={visits || []} clients={clients || []} onNavigate={onNavigate} />
           <button onClick={onLog} className="crm-log-btn">
             <Plus style={{ width: 14, height: 14 }} />
             <span>LOG VISIT</span>
