@@ -832,18 +832,26 @@ export default function AvanteCRM() {
       <Header view={view} setView={setView} onLog={() => setShowLogModal(true)}
         visits={visits.map(v => ({ ...v, clientName: clients.find(c => c.id === v.clientId)?.venue || '' }))}
         clients={clients}
-        onNavigate={(v, clientId) => {
-          setView(v);
+        onNavigate={(targetView, clientId) => {
+          setView(targetView);
           if (clientId) {
             const c = clients.find(cl => cl.id === clientId);
-            if (c) {
-              // Small timeout ensures view change renders before modal opens
-              setTimeout(() => setSelectedClient(c), 50);
-            }
+            if (c) setSelectedClient(c);
           }
         }} />
 
       <main className="crm-main">
+        {view === 'notifications' && (
+          <NotificationsPage
+            visits={visits.map(v => ({ ...v, clientName: clients.find(c => c.id === v.clientId)?.venue || '' }))}
+            clients={clients}
+            onSelectClient={(clientId) => {
+              const c = clients.find(cl => cl.id === clientId);
+              if (c) setSelectedClient(c);
+            }}
+          />
+        )}
+
         {view === 'dashboard' && (
           <Dashboard
             clients={clients}
@@ -1101,178 +1109,6 @@ function ConfirmModal({ title, message, confirmLabel, danger, onCancel, onConfir
 }
 
 // =================== Header ===================
-// =================== Notification Bell ===================
-function NotificationBell({ visits, clients, onNavigate }) {
-  const [open, setOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('avante_dismissed_tags') || '[]'); } catch { return []; }
-  });
-
-  const saveDismissed = (next) => {
-    setDismissed(next);
-    try { localStorage.setItem('avante_dismissed_tags', JSON.stringify(next)); } catch {}
-  };
-
-  // Build two types of notifications:
-  // 1. Visit-level tags (taggedReps on a visit log)
-  // 2. Client-level tags (clientTags on a client)
-  const notifications = useMemo(() => {
-    const items = [];
-
-    // Visit tags
-    (visits || []).forEach(v => {
-      if (v.taggedReps && v.taggedReps.length > 0) {
-        const key = `visit-${v.id}`;
-        if (!dismissed.includes(key)) {
-          items.push({
-            key, type: 'visit',
-            clientId: v.clientId,
-            clientName: v.clientName || (clients || []).find(c => c.id === v.clientId)?.venue || `Client #${v.clientId}`,
-            taggedReps: v.taggedReps,
-            date: v.date,
-            subtitle: `Visit · ${v.outcome || ''} · by ${v.salesRep || ''}`,
-            notes: v.notes,
-          });
-        }
-      }
-    });
-
-    // Client tags
-    (clients || []).forEach(c => {
-      if (c.clientTags && c.clientTags.length > 0) {
-        const key = `client-${c.id}`;
-        if (!dismissed.includes(key)) {
-          items.push({
-            key, type: 'client',
-            clientId: c.id,
-            clientName: c.venue,
-            taggedReps: c.clientTags,
-            date: c.lastContacted || '',
-            subtitle: `Client tag · ${c.channel || ''} · ${c.accountManager || ''}`,
-            notes: c.notes,
-          });
-        }
-      }
-    });
-
-    return items.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 30);
-  }, [visits, clients, dismissed]);
-
-  // Group by rep
-  const byRep = useMemo(() => {
-    const map = {};
-    notifications.forEach(item => {
-      (item.taggedReps || []).forEach(rep => {
-        if (!map[rep]) map[rep] = [];
-        if (!map[rep].find(x => x.key === item.key)) map[rep].push(item);
-      });
-    });
-    return map;
-  }, [notifications]);
-
-  const totalCount = notifications.length;
-
-  const dismiss = (key) => saveDismissed([...dismissed, key]);
-  const dismissAll = () => { saveDismissed([...dismissed, ...notifications.map(n => n.key)]); setOpen(false); };
-
-  return (
-    <>
-      {/* Bell button — simple toggle, no ref needed */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{ position: 'relative', background: totalCount > 0 ? 'rgba(253,185,64,0.15)' : 'none', border: totalCount > 0 ? '1px solid #FDB940' : '1px solid rgba(255,255,255,0.2)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: totalCount > 0 ? '#FDB940' : 'rgba(255,255,255,0.5)', transition: 'all 0.2s', flexShrink: 0 }}
-        title="Notifications">
-        <Bell style={{ width: 15, height: 15 }} />
-        {totalCount > 0 && (
-          <span style={{ background: '#9c2c2c', color: '#FFFEF2', fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center', lineHeight: 1.6 }}>
-            {totalCount > 99 ? '99+' : totalCount}
-          </span>
-        )}
-      </button>
-
-      {/* Panel — portalled to body */}
-      {open && createPortal(
-        <>
-          {/* Backdrop */}
-          <div onClick={() => setOpen(false)}
-            style={{ position: 'fixed', inset: 0, zIndex: 8888 }} />
-          {/* Panel */}
-          <div style={{ position: 'fixed', top: 64, right: 16, width: 360, maxHeight: '80vh', background: '#FFFEF2', border: '2px solid #D78433', boxShadow: '0 8px 40px rgba(0,53,83,0.25)', zIndex: 8889, display: 'flex', flexDirection: 'column' }}>
-
-            {/* Header */}
-            <div style={{ background: '#003553', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-              <div>
-                <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.4em', color: '#FDB940', fontWeight: 600, margin: 0 }}>AGENT TAGS</p>
-                <h3 style={{ fontFamily: "'Cinzel',serif", color: '#FFFEF2', fontWeight: 700, fontSize: 14, margin: '2px 0 0' }}>
-                  NOTIFICATIONS {totalCount > 0 && <span style={{ fontSize: 10, color: '#FDB940' }}>({totalCount})</span>}
-                </h3>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {totalCount > 0 && (
-                  <button onClick={dismissAll}
-                    style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.15em', cursor: 'pointer', padding: '4px 8px' }}>
-                    CLEAR ALL
-                  </button>
-                )}
-                <button onClick={() => setOpen(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: 20, lineHeight: 1, padding: '0 4px' }}>✕</button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div style={{ overflowY: 'auto', flex: 1 }}>
-              {totalCount === 0 ? (
-                <div style={{ padding: 32, textAlign: 'center' }}>
-                  <Bell style={{ width: 28, height: 28, color: 'rgba(0,53,83,0.15)', margin: '0 auto 10px', display: 'block' }} />
-                  <p style={{ fontSize: 12, color: '#006C90', fontStyle: 'italic', margin: 0 }}>No tag notifications</p>
-                </div>
-              ) : (
-                Object.entries(byRep).map(([rep, items]) => (
-                  <div key={rep}>
-                    {/* Rep header */}
-                    <div style={{ padding: '8px 16px', background: 'rgba(0,53,83,0.06)', borderBottom: '1px solid rgba(0,53,83,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ padding: '2px 8px', background: '#D78433', color: '#FFFEF2', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.15em', fontWeight: 700 }}>@{rep.toUpperCase()}</span>
-                      <span style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>{items.length} tag{items.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    {/* Items */}
-                    {items.map(item => (
-                      <div key={item.key}
-                        style={{ padding: '10px 16px', borderBottom: '1px solid rgba(0,53,83,0.06)', display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', transition: 'background 0.15s' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.04)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        onClick={() => { onNavigate('leads', item.clientId); setOpen(false); }}>
-                        {/* Type badge */}
-                        <span style={{ flexShrink: 0, marginTop: 2, padding: '2px 6px', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.1em', fontWeight: 700, background: item.type === 'client' ? 'rgba(0,108,144,0.12)' : 'rgba(45,134,89,0.12)', color: item.type === 'client' ? '#006C90' : '#2d8659', border: `1px solid ${item.type === 'client' ? '#006C90' : '#2d8659'}` }}>
-                          {item.type === 'client' ? 'CLIENT' : 'VISIT'}
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 12, color: '#003553', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {item.clientName}
-                          </p>
-                          <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', margin: '2px 0 0' }}>{item.subtitle}</p>
-                          {item.notes && (
-                            <p style={{ fontSize: 10, color: 'rgba(0,53,83,0.6)', margin: '3px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{item.notes}"</p>
-                          )}
-                        </div>
-                        <button onClick={e => { e.stopPropagation(); dismiss(item.key); }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(0,53,83,0.25)', flexShrink: 0, padding: '2px 4px', fontSize: 16, lineHeight: 1 }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
-                          onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.25)'}
-                          title="Dismiss">×</button>
-                      </div>
-                    ))}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </>,
-        document.body
-      )}
-    </>
-  );
-}
-
 function Header({ view, setView, onLog, visits, clients, onNavigate }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -1281,6 +1117,14 @@ function Header({ view, setView, onLog, visits, clients, onNavigate }) {
     { id: 'visits', label: 'Visit Log', icon: ClipboardList },
     { id: 'manager', label: 'Manager', icon: Settings },
   ];
+
+  // Count notifications for badge
+  const notifCount = useMemo(() => {
+    let count = 0;
+    (visits || []).forEach(v => { if (v.taggedReps && v.taggedReps.length > 0) count++; });
+    (clients || []).forEach(c => { if (c.clientTags && c.clientTags.length > 0) count++; });
+    return count;
+  }, [visits, clients]);
   return (
     <header className="crm-header">
       <div className="crm-header-inner">
@@ -1305,9 +1149,19 @@ function Header({ view, setView, onLog, visits, clients, onNavigate }) {
             );
           })}
         </nav>
-        {/* Right side — Bell + Log Visit */}
+        {/* Right side — Notifications + Log Visit */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <NotificationBell visits={visits || []} clients={clients || []} onNavigate={onNavigate} />
+          <button
+            onClick={() => setView('notifications')}
+            style={{ position: 'relative', background: view === 'notifications' ? 'rgba(253,185,64,0.2)' : notifCount > 0 ? 'rgba(253,185,64,0.1)' : 'none', border: notifCount > 0 ? '1px solid #FDB940' : '1px solid rgba(255,255,255,0.2)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: notifCount > 0 ? '#FDB940' : 'rgba(255,255,255,0.5)', transition: 'all 0.2s' }}
+            title="Notifications">
+            <Bell style={{ width: 15, height: 15 }} />
+            {notifCount > 0 && (
+              <span style={{ background: '#9c2c2c', color: '#FFFEF2', fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center', lineHeight: 1.6 }}>
+                {notifCount > 99 ? '99+' : notifCount}
+              </span>
+            )}
+          </button>
           <button onClick={onLog} className="crm-log-btn">
             <Plus style={{ width: 14, height: 14 }} />
             <span>LOG VISIT</span>
@@ -1817,6 +1671,177 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
         document.body
       )}
     </>
+  );
+}
+
+// =================== Notifications Page ===================
+function NotificationsPage({ visits, clients, onSelectClient }) {
+  const [filter, setFilter] = useState('All'); // All | Visit | Client
+  const [repFilter, setRepFilter] = useState('All');
+
+  const allItems = useMemo(() => {
+    const items = [];
+
+    // Visit-level tags
+    (visits || []).forEach(v => {
+      if (v.taggedReps && v.taggedReps.length > 0) {
+        const client = (clients || []).find(c => c.id === v.clientId);
+        items.push({
+          key: `visit-${v.id}`,
+          type: 'visit',
+          clientId: v.clientId,
+          clientName: client?.venue || `Client #${v.clientId}`,
+          clientChannel: client?.channel || '',
+          clientLocation: client?.location || '',
+          taggedReps: v.taggedReps,
+          date: v.date || '',
+          subtitle: `${v.outcome || '—'} · by ${v.salesRep || '—'}`,
+          notes: v.notes || '',
+          followUp: v.followUp || '',
+        });
+      }
+    });
+
+    // Client-level tags
+    (clients || []).forEach(c => {
+      if (c.clientTags && c.clientTags.length > 0) {
+        items.push({
+          key: `client-${c.id}`,
+          type: 'client',
+          clientId: c.id,
+          clientName: c.venue,
+          clientChannel: c.channel || '',
+          clientLocation: c.location || '',
+          taggedReps: c.clientTags,
+          date: c.lastContacted || '',
+          subtitle: `${c.channel || '—'} · ${c.accountManager || '—'} · ${c.status || '—'}`,
+          notes: c.notes || '',
+          followUp: '',
+        });
+      }
+    });
+
+    return items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [visits, clients]);
+
+  const filtered = useMemo(() => {
+    return allItems.filter(item => {
+      if (filter !== 'All' && item.type !== filter.toLowerCase()) return false;
+      if (repFilter !== 'All' && !item.taggedReps.includes(repFilter)) return false;
+      return true;
+    });
+  }, [allItems, filter, repFilter]);
+
+  // Group by tagged rep
+  const byRep = useMemo(() => {
+    if (repFilter !== 'All') return { [repFilter]: filtered };
+    const map = {};
+    filtered.forEach(item => {
+      (item.taggedReps || []).forEach(rep => {
+        if (!map[rep]) map[rep] = [];
+        if (!map[rep].find(x => x.key === item.key)) map[rep].push(item);
+      });
+    });
+    return map;
+  }, [filtered, repFilter]);
+
+  const typeColors = { visit: { bg: 'rgba(45,134,89,0.1)', color: '#2d8659', label: 'VISIT' }, client: { bg: 'rgba(0,108,144,0.1)', color: '#006C90', label: 'CLIENT' } };
+
+  return (
+    <div className="space-y-4 fade-up">
+      {/* Header */}
+      <div className="pb-3 border-b border">
+        <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>AGENT MENTIONS</p>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+          <div>
+            <h1 className="font-display ink mt-1" style={{ fontWeight: 700, fontSize: 28 }}>NOTIFICATIONS</h1>
+            <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>{allItems.length} total tag{allItems.length !== 1 ? 's' : ''} across {Object.keys(byRep).length} agent{Object.keys(byRep).length !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Type filter */}
+        <div style={{ display: 'flex', border: '1px solid rgba(0,53,83,0.2)', overflow: 'hidden' }}>
+          {['All', 'Visit', 'Client'].map(t => (
+            <button key={t} onClick={() => setFilter(t)}
+              style={{ padding: '7px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: 'none', background: filter === t ? '#003553' : 'transparent', color: filter === t ? '#FFFEF2' : '#003553', cursor: 'pointer' }}>
+              {t.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        {/* Rep filter */}
+        <div style={{ display: 'flex', border: '1px solid rgba(0,53,83,0.2)', overflow: 'hidden' }}>
+          {['All', ...SALES_REPS].map(r => (
+            <button key={r} onClick={() => setRepFilter(r)}
+              style={{ padding: '7px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: 'none', background: repFilter === r ? '#D78433' : 'transparent', color: repFilter === r ? '#FFFEF2' : '#003553', cursor: 'pointer' }}>
+              {r === 'All' ? 'ALL REPS' : `@${r.toUpperCase()}`}
+            </button>
+          ))}
+        </div>
+        <p style={{ fontSize: 11, fontStyle: 'italic', color: '#006C90', margin: 0 }}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</p>
+      </div>
+
+      {/* Content */}
+      {filtered.length === 0 ? (
+        <div className="premium-card" style={{ padding: 40, textAlign: 'center' }}>
+          <Bell style={{ width: 32, height: 32, color: 'rgba(0,53,83,0.15)', margin: '0 auto 12px', display: 'block' }} />
+          <p style={{ fontSize: 14, color: '#006C90', fontStyle: 'italic' }}>No tag notifications match your filters.</p>
+        </div>
+      ) : (
+        Object.entries(byRep).map(([rep, items]) => (
+          <div key={rep} className="premium-card" style={{ overflow: 'hidden' }}>
+            {/* Rep header */}
+            <div style={{ padding: '12px 16px', background: '#003553', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ padding: '3px 12px', background: '#D78433', color: '#FFFEF2', fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700 }}>@{rep.toUpperCase()}</span>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontStyle: 'italic' }}>{items.length} tag{items.length !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+
+            {/* Items */}
+            {items.map((item, i) => (
+              <div key={item.key}
+                onClick={() => onSelectClient && onSelectClient(item.clientId)}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px', borderBottom: i < items.length - 1 ? '1px solid rgba(0,53,83,0.07)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.03)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+
+                {/* Type badge */}
+                <div style={{ flexShrink: 0, marginTop: 2 }}>
+                  <span style={{ padding: '3px 8px', background: typeColors[item.type].bg, color: typeColors[item.type].color, fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.12em', fontWeight: 700, border: `1px solid ${typeColors[item.type].color}` }}>
+                    {typeColors[item.type].label}
+                  </span>
+                </div>
+
+                {/* Main content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                    <p style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 14, color: '#003553', margin: 0 }}>{item.clientName}</p>
+                    {item.date && <span style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>{item.date}</span>}
+                    {item.clientLocation && <span style={{ fontSize: 10, color: 'rgba(0,53,83,0.4)' }}>{item.clientLocation}</span>}
+                  </div>
+                  <p style={{ fontSize: 11, color: '#006C90', fontStyle: 'italic', margin: '3px 0 0' }}>{item.subtitle}</p>
+                  {item.notes && <p style={{ fontSize: 11, color: '#003553', margin: '6px 0 0', lineHeight: 1.5 }}>📝 {item.notes}</p>}
+                  {item.followUp && <p style={{ fontSize: 11, color: '#D78433', margin: '4px 0 0' }}>→ {item.followUp}</p>}
+                  {/* All tagged reps */}
+                  {item.taggedReps.length > 1 && (
+                    <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+                      {item.taggedReps.map(r => (
+                        <span key={r} style={{ padding: '2px 7px', background: 'rgba(215,132,51,0.12)', color: '#D78433', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>@{r.toUpperCase()}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <ChevronRight style={{ width: 16, height: 16, color: '#D78433', flexShrink: 0, marginTop: 4 }} />
+              </div>
+            ))}
+          </div>
+        ))
+      )}
+    </div>
   );
 }
 
