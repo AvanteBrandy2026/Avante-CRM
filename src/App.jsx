@@ -834,7 +834,13 @@ export default function AvanteCRM() {
         clients={clients}
         onNavigate={(v, clientId) => {
           setView(v);
-          if (clientId) { const c = clients.find(cl => cl.id === clientId); if (c) setSelectedClient(c); }
+          if (clientId) {
+            const c = clients.find(cl => cl.id === clientId);
+            if (c) {
+              // Small timeout ensures view change renders before modal opens
+              setTimeout(() => setSelectedClient(c), 50);
+            }
+          }
         }} />
 
       <main className="crm-main">
