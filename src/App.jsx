@@ -2972,6 +2972,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
