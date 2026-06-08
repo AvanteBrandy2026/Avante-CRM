@@ -3221,7 +3221,6 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
           })}
         </div>
       )}
-    </div>
       )}
     </div>
   );
