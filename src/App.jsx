@@ -1132,47 +1132,73 @@ function Header({ view, setView, onLog }) {
 // ── OVERDUE CLIENTS WIDGET ──────────────────────────────────────────────────
 function OverdueClients({ clients, visits, activeRep, onNavigate }) {
   const today = new Date();
+  const [overdueRep, setOverdueRep] = useState('All');
 
-  // Find clients not visited in 30+ days — filter by rep if selected
-  const overdue = useMemo(() => {
-    const repClients = activeRep === 'All' ? clients : clients.filter(c => c.accountManager === activeRep);
+  const repToShow = activeRep !== 'All' ? activeRep : overdueRep;
 
-    return repClients
-      .map(c => {
-        // Find latest visit date for this client
-        const clientVisits = visits.filter(v => v.clientId === c.id);
-        const latestVisit = clientVisits.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
-        const lastDate = latestVisit?.date || c.lastContacted || null;
-        const daysAgo = lastDate
-          ? Math.floor((today.getTime() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
-          : 999; // never contacted = most overdue
-        return { ...c, lastDate, daysAgo };
-      })
-      .filter(c => c.daysAgo >= 30 && c.status !== 'Lost')
-      .sort((a, b) => b.daysAgo - a.daysAgo)
-      .slice(0, 10);
+  const overdueByRep = useMemo(() => {
+    const result = {};
+    const repsToCalc = activeRep !== 'All' ? [activeRep] : ['All', ...SALES_REPS];
+
+    repsToCalc.forEach(rep => {
+      const repClients = rep === 'All' ? clients : clients.filter(c => c.accountManager === rep);
+      result[rep] = repClients
+        .map(c => {
+          const clientVisits = visits.filter(v => v.clientId === c.id);
+          const latestVisit = clientVisits.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+          const lastDate = latestVisit?.date || c.lastContacted || null;
+          const daysAgo = lastDate
+            ? Math.floor((today.getTime() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
+            : 999;
+          return { ...c, lastDate, daysAgo };
+        })
+        .filter(c => c.daysAgo >= 30 && c.status !== 'Lost')
+        .sort((a, b) => b.daysAgo - a.daysAgo)
+        .slice(0, 5);
+    });
+    return result;
   }, [clients, visits, activeRep]);
 
+  const overdue = overdueByRep[repToShow] || [];
   const statusColors = { New: '#006C90', Contacted: '#FDB940', Converted: '#2d8659', Lost: '#9c2c2c' };
 
   return (
     <div className="premium-card p-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 diamond-clip" style={{ background: '#9c2c2c' }}></div>
           <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
-            OVERDUE FOLLOW-UPS {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
+            OVERDUE FOLLOW-UPS
           </h2>
         </div>
         <span className="font-display text-[9px] tracking-[0.15em]" style={{ color: '#9c2c2c', fontWeight: 600 }}>
-          {overdue.length} client{overdue.length !== 1 ? 's' : ''} &gt;30 days
+          TOP 5 PER REP · &gt;30 DAYS
         </span>
       </div>
+
+      {/* Rep tabs — only show when viewing All reps */}
+      {activeRep === 'All' && (
+        <div style={{ display: 'flex', gap: 4, marginBottom: 12, flexWrap: 'wrap' }}>
+          {['All', ...SALES_REPS].map(r => {
+            const count = overdueByRep[r]?.length || 0;
+            const active = overdueRep === r;
+            return (
+              <button key={r} onClick={() => setOverdueRep(r)}
+                style={{ padding: '5px 12px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: '1px solid', borderColor: active ? '#003553' : 'rgba(0,53,83,0.2)', background: active ? '#003553' : 'transparent', color: active ? '#FFFEF2' : '#003553', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {r.toUpperCase()}
+                {count > 0 && (
+                  <span style={{ background: active ? '#FDB940' : '#9c2c2c', color: active ? '#003553' : '#FFFEF2', borderRadius: 10, padding: '1px 6px', fontSize: 8, fontWeight: 700 }}>{count}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {overdue.length === 0 ? (
         <div style={{ padding: '16px 0', textAlign: 'center' }}>
           <p className="italic ocean" style={{ fontSize: 12 }}>
-            {activeRep === 'All' ? 'All clients contacted within 30 days 🎉' : `${activeRep} is up to date 🎉`}
+            {repToShow === 'All' ? 'All clients contacted within 30 days 🎉' : `${repToShow} is up to date 🎉`}
           </p>
         </div>
       ) : (
@@ -2726,11 +2752,65 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
 }
 
 // =================== Leads Page ===================
+function KanbanView({ filtered, onSelect, onDelete, updateClient }) {
+  const statusColors = { New: '#006C90', Contacted: '#D78433', Converted: '#2d8659', Lost: '#9c2c2c' };
+  const statusBg = { New: 'rgba(0,108,144,0.08)', Contacted: 'rgba(215,132,51,0.08)', Converted: 'rgba(45,134,89,0.08)', Lost: 'rgba(156,44,44,0.08)' };
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, overflowX: 'auto', minWidth: 0 }}>
+      {STATUSES.map(status => {
+        const cols = filtered.filter(c => c.status === status);
+        return (
+          <div key={status} style={{ background: statusBg[status] || 'rgba(0,53,83,0.04)', border: `1px solid ${statusColors[status]}22`, minWidth: 200 }}>
+            {/* Column header */}
+            <div style={{ padding: '10px 12px', borderBottom: `2px solid ${statusColors[status]}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: statusColors[status] }}>
+              <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.25em', fontWeight: 700, color: '#FFFEF2' }}>{status.toUpperCase()}</span>
+              <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '1px 8px' }}>{cols.length}</span>
+            </div>
+            {/* Cards */}
+            <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 560, overflowY: 'auto' }}>
+              {cols.length === 0 && (
+                <p style={{ fontSize: 11, color: 'rgba(0,53,83,0.3)', fontStyle: 'italic', textAlign: 'center', padding: '16px 0' }}>No clients</p>
+              )}
+              {cols.map(c => (
+                <div key={c.id}
+                  onClick={() => onSelect(c)}
+                  style={{ background: '#FFFEF2', border: '1px solid rgba(0,53,83,0.12)', padding: '10px 12px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,53,83,0.12)'}
+                  onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+                  <p style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 11, color: '#003553', marginBottom: 4, lineHeight: 1.3 }}>{c.venue}</p>
+                  <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginBottom: 6 }}>
+                    {c.accountManager}{c.location ? ` · ${c.location}` : ''}
+                  </p>
+                  {/* Tags */}
+                  {c.tags && c.tags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6 }}>
+                      {c.tags.map(tag => (
+                        <span key={tag} style={{ padding: '2px 6px', background: 'rgba(215,132,51,0.15)', color: '#D78433', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.1em', fontWeight: 700 }}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                    <span style={{ fontSize: 9, color: '#D78433', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>{c.channel}</span>
+                    {c.priority && <span style={{ fontSize: 8, color: 'rgba(0,53,83,0.4)', fontStyle: 'italic' }}>{c.priority}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete }) {
   const [search, setSearch] = useState('');
   const [filterRep, setFilterRep] = useState('All');
   const [filterChannel, setFilterChannel] = useState('All');
   const [filterLocation, setFilterLocation] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'kanban'
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   // Alphabetically sorted + filtered list
@@ -2740,6 +2820,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
         if (filterRep !== 'All' && c.accountManager !== filterRep) return false;
         if (filterChannel !== 'All' && c.channel !== filterChannel) return false;
         if (filterLocation !== 'All' && c.location !== filterLocation) return false;
+        if (filterStatus !== 'All' && c.status !== filterStatus) return false;
         if (search.trim()) {
           const q = search.trim().toLowerCase();
           const hay = [c.venue, c.firstName, c.lastName, c.location, c.email, c.phone, c.notes]
@@ -2749,7 +2830,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
         return true;
       })
       .sort((a, b) => (a.venue || '').localeCompare(b.venue || ''));
-  }, [clients, filterRep, filterChannel, filterLocation, search]);
+  }, [clients, filterRep, filterChannel, filterLocation, filterStatus, search]);
 
   return (
     <div className="space-y-4 fade-up">
@@ -2761,41 +2842,49 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
             <h1 className="font-display mt-1 ink" style={{ fontWeight: 700, fontSize: 28 }}>LEADS &amp; CLIENTS</h1>
             <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>{clients.length} venues tracked</p>
           </div>
-          <button onClick={() => onAddNew && onAddNew()}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-            <span style={{ fontSize: 16, fontWeight: 300 }}>+</span> ADD NEW CLIENT
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* List / Kanban toggle */}
+            <div style={{ display: 'flex', border: '1px solid rgba(0,53,83,0.2)', overflow: 'hidden' }}>
+              {[['list','≡ LIST'], ['kanban','⊞ KANBAN']].map(([mode, label]) => (
+                <button key={mode} onClick={() => setViewMode(mode)}
+                  style={{ padding: '8px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: 'none', background: viewMode === mode ? '#003553' : 'transparent', color: viewMode === mode ? '#FFFEF2' : '#003553', cursor: 'pointer' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => onAddNew && onAddNew()}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+              <span style={{ fontSize: 16, fontWeight: 300 }}>+</span> ADD NEW CLIENT
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Search + filters */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {/* Search bar — plain input, no absolute positioning */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', padding: '0 12px' }}>
           <Search style={{ width: 16, height: 16, color: '#006C90', flexShrink: 0 }} />
-          <input
-            type="text"
-            placeholder="Search venue, contact, location..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ flex: 1, border: 'none', background: 'transparent', padding: '12px 0', fontFamily: "'Libre Baskerville', Georgia, serif", fontSize: 14, color: '#003553', outline: 'none' }}
-          />
-          {search && (
-            <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006C90', fontSize: 18, lineHeight: 1 }}>×</button>
-          )}
+          <input type="text" placeholder="Search venue, contact, location..."
+            value={search} onChange={(e) => setSearch(e.target.value)}
+            style={{ flex: 1, border: 'none', background: 'transparent', padding: '12px 0', fontFamily: "'Libre Baskerville', Georgia, serif", fontSize: 14, color: '#003553', outline: 'none' }} />
+          {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006C90', fontSize: 18, lineHeight: 1 }}>×</button>}
         </div>
-        {/* Rep + Channel + Location filters */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        {/* 4-col filter row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
           <FilterSelect label="Rep" value={filterRep} onChange={setFilterRep} options={['All', ...SALES_REPS, 'Unassigned']} />
           <FilterSelect label="Channel" value={filterChannel} onChange={setFilterChannel} options={['All', ...CHANNELS]} />
           <FilterSelect label="Location" value={filterLocation} onChange={setFilterLocation} options={['All', ...LOCATIONS]} />
+          <FilterSelect label="Status" value={filterStatus} onChange={setFilterStatus} options={['All', ...STATUSES]} />
         </div>
         <p style={{ fontSize: 11, fontStyle: 'italic', color: '#006C90', margin: 0 }}>
           {filtered.length} of {clients.length} clients{search ? ` matching "${search}"` : ''}
         </p>
       </div>
 
-      {/* Client list — single unified view, works on all screen sizes */}
+      {/* Kanban or List view */}
+      {viewMode === 'kanban' ? (
+        <KanbanView filtered={filtered} onSelect={onSelect} onDelete={onDelete} updateClient={updateClient} />
+      ) : (
       <div className="premium-card" style={{ overflow: 'hidden' }}>
         {filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center' }}>
@@ -3132,6 +3221,8 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
         </div>
       )}
     </div>
+      )}
+    </div>
   );
 }
 
@@ -3230,6 +3321,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
   const [items, setItems] = useState(existingVisit?.items ? existingVisit.items.map(it => ({ ...it })) : []);
   const [notes, setNotes] = useState(existingVisit?.notes || '');
   const [followUp, setFollowUp] = useState(existingVisit?.followUp || '');
+  const [taggedReps, setTaggedReps] = useState(existingVisit?.taggedReps || []);
   // Auto-open email modal when opened in emailOnly mode
   const [emailModalOpen, setEmailModalOpen] = useState(isEmailOnly);
   const [search, setSearch] = useState('');
@@ -3436,7 +3528,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
         listPrice: Number(it.listPrice) || 0,
         lineTotal: (Number(it.unitPrice) || 0) * (Number(it.qty) || 0),
       })),
-      notes, followUp,
+      notes, followUp, taggedReps,
     };
     console.log('[LogVisit] calling onSubmit with payload', payload);
     try {
@@ -3701,6 +3793,31 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
           <div>
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>FOLLOW-UP NOTES</label>
             <textarea value={followUp} onChange={(e) => setFollowUp(e.target.value)} rows="2" placeholder="Next action, due date, who owns it..." className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
+          </div>
+
+          {/* Tag agents */}
+          <div>
+            <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>TAG AGENTS</label>
+            <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginBottom: 8 }}>Tag team members who should be notified or are involved in this visit.</p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {SALES_REPS.map(rep => {
+                const tagged = (taggedReps || []).includes(rep);
+                return (
+                  <button key={rep} type="button"
+                    onClick={() => setTaggedReps(prev =>
+                      tagged ? prev.filter(r => r !== rep) : [...(prev || []), rep]
+                    )}
+                    style={{ padding: '7px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, border: '1px solid', borderColor: tagged ? '#D78433' : 'rgba(0,53,83,0.2)', background: tagged ? '#D78433' : 'transparent', color: tagged ? '#FFFEF2' : '#003553', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {tagged && <span style={{ fontSize: 10 }}>✓</span>} @{rep.toUpperCase()}
+                  </button>
+                );
+              })}
+            </div>
+            {(taggedReps || []).length > 0 && (
+              <p style={{ fontSize: 10, color: '#D78433', fontStyle: 'italic', marginTop: 6 }}>
+                Tagged: {taggedReps.map(r => `@${r}`).join(', ')}
+              </p>
+            )}
           </div>
 
           {/* Actions */}
@@ -4581,6 +4698,17 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                             <div>
                               <p className="font-display text-[9px] tracking-[0.2em] ocean mb-0.5" style={{ fontWeight: 600 }}>{isHistorical ? 'CONTEXT' : 'VISIT NOTES'}</p>
                               <p className="text-xs ink italic">{v.notes}</p>
+                            </div>
+                          )}
+                          {/* Tagged agents */}
+                          {v.taggedReps && v.taggedReps.length > 0 && (
+                            <div>
+                              <p className="font-display text-[9px] tracking-[0.2em] copper mb-0.5" style={{ fontWeight: 600 }}>TAGGED</p>
+                              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                {v.taggedReps.map(r => (
+                                  <span key={r} style={{ padding: '2px 8px', background: 'rgba(215,132,51,0.15)', color: '#D78433', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>@{r.toUpperCase()}</span>
+                                ))}
+                              </div>
                             </div>
                           )}
                           {/* Follow-up date */}
