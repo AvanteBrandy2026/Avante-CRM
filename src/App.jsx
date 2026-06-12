@@ -4591,6 +4591,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
   const [form, setForm] = useState(client);
   const [showUnsaved, setShowUnsaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [tagsSaved, setTagsSaved] = useState(false);
 
   const isDirty = edit && JSON.stringify(form) !== JSON.stringify(client);
 
@@ -4794,14 +4795,16 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
             </div>
           </div>
 
-          <div>
-            <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>NOTES</label>
-            {edit ? (
-              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows="3" className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
-            ) : (
-              <p className="text-sm ink italic">{client.notes || '—'}</p>
-            )}
-          </div>
+          {(edit || client.notes) && (
+            <div>
+              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>NOTES</label>
+              {edit ? (
+                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows="3" className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
+              ) : (
+                <p className="text-sm ink italic">{client.notes}</p>
+              )}
+            </div>
+          )}
 
           {/* === TAG AGENTS === */}
           <div className="pt-4 border-t border">
@@ -5004,7 +5007,19 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                 <button type="button" onClick={save} className="bg-copper hover:bg-gold px-6 py-2.5 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>SAVE CHANGES</button>
               </>
             ) : (
-              <button type="button" onClick={() => setEdit(true)} className="bg-ink hover:bg-copper px-6 py-2.5 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>EDIT CLIENT</button>
+              <>
+                <button type="button"
+                  onClick={async () => {
+                    await onUpdate(client.id, { clientTags: form.clientTags || [] });
+                    setTagsSaved(true);
+                    setTimeout(() => setTagsSaved(false), 2000);
+                  }}
+                  className="px-6 py-2.5 font-display text-xs tracking-[0.25em]"
+                  style={{ background: tagsSaved ? '#2d8659' : 'transparent', color: tagsSaved ? '#FFFEF2' : '#003553', border: '1px solid', borderColor: tagsSaved ? '#2d8659' : 'rgba(0,53,83,0.25)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Save style={{ width: 13, height: 13 }} /> {tagsSaved ? 'TAGS SAVED' : 'SAVE TAGS'}
+                </button>
+                <button type="button" onClick={() => setEdit(true)} className="bg-ink hover:bg-copper px-6 py-2.5 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>EDIT CLIENT</button>
+              </>
             )}
           </div>
         </div>
@@ -5014,6 +5029,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
 }
 
 function Field({ label, value, edit, onChange, icon: Icon }) {
+  if (!edit && !value) return null;
   return (
     <div>
       <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>{label.toUpperCase()}</label>
@@ -5022,7 +5038,7 @@ function Field({ label, value, edit, onChange, icon: Icon }) {
       ) : (
         <div className="flex items-center gap-2 text-sm ink py-1">
           {Icon && <Icon className="w-3.5 h-3.5 ocean" />}
-          {value || <span className="italic ocean">—</span>}
+          {value}
         </div>
       )}
     </div>
@@ -5030,6 +5046,7 @@ function Field({ label, value, edit, onChange, icon: Icon }) {
 }
 
 function SelectField({ label, value, edit, onChange, options }) {
+  if (!edit && !value) return null;
   return (
     <div>
       <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>{label.toUpperCase()}</label>
@@ -5038,7 +5055,7 @@ function SelectField({ label, value, edit, onChange, options }) {
           {options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : (
-        <div className="text-sm ink py-1">{value || <span className="italic ocean">—</span>}</div>
+        <div className="text-sm ink py-1">{value}</div>
       )}
     </div>
   );
