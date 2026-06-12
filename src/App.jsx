@@ -56,9 +56,12 @@ function composeTagEmail({ rep, clientName, location, channel, taggedBy, type, d
 // Open a mailto link for each newly-tagged rep (only those not already in prevTags)
 function notifyNewTags({ prevTags = [], newTags = [], ...rest }) {
   const added = newTags.filter(r => !prevTags.includes(r));
-  added.forEach(rep => {
+  added.forEach((rep, i) => {
     const url = composeTagEmail({ rep, ...rest });
-    window.open(url, '_blank');
+    // mailto: links are reliably triggered via location.href (window.open
+    // with mailto is frequently blocked or opens a blank tab). Stagger
+    // multiple recipients slightly so each mail client invocation registers.
+    setTimeout(() => { window.location.href = url; }, i * 400);
   });
   return added;
 }
