@@ -58,10 +58,18 @@ function notifyNewTags({ prevTags = [], newTags = [], ...rest }) {
   const added = newTags.filter(r => !prevTags.includes(r));
   added.forEach((rep, i) => {
     const url = composeTagEmail({ rep, ...rest });
-    // mailto: links are reliably triggered via location.href (window.open
-    // with mailto is frequently blocked or opens a blank tab). Stagger
-    // multiple recipients slightly so each mail client invocation registers.
-    setTimeout(() => { window.location.href = url; }, i * 400);
+    const fire = () => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+    // First link fires immediately (within the click gesture).
+    // Any additional tagged reps fire shortly after.
+    if (i === 0) fire();
+    else setTimeout(fire, i * 500);
   });
   return added;
 }
@@ -3805,7 +3813,6 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     };
     console.log('[LogVisit] calling onSubmit with payload', payload);
     try {
-      onSubmit(payload);
       notifyNewTags({
         prevTags: existingVisit?.taggedReps || [],
         newTags: taggedReps || [],
@@ -3816,6 +3823,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
         type: 'visit',
         date, outcome, notes, followUp,
       });
+      onSubmit(payload);
     } catch (err) {
       console.error('[LogVisit] onSubmit threw:', err);
       setValidationError('Save failed: ' + (err?.message || String(err)));
@@ -5072,7 +5080,6 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                   onClick={async () => {
                     const prevTags = client.clientTags || [];
                     const newTags = form.clientTags || [];
-                    await onUpdate({ clientTags: newTags });
                     notifyNewTags({
                       prevTags, newTags,
                       clientName: client.venue,
@@ -5083,6 +5090,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                       status: client.status,
                       notes: client.notes,
                     });
+                    await onUpdate({ clientTags: newTags });
                     setTagsSaved(true);
                     setTimeout(() => setTagsSaved(false), 2000);
                   }}
