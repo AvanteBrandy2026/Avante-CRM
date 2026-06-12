@@ -26,15 +26,12 @@ const DEFAULT_ORDER_RECIPIENTS = [
 const TRADE_RETAIL_ORDER_RECIPIENTS = [
   'orders@redbev.co.za',
 ];
-const CHANNELS = ['Private Sales', 'Trade Retail', 'On-Con'];
+const CHANNELS = ['Private Sales', 'Trade Retail', 'On-Con', 'B2B'];
 const PAYMENT_TERMS = ['COD', '30 Days', '60 Days'];
 const CONTACT_METHODS = ['In Person', 'WhatsApp', 'Phone Call / Online Meet', 'Email'];
 const LOCATIONS = [
-  'CBD', 'Sea Point', 'Camps Bay', 'Blouberg', 'Milnerton', 'Tableview', 'Parklands',
-  'Waterfront', 'Green Point', 'De Waterkant', 'Woodstock', 'Observatory', 'Mowbray',
-  'Claremont', 'Constantia', 'Tokai', 'Hout Bay', 'Stellenbosch', 'Franschhoek',
-  'Paarl', 'Somerset West', 'Strand', 'Hermanus', 'Overberg', 'Cape Winelands',
-  'West-Coast', 'Durban', "Jo'Burg", 'Pretoria', 'Other',
+  'Western Cape', 'Eastern Cape', 'Northern Cape', 'Gauteng',
+  'KwaZulu-Natal', 'Free State', 'Limpopo', 'Mpumalanga', 'North West',
 ];
 const STATUSES = ['New', 'Contacted', 'Converted', 'Lost'];
 const LEAD_SOURCES = ['Cold Call', 'Referral', 'Walk into Store', 'Email', 'Event', 'Networking', 'Call-cycle', 'Website', 'Online'];
@@ -4459,13 +4456,13 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
           {/* Channel — critical for visit logging */}
           <div>
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>CHANNEL * <span className="italic normal-case text-[9px] ocean">(required for visit logging)</span></label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {CHANNELS.map(ch => (
                 <button key={ch} type="button"
                   onClick={() => setF('channel', ch)}
                   className={`py-3 font-display text-xs tracking-[0.15em] border-2 transition-all ${form.channel === ch ? 'bg-ink border-ink' : 'bg-cream border'}`}
                   style={{ color: form.channel === ch ? '#FFFEF2' : '#003553', fontWeight: 700 }}>
-                  {ch === 'Private Sales' ? 'PRIVATE SALES' : 'TRADE RETAIL'}
+                  {ch.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -4768,7 +4765,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               onChange={async (e) => {
                 const newStatus = e.target.value;
                 setForm(f => ({ ...f, status: newStatus }));
-                await onUpdate(client.id, { status: newStatus });
+                await onUpdate({ status: newStatus });
               }}
               style={{ padding: '6px 10px', border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, color: '#003553', cursor: 'pointer', outline: 'none' }}
             >
@@ -4821,7 +4818,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                         ? currentTags.filter(r => r !== rep)
                         : [...currentTags, rep];
                       setForm(f => ({ ...f, clientTags: next }));
-                      onUpdate(client.id, { clientTags: next });
+                      onUpdate({ clientTags: next });
                     }}
                     style={{ padding: '8px 16px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, border: '1px solid', borderColor: tagged ? '#D78433' : 'rgba(0,53,83,0.2)', background: tagged ? '#D78433' : 'transparent', color: tagged ? '#FFFEF2' : '#003553', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s' }}>
                     {tagged && <span style={{ fontSize: 10 }}>✓</span>} @{rep.toUpperCase()}
@@ -5010,7 +5007,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               <>
                 <button type="button"
                   onClick={async () => {
-                    await onUpdate(client.id, { clientTags: form.clientTags || [] });
+                    await onUpdate({ clientTags: form.clientTags || [] });
                     setTagsSaved(true);
                     setTimeout(() => setTagsSaved(false), 2000);
                   }}
