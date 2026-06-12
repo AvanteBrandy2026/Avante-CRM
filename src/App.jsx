@@ -15,6 +15,52 @@ const REP_EMAILS = {
   Loydz: 'lonwabo@breakfreebeverages.com',
 };
 
+// Build a mailto: link that notifies a tagged agent
+function composeTagEmail({ rep, clientName, location, channel, taggedBy, type, date, outcome, notes, followUp, status }) {
+  const to = REP_EMAILS[rep] || '';
+  const subject = `You've been tagged on ${clientName} — Avante CRM`;
+  const lines = [];
+  lines.push(`Hi ${rep},`);
+  lines.push('');
+  lines.push(`You've been tagged on a client in the Avante Sales CRM.`);
+  lines.push('');
+  lines.push(`CLIENT:    ${clientName}`);
+  if (location) lines.push(`LOCATION:  ${location}`);
+  if (channel) lines.push(`CHANNEL:   ${channel}`);
+  if (taggedBy) lines.push(`TAGGED BY: ${taggedBy}`);
+  lines.push(`TYPE:      ${type === 'visit' ? 'Visit Note' : 'Client Tag'}`);
+  lines.push('');
+  if (type === 'visit') {
+    if (date) lines.push(`VISIT DATE: ${date}`);
+    if (outcome) lines.push(`OUTCOME:    ${outcome}`);
+    if (notes) lines.push(`NOTES:      "${notes}"`);
+    if (followUp) lines.push(`FOLLOW-UP:  ${followUp}`);
+  } else {
+    if (status) lines.push(`STATUS:     ${status}`);
+    if (taggedBy) lines.push(`ACCOUNT MANAGER: ${taggedBy}`);
+    if (notes) lines.push(`NOTES:      "${notes}"`);
+  }
+  lines.push('');
+  lines.push('View this client in the CRM:');
+  lines.push('https://avante-crm.vercel.app/ \u2192 Notifications');
+  lines.push('');
+  lines.push('\u2014 Avante Sales CRM');
+  lines.push('   Dare to Forward');
+
+  const body = lines.join('\n');
+  return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+// Open a mailto link for each newly-tagged rep (only those not already in prevTags)
+function notifyNewTags({ prevTags = [], newTags = [], ...rest }) {
+  const added = newTags.filter(r => !prevTags.includes(r));
+  added.forEach(rep => {
+    const url = composeTagEmail({ rep, ...rest });
+    window.open(url, '_blank');
+  });
+  return added;
+}
+
 // Default recipients for every order confirmation email — copied into the
 // SEND TO field automatically. Reps can edit/add/remove before sending.
 const DEFAULT_ORDER_RECIPIENTS = [
@@ -3753,6 +3799,16 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     console.log('[LogVisit] calling onSubmit with payload', payload);
     try {
       onSubmit(payload);
+      notifyNewTags({
+        prevTags: existingVisit?.taggedReps || [],
+        newTags: taggedReps || [],
+        clientName: selectedClient?.venue || '',
+        location: selectedClient?.location || '',
+        channel: selectedClient?.channel || '',
+        taggedBy: salesRep,
+        type: 'visit',
+        date, outcome, notes, followUp,
+      });
     } catch (err) {
       console.error('[LogVisit] onSubmit threw:', err);
       setValidationError('Save failed: ' + (err?.message || String(err)));
@@ -5007,7 +5063,19 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               <>
                 <button type="button"
                   onClick={async () => {
-                    await onUpdate({ clientTags: form.clientTags || [] });
+                    const prevTags = client.clientTags || [];
+                    const newTags = form.clientTags || [];
+                    await onUpdate({ clientTags: newTags });
+                    notifyNewTags({
+                      prevTags, newTags,
+                      clientName: client.venue,
+                      location: client.location,
+                      channel: client.channel,
+                      taggedBy: client.accountManager,
+                      type: 'client',
+                      status: client.status,
+                      notes: client.notes,
+                    });
                     setTagsSaved(true);
                     setTimeout(() => setTagsSaved(false), 2000);
                   }}
