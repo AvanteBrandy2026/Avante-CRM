@@ -4205,7 +4205,6 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
   }, [client]);
 
   const [recipient, setRecipient] = useState(initialRecipients);
-  const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState('');
   const composed = useMemo(() => composeOrderEmail(), [composeOrderEmail]);
 
@@ -4336,127 +4335,61 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
             </div>
           </div>
 
-          {/* Preview toggle */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowPreview(!showPreview)}
-              className="text-[10px] font-display tracking-[0.2em] copper hover:gold"
-              style={{ fontWeight: 700 }}
-            >
-              {showPreview ? '▾ HIDE EMAIL PREVIEW' : '▸ SHOW EMAIL PREVIEW'}
-            </button>
-            {showPreview && (
-              <pre className="mt-2 p-3  border border text-[11px] ink whitespace-pre-wrap font-mono max-h-72 overflow-y-auto scrollbar-thin">{composed.body}</pre>
-            )}
-          </div>
-
           <div>
             <p className="font-display text-[10px] tracking-[0.3em] copper mb-2" style={{ fontWeight: 600 }}>SEND VIA</p>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-              {/* Gmail — opens the Gmail mobile app via its custom URL scheme, falls back to Gmail web on desktop */}
-              <a
-                href={(() => {
-                  const list = parseRecipients(recipient).filter(e => isValidEmail(e));
-                  if (list.length === 0) return '#';
-                  const to = encodeURIComponent(list.join(','));
-                  const su = encodeURIComponent(composed.subject);
-                  const bo = encodeURIComponent(composed.body);
-                  // googlegmail:// is the scheme registered by the Gmail app on iOS & Android
-                  return `googlegmail://co?to=${to}&subject=${su}&body=${bo}`;
-                })()}
-                onClick={(e) => {
-                  const list = parseRecipients(recipient);
-                  if (list.length === 0) { e.preventDefault(); setError('Please enter at least one recipient.'); return; }
-                  const invalid = list.filter(em => !isValidEmail(em));
-                  if (invalid.length > 0) { e.preventDefault(); setError(`Invalid: ${invalid.join(', ')}`); return; }
-                  setError('');
-                  // If the Gmail app isn't installed, googlegmail:// fails silently
-                  // on most mobile browsers. After a short delay, fall back to
-                  // Gmail web compose in a new tab.
-                  const to = encodeURIComponent(list.join(','));
-                  const su = encodeURIComponent(composed.subject);
-                  const bo = encodeURIComponent(composed.body);
-                  const webUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${su}&body=${bo}`;
-                  setTimeout(() => {
-                    if (!document.hidden) window.open(webUrl, '_blank', 'noopener,noreferrer');
-                  }, 800);
-                }}
-                className="flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.2em] hover:opacity-90 no-underline border border"
-                style={{ background: '#FCF7F2', color: '#002855', fontWeight: 700, textDecoration: 'none' }}
-              >
-                <Mail className="w-4 h-4" /> GMAIL APP
-              </a>
-              {/* Gmail web compose — always opens in browser */}
-              <a
-                href={(() => {
-                  const list = parseRecipients(recipient).filter(e => isValidEmail(e));
-                  if (list.length === 0) return '#';
-                  const to = encodeURIComponent(list.join(','));
-                  const su = encodeURIComponent(composed.subject);
-                  const bo = encodeURIComponent(composed.body);
-                  return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${su}&body=${bo}`;
-                })()}
-                onClick={(e) => {
-                  const list = parseRecipients(recipient);
-                  if (list.length === 0) { e.preventDefault(); setError('Please enter at least one recipient.'); return; }
-                  const invalid = list.filter(em => !isValidEmail(em));
-                  if (invalid.length > 0) { e.preventDefault(); setError(`Invalid: ${invalid.join(', ')}`); return; }
-                  setError('');
-                }}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.2em] hover:opacity-90 no-underline border border"
-                style={{ background: '#FCF7F2', color: '#002855', fontWeight: 700, textDecoration: 'none' }}
-              >
-                <Mail className="w-4 h-4" /> GMAIL WEB
-              </a>
-              {/* Outlook web compose */}
-              <a
-                href={(() => {
-                  const list = parseRecipients(recipient).filter(e => isValidEmail(e));
-                  if (list.length === 0) return '#';
-                  const to = encodeURIComponent(list.join(';'));
-                  const su = encodeURIComponent(composed.subject);
-                  const bo = encodeURIComponent(composed.body);
-                  return `https://outlook.office.com/mail/deeplink/compose?to=${to}&subject=${su}&body=${bo}`;
-                })()}
-                onClick={(e) => {
-                  const list = parseRecipients(recipient);
-                  if (list.length === 0) { e.preventDefault(); setError('Please enter at least one recipient.'); return; }
-                  const invalid = list.filter(em => !isValidEmail(em));
-                  if (invalid.length > 0) { e.preventDefault(); setError(`Invalid: ${invalid.join(', ')}`); return; }
-                  setError('');
-                }}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.2em] hover:opacity-90 no-underline border border"
-                style={{ background: '#FCF7F2', color: '#002855', fontWeight: 700, textDecoration: 'none' }}
-              >
-                <Mail className="w-4 h-4" /> OUTLOOK
-              </a>
-              {/* OS default mail app via mailto */}
-              <a
-                href={(() => {
-                  const list = parseRecipients(recipient);
-                  if (list.length === 0 || list.some(e => !isValidEmail(e))) return '#';
-                  return buildMailtoUrl(list.join(','));
-                })()}
-                onClick={(e) => {
-                  const list = parseRecipients(recipient);
-                  if (list.length === 0) { e.preventDefault(); setError('Please enter at least one recipient.'); return; }
-                  const invalid = list.filter(em => !isValidEmail(em));
-                  if (invalid.length > 0) { e.preventDefault(); setError(`Invalid: ${invalid.join(', ')}`); return; }
-                  setError('');
-                }}
-                target="_top"
-                className="flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.2em] hover:opacity-90 no-underline"
-                style={{ background: '#5A7A99', color: '#FCF7F2', fontWeight: 700, textDecoration: 'none' }}
-              >
-                <Mail className="w-4 h-4" /> OS MAIL APP
-              </a>
-            </div>
-            <p className="text-[10px] italic ocean mt-2">On mobile, "GMAIL APP" opens the Gmail app directly. If it doesn't open (app not installed), Gmail web will open instead after a moment. "GMAIL WEB", "OUTLOOK" and "OS MAIL APP" always open in browser/default app.</p>
+            <a
+              href={(() => {
+                const list = parseRecipients(recipient).filter(e => isValidEmail(e));
+                if (list.length === 0) return '#';
+                const to = encodeURIComponent(list.join(','));
+                const su = encodeURIComponent(composed.subject);
+                const bo = encodeURIComponent(composed.body);
+                // googlegmail:// is the scheme registered by the Gmail app on iOS
+                return `googlegmail://co?to=${to}&subject=${su}&body=${bo}`;
+              })()}
+              onClick={(e) => {
+                const list = parseRecipients(recipient);
+                if (list.length === 0) { e.preventDefault(); setError('Please enter at least one recipient.'); return; }
+                const invalid = list.filter(em => !isValidEmail(em));
+                if (invalid.length > 0) { e.preventDefault(); setError(`Invalid: ${invalid.join(', ')}`); return; }
+                setError('');
+
+                const to = list.join(',');
+                const su = composed.subject;
+                const bo = composed.body;
+
+                // Android: use an explicit intent:// URL targeting the Gmail
+                // package (com.google.android.gm) with a mailto data URI.
+                // This opens the Gmail app's compose screen directly — if
+                // the app isn't installed, Android's intent system falls
+                // back to the Play Store listing for Gmail automatically.
+                const ua = navigator.userAgent || '';
+                const isAndroid = /android/i.test(ua);
+                const isIOS = /iphone|ipad|ipod/i.test(ua);
+
+                if (isAndroid) {
+                  e.preventDefault();
+                  const mailtoData = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(su)}&body=${encodeURIComponent(bo)}`;
+                  const intentUrl = `intent://send?${mailtoData.split('?')[1]}#Intent;scheme=mailto;package=com.google.android.gm;S.android.intent.extra.EMAIL=${encodeURIComponent(to)};end`;
+                  window.location.href = intentUrl;
+                } else if (!isIOS) {
+                  // Desktop: googlegmail:// scheme isn't registered — go
+                  // straight to Gmail web compose instead.
+                  e.preventDefault();
+                  const webTo = encodeURIComponent(to);
+                  const webSu = encodeURIComponent(su);
+                  const webBo = encodeURIComponent(bo);
+                  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${webTo}&su=${webSu}&body=${webBo}`, '_blank', 'noopener,noreferrer');
+                }
+                // iOS: let the default href (googlegmail://co?...) fire —
+                // this is the scheme the Gmail app registers on iOS.
+              }}
+              className="flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.2em] hover:opacity-90 no-underline border border w-full"
+              style={{ background: '#FCF7F2', color: '#002855', fontWeight: 700, textDecoration: 'none' }}
+            >
+              <Mail className="w-4 h-4" /> GMAIL APP
+            </a>
+            <p className="text-[10px] italic ocean mt-2">Opens a new draft in the Gmail app on your phone, pre-filled with the recipients, subject and order details. On desktop this opens Gmail in your browser.</p>
           </div>
           {client?.email && !includesClient && (
             <p className="text-[11px] italic" style={{ color: '#BC8D26' }}>
