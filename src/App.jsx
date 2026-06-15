@@ -74,17 +74,6 @@ function notifyNewTags({ prevTags = [], newTags = [], ...rest }) {
   return added;
 }
 
-// Default recipients for every order confirmation email — copied into the
-// SEND TO field automatically. Reps can edit/add/remove before sending.
-const DEFAULT_ORDER_RECIPIENTS = [
-  'lauren@redbev.co.za',
-  'melanie@redbev.co.za',
-];
-
-// Additional recipients pre-populated for Trade Retail channel orders
-const TRADE_RETAIL_ORDER_RECIPIENTS = [
-  'orders@redbev.co.za',
-];
 const CHANNELS = ['Private Sales', 'Trade Retail', 'On-Con', 'B2B'];
 const PAYMENT_TERMS = ['COD', '30 Days', '60 Days'];
 const CONTACT_METHODS = ['In Person', 'WhatsApp', 'Phone Call / Online Meet', 'Email'];
@@ -628,7 +617,7 @@ export default function AvanteCRM() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@500;600;700;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; overflow-x: hidden; width: 100%; }
+        html, body { margin: 0; padding: 0; overflow-x: hidden; width: 100%; background: #FCF7F2; }
         .font-display { font-family: 'Cinzel', 'Copperplate', serif; letter-spacing: 0.08em; }
         .font-body { font-family: 'Libre Baskerville', Georgia, serif; }
         /* Colour utilities */
@@ -1207,7 +1196,7 @@ function Header({ view, setView, onLog, visits, clients, onNavigate }) {
           <AvanteLogo height={40} />
           <div className="crm-brand-text" style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 12 }}>
             <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.35em', color: '#DBB85E', fontWeight: 600, margin: 0 }}>SALES CRM</p>
-            <p className="font-display" style={{ fontSize: 7, letterSpacing: '0.2em', color: '#FCF7F2', opacity: 0.5, margin: '2px 0 0' }}>DARE TO FORWARD</p>
+            <p className="font-display" style={{ fontSize: 7, letterSpacing: '0.2em', color: '#FCF7F2', opacity: 0.5, margin: '2px 0 0' }}>FORWARD TOGETHER</p>
           </div>
         </div>
         {/* Navigation — desktop only (hidden on mobile via CSS) */}
@@ -1840,7 +1829,7 @@ function NotificationsPage({ visits, clients, onSelectClient }) {
   return (
     <div className="space-y-4 fade-up">
       {/* Header */}
-      <div className="pb-3 border-b border">
+      <div className="pb-3 border-b">
         <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>AGENT MENTIONS</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
           <div>
@@ -1996,7 +1985,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
     <div className="space-y-4 md:space-y-6 fade-up">
 
       {/* Page header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap pb-3 border-b border">
+      <div className="flex items-center justify-between gap-3 flex-wrap pb-3 border-b">
         <div className="flex items-center gap-3">
           {/* Prev month */}
           <button
@@ -2970,7 +2959,7 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
 
   return (
     <div className="premium-card p-4 md:p-6 relative">
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border">
+      <div className="flex items-center justify-between pb-3 mb-3 border-b">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 flex items-center justify-center bg-ink">
             <span className="font-display text-sm" style={{ color: '#DBB85E', fontWeight: 700 }}>{rep[0]}</span>
@@ -3148,7 +3137,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
   return (
     <div className="space-y-4 fade-up">
       {/* Page header */}
-      <div className="pb-3 border-b border">
+      <div className="pb-3 border-b">
         <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>CLIENT DATABASE</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
           <div>
@@ -3360,7 +3349,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
   return (
     <div className="fade-up space-y-5">
       {/* Header */}
-      <div className="pb-3 border-b border">
+      <div className="pb-3 border-b">
         <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>ORDER DATABASE</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
           <div>
@@ -3546,7 +3535,7 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
   return (
     <div className="space-y-6 fade-up">
       {/* Page header */}
-      <div className="pb-3 border-b border">
+      <div className="pb-3 border-b">
         <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>VISIT HISTORY</p>
         <div className="flex items-center justify-between gap-3 mt-1 flex-wrap">
           <h1 className="font-display text-2xl md:text-3xl ink" style={{ fontWeight: 700 }}>VISIT LOG</h1>
@@ -3765,12 +3754,13 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     lines.push('Avante Cape Brandy');
     lines.push('— Dare to Forward —');
 
-    // Build recipient list — client email first, then Trade Retail order address if applicable
+    // Build recipient list per channel: Private Sales & B2B → matthew,
+    // Trade Retail / other channels → orders@redbev. Client email always included if on file.
     const recipientParts = [];
     if (c?.email) recipientParts.push(c.email);
-    if (c?.channel === 'Trade Retail') {
-      TRADE_RETAIL_ORDER_RECIPIENTS.forEach(r => { if (!recipientParts.includes(r)) recipientParts.push(r); });
-    }
+    const isMatthewChannel = c?.channel === 'Private Sales' || c?.channel === 'B2B';
+    const defaultAddr = isMatthewChannel ? 'matthew@breakfreebeverages.com' : 'orders@redbev.co.za';
+    if (!recipientParts.includes(defaultAddr)) recipientParts.push(defaultAddr);
     const defaultRecipient = recipientParts.join(', ');
 
     return { subject, body: lines.join('\n'), defaultRecipient, orderTotal };
@@ -4045,7 +4035,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                 </div>
                 {/* Desktop: compact grid */}
                 <div className="hidden md:block">
-                  <div className="grid grid-cols-12 gap-2 px-3 py-2  border-b border">
+                  <div className="grid grid-cols-12 gap-2 px-3 py-2  border-b">
                     <div className="col-span-4 font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>SKU</div>
                     <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-center" style={{ fontWeight: 600 }}>QTY</div>
                     <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>UNIT R</div>
@@ -4058,7 +4048,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                     const discountPct = it.listPrice > 0 ? Math.round((1 - Number(it.unitPrice) / Number(it.listPrice)) * 100) : 0;
                     const discounted = Number(it.unitPrice) < Number(it.listPrice);
                     return (
-                      <div key={it.skuId} className="grid grid-cols-12 gap-2 px-3 py-2 border-b border items-center">
+                      <div key={it.skuId} className="grid grid-cols-12 gap-2 px-3 py-2 border-b items-center">
                         <div className="col-span-4">
                           <p className="ink text-xs font-display" style={{ fontWeight: 700 }}>{it.name}</p>
                           {discounted && <p className="text-[9px] copper italic">from {ZAR(it.listPrice)}</p>}
@@ -4150,7 +4140,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
             </div>
           )}
           {/* Mobile: stacked full-width buttons. Desktop: row layout */}
-          <div className="pt-4 border-t border space-y-2 md:space-y-0 md:flex md:items-center md:justify-between md:gap-3 md:flex-wrap">
+          <div className="pt-4 border-t space-y-2 md:space-y-0 md:flex md:items-center md:justify-between md:gap-3 md:flex-wrap">
             <button type="button" onClick={handleEmailOrder}
               className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.25em] border"
               style={{ color: '#5A7A99', fontWeight: 700, borderColor: '#5A7A99' }}>
@@ -4194,11 +4184,11 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
 function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCount, composeOrderEmail, buildMailtoUrl, onClose, onSend }) {
   // Build initial recipient list: defaults + client's email if on file (deduped, in order)
   const initialRecipients = useMemo(() => {
-    // Route by channel: Private Sales → matthew, Trade Retail → lauren + melanie + orders
-    const isPrivate = client?.channel === 'Private Sales';
-    const list = isPrivate
+    // Route by channel: Private Sales & B2B → matthew, Trade Retail (& others) → orders@redbev
+    const isMatthewChannel = client?.channel === 'Private Sales' || client?.channel === 'B2B';
+    const list = isMatthewChannel
       ? ['matthew@breakfreebeverages.com']
-      : ['lauren@redbev.co.za', 'melanie@redbev.co.za', 'orders@redbev.co.za'];
+      : ['orders@redbev.co.za'];
     // Always add the client's own email if on file
     if (client?.email && !list.includes(client.email)) list.push(client.email);
     return list.join(', ');
@@ -4299,7 +4289,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
               className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none"
               autoFocus
             />
-            <p className="text-[10px] italic ocean mt-1">Private clients → matthew@breakfreebeverages.com · Trade clients → lauren@redbev.co.za, melanie@redbev.co.za, orders@redbev.co.za</p>
+            <p className="text-[10px] italic ocean mt-1">Private Sales & B2B → matthew@breakfreebeverages.com · Trade Retail / other channels → orders@redbev.co.za</p>
             {client?.venue && (
               <p className="text-[11px] italic ocean mt-1.5">
                 Order for <strong className="ink">{client.venue}</strong>
@@ -4624,7 +4614,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
           </p>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-3 border-t border">
+          <div className="flex gap-3 pt-3 border-t">
             <button type="button" onClick={onClose} className="flex-none px-4 py-3 font-display text-xs tracking-[0.2em] ink border border" style={{ fontWeight: 700 }}>
               CANCEL
             </button>
@@ -4804,7 +4794,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
 
         <div className="p-4 md:p-6 space-y-5">
           {/* Quick stats — 2 col on mobile, 4 on desktop */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-4 border-b border">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-4 border-b">
             <div>
               <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>TOTAL SALES TD</p>
               <p className="font-display text-xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(client.totalSales || 0)}</p>
@@ -4827,7 +4817,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
           </div>
 
           {/* Status quick-change — separate row */}
-          <div className="pb-3 border-b border">
+          <div className="pb-3 border-b">
             <p className="font-display text-[10px] tracking-[0.3em] copper mb-2" style={{ fontWeight: 600 }}>STATUS</p>
             <select
               value={form.status || client.status}
@@ -4873,7 +4863,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
           )}
 
           {/* === TAG AGENTS === */}
-          <div className="pt-4 border-t border">
+          <div className="pt-4 border-t">
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>TAG AGENTS</label>
             <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginBottom: 10 }}>Tag team members who should follow up or are involved with this client.</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -4906,20 +4896,20 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
 
           {/* === PURCHASE HISTORY (SKUs aggregated) === */}
           {skuTotals.length > 0 && (
-            <div className="pt-5 border-t border">
+            <div className="pt-5 border-t">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>PURCHASE HISTORY · SKU BREAKDOWN</p>
                 <span className="text-[10px] italic ocean">All-time totals across {visits.filter(v => v.items && v.items.length > 0).length} order{visits.filter(v => v.items && v.items.length > 0).length === 1 ? '' : 's'}</span>
               </div>
               <div className="border border">
-                <div className="grid grid-cols-12 gap-2 px-3 py-2  border-b border">
+                <div className="grid grid-cols-12 gap-2 px-3 py-2  border-b">
                   <div className="col-span-6 font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>SKU</div>
                   <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-center" style={{ fontWeight: 600 }}>UNITS</div>
                   <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>REVENUE</div>
                   <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>LAST</div>
                 </div>
                 {skuTotals.map(s => (
-                  <div key={s.skuId} className="grid grid-cols-12 gap-2 px-3 py-2 border-b border items-center text-xs">
+                  <div key={s.skuId} className="grid grid-cols-12 gap-2 px-3 py-2 border-b items-center text-xs">
                     <div className="col-span-6 ink font-display" style={{ fontWeight: 700 }}>{s.name}</div>
                     <div className="col-span-2 text-center ink">{s.qty}</div>
                     <div className="col-span-2 text-right copper font-display" style={{ fontWeight: 700 }}>{ZAR(s.revenue)}</div>
@@ -4937,7 +4927,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
 
           {/* === CALL CYCLE / VISIT TIMELINE === */}
           {orderedVisits.length > 0 ? (
-            <div className="pt-5 border-t border">
+            <div className="pt-5 border-t">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>CALL CYCLE · VISIT TIMELINE ({orderedVisits.length})</p>
                 <span className="text-[10px] italic ocean">Newest first</span>
@@ -4964,7 +4954,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                         <div className="absolute left-[5px] top-5 bottom-[-12px] w-px bg-ink/15"></div>
                       )}
                       <div className={`border ${isLatest ? 'border-copper' : isHistorical ? 'border border-dashed' : 'border'} bg-cream`}>
-                        <div className="flex items-baseline justify-between gap-2 px-3 py-2 border-b border" style={{ background: isLatest ? 'rgba(219,184,94,0.08)' : isHistorical ? 'rgba(90,122,153,0.04)' : 'transparent' }}>
+                        <div className="flex items-baseline justify-between gap-2 px-3 py-2 border-b" style={{ background: isLatest ? 'rgba(219,184,94,0.08)' : isHistorical ? 'rgba(90,122,153,0.04)' : 'transparent' }}>
                           <div className="flex items-baseline gap-3 flex-wrap">
                             <span className="font-display ink text-sm tracking-wide" style={{ fontWeight: 700 }}>{v.date || 'No date'}</span>
                             <span className="text-[10px] font-display tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>BY {v.salesRep?.toUpperCase() || '—'}</span>
@@ -5057,7 +5047,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               </div>
             </div>
           ) : (
-            <div className="pt-5 border-t border">
+            <div className="pt-5 border-t">
               <p className="font-display text-[10px] tracking-[0.3em] copper mb-3" style={{ fontWeight: 600 }}>CALL CYCLE · VISIT TIMELINE</p>
               <div className="border border-dashed border p-6 text-center">
                 <p className="text-xs italic ocean">No visits logged for this client yet.</p>
@@ -5066,7 +5056,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t">
             {edit ? (
               <>
                 <button type="button" onClick={() => { setForm(client); setEdit(false); }} className="px-5 py-2.5 font-display text-xs tracking-[0.25em] ink" style={{ fontWeight: 700 }}>CANCEL</button>
