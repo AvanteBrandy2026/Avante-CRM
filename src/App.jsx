@@ -17,6 +17,11 @@ const REP_EMAILS = {
   Matthew: 'matthew@breakfreebeverages.com',
 };
 
+// Personal/internal addresses that must NEVER be auto-populated as a
+// recipient anywhere in the app (test data leftovers etc.)
+const BLOCKED_EMAILS = ['mrunnalls22@gmail.com'];
+const isBlockedEmail = (email) => !!email && BLOCKED_EMAILS.includes(String(email).trim().toLowerCase());
+
 // Build a mailto: link that notifies a tagged agent
 function composeTagEmail({ rep, clientName, location, channel, taggedBy, type, date, outcome, notes, followUp, status }) {
   const to = REP_EMAILS[rep] || '';
@@ -3700,7 +3705,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     lines.push(`Contact Method: ${contactMethod || 'In Person'}`);
     lines.push(`Outcome:        ${outcome}`);
     lines.push(`Sales Rep:      ${salesRep} — Avante Cape Brandy`);
-    if (c?.email) lines.push(`Email Invoice:  ${c.email}`);
+    if (c?.email && !isBlockedEmail(c.email)) lines.push(`Email Invoice:  ${c.email}`);
     const terms = c?.paymentTerms || 'COD';
     lines.push(`Payment Terms:  ${terms === 'COD' ? 'Cash on Delivery (COD)' : terms === '30 Days' ? '30 Days from Invoice' : terms === '60 Days' ? '60 Days from Invoice' : terms}`);
     if (followUpDate) lines.push(`Follow-up Due:  ${followUpDate}`);
@@ -3757,7 +3762,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     // Build recipient list per channel: Private Sales & B2B → matthew,
     // Trade Retail / other channels → orders@redbev. Client email always included if on file.
     const recipientParts = [];
-    if (c?.email) recipientParts.push(c.email);
+    if (c?.email && !isBlockedEmail(c.email)) recipientParts.push(c.email);
     const isMatthewChannel = c?.channel === 'Private Sales' || c?.channel === 'B2B';
     const defaultAddr = isMatthewChannel ? 'matthew@breakfreebeverages.com' : 'orders@redbev.co.za';
     if (!recipientParts.includes(defaultAddr)) recipientParts.push(defaultAddr);
@@ -4190,7 +4195,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
       ? ['matthew@breakfreebeverages.com']
       : ['orders@redbev.co.za'];
     // Always add the client's own email if on file
-    if (client?.email && !list.includes(client.email)) list.push(client.email);
+    if (client?.email && !isBlockedEmail(client.email) && !list.includes(client.email)) list.push(client.email);
     return list.join(', ');
   }, [client]);
 
@@ -4271,7 +4276,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
             <div className="flex items-baseline justify-between mb-1 flex-wrap gap-2">
               <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>SEND TO</p>
               <div className="flex items-center gap-3">
-                {client?.email && (
+                {client?.email && !isBlockedEmail(client.email) && (
                   <button type="button" onClick={toggleClientEmail} className="text-[10px] font-display tracking-wider copper hover:gold" style={{ fontWeight: 700 }}>
                     {includesClient ? '− REMOVE CLIENT EMAIL' : '+ ADD CLIENT EMAIL'}
                   </button>
@@ -4359,8 +4364,12 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
 
                 if (isAndroid) {
                   e.preventDefault();
-                  const mailtoData = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(su)}&body=${encodeURIComponent(bo)}`;
-                  const intentUrl = `intent://send?${mailtoData.split('?')[1]}#Intent;scheme=mailto;package=com.google.android.gm;S.android.intent.extra.EMAIL=${encodeURIComponent(to)};end`;
+                  // The recipient must sit where mailto: puts it — directly
+                  // after the scheme, before the "?". Putting it in a "to="
+                  // query param (as a generic mailto query string) is NOT
+                  // read by Gmail's intent handler and results in a blank
+                  // "To" field.
+                  const intentUrl = `intent://${encodeURIComponent(to)}?subject=${encodeURIComponent(su)}&body=${encodeURIComponent(bo)}#Intent;scheme=mailto;package=com.google.android.gm;end`;
                   window.location.href = intentUrl;
                 } else if (!isIOS) {
                   // Desktop: googlegmail:// scheme isn't registered — go
@@ -4381,7 +4390,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
             </a>
             <p className="text-[10px] italic ocean mt-2">Opens a new draft in the Gmail app on your phone, pre-filled with the recipients, subject and order details. On desktop this opens Gmail in your browser.</p>
           </div>
-          {client?.email && !includesClient && (
+          {client?.email && !isBlockedEmail(client.email) && !includesClient && (
             <p className="text-[11px] italic" style={{ color: '#BC8D26' }}>
               Tip: Click "+ ADD CLIENT EMAIL" above to also send to <strong>{client.email}</strong>.
             </p>
@@ -4649,7 +4658,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [tagsSaved, setTagsSaved] = useState(false);
 
-  const isDirty = edit && JSON.stringify(form) !== JSON.stringify(client);
+  const isDirty = JSON.stringify(form) !== JSON.stringify(client);
 
   const save = () => {
     console.log('[ClientDetail] saving', form);
