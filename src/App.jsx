@@ -158,14 +158,14 @@ const AvanteLogo = ({ className = '', height = 52, gold = true }) => (
 
 const AvanteWordmark = ({ dark = false, className = '' }) => (
   <svg viewBox="0 0 280 60" className={className} xmlns="http://www.w3.org/2000/svg">
-    <text x="140" y="38" textAnchor="middle" fontFamily="'Cinzel', 'Copperplate', serif" fontWeight="700" fontSize="34" letterSpacing="6" fill={dark ? '#FFFEF2' : '#003553'}>AVANTE</text>
-    <text x="140" y="55" textAnchor="middle" fontFamily="'Cinzel', 'Copperplate', serif" fontWeight="600" fontSize="9" letterSpacing="6" fill={dark ? '#FFFEF2' : '#003553'}>CAPE BRANDY</text>
+    <text x="140" y="38" textAnchor="middle" fontFamily="'Cinzel', 'Copperplate', serif" fontWeight="700" fontSize="34" letterSpacing="6" fill={dark ? '#FCF7F2' : '#002855'}>AVANTE</text>
+    <text x="140" y="55" textAnchor="middle" fontFamily="'Cinzel', 'Copperplate', serif" fontWeight="600" fontSize="9" letterSpacing="6" fill={dark ? '#FCF7F2' : '#002855'}>CAPE BRANDY</text>
   </svg>
 );
 
 const RaysBackdrop = ({ opacity = 0.07 }) => (
   <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-    <g stroke="#FDB940" strokeWidth="0.4" opacity={opacity}>
+    <g stroke="#DBB85E" strokeWidth="0.4" opacity={opacity}>
       {Array.from({ length: 60 }).map((_, i) => {
         const angle = (i * 6) * Math.PI / 180;
         return <line key={i} x1="200" y1="200" x2={200 + 600 * Math.cos(angle)} y2={200 + 600 * Math.sin(angle)} />;
@@ -309,11 +309,11 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 40, fontFamily: 'Georgia, serif', color: '#003553', textAlign: 'center', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#FFFEF2' }}>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, letterSpacing: '0.15em', color: '#D78433' }}>AVANTE CRM</div>
-          <p style={{ marginTop: 16, color: '#003553' }}>Something went wrong. Please reload.</p>
-          <pre style={{ marginTop: 12, fontSize: 11, color: '#9c2c2c', background: '#f9f5e8', padding: 12, maxWidth: 500, overflow: 'auto', textAlign: 'left' }}>{this.state.error?.message || String(this.state.error)}</pre>
-          <button onClick={() => window.location.reload()} style={{ marginTop: 16, padding: '10px 24px', background: '#D78433', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'Cinzel, serif', letterSpacing: '0.15em', fontSize: 11 }}>RELOAD</button>
+        <div style={{ padding: 40, fontFamily: 'Georgia, serif', color: '#002855', textAlign: 'center', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#FCF7F2' }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, letterSpacing: '0.15em', color: '#BC8D26' }}>AVANTE CRM</div>
+          <p style={{ marginTop: 16, color: '#002855' }}>Something went wrong. Please reload.</p>
+          <pre style={{ marginTop: 12, fontSize: 11, color: '#CC233A', background: '#f9f5e8', padding: 12, maxWidth: 500, overflow: 'auto', textAlign: 'left' }}>{this.state.error?.message || String(this.state.error)}</pre>
+          <button onClick={() => window.location.reload()} style={{ marginTop: 16, padding: '10px 24px', background: '#BC8D26', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'Cinzel, serif', letterSpacing: '0.15em', fontSize: 11 }}>RELOAD</button>
         </div>
       );
     }
@@ -612,19 +612,19 @@ export default function AvanteCRM() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#003553' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#002855' }}>
         <div className="text-center">
           <div className="inline-block animate-pulse">
             <AvanteLogo height={140} />
           </div>
-          <p className="mt-6 text-sm tracking-[0.4em]" style={{ color: '#FDB940', fontFamily: "'Cinzel', serif", fontWeight: 600 }}>LOADING CRM</p>
+          <p className="mt-6 text-sm tracking-[0.4em]" style={{ color: '#DBB85E', fontFamily: "'Cinzel', serif", fontWeight: 600 }}>LOADING CRM</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: '#FFFEF2', fontFamily: "'Libre Baskerville', Georgia, serif", color: '#003553' }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ background: '#FCF7F2', fontFamily: "'Libre Baskerville', Georgia, serif", color: '#002855' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@500;600;700;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; }
@@ -632,23 +632,23 @@ export default function AvanteCRM() {
         .font-display { font-family: 'Cinzel', 'Copperplate', serif; letter-spacing: 0.08em; }
         .font-body { font-family: 'Libre Baskerville', Georgia, serif; }
         /* Colour utilities */
-        .ink { color: #003553; }
-        .ocean { color: #006C90; }
-        .gold { color: #FDB940; }
-        .copper { color: #D78433; }
-        .bg-ink { background: #003553; }
-        .bg-cream { background: #FFFEF2; }
-        .bg-gold { background: #FDB940; }
-        .bg-copper { background: #D78433; }
-        .border-ink { border-color: #003553; }
-        .border-copper { border-color: #D78433; }
-        .border-gold { border-color: #FDB940; }
+        .ink { color: #002855; }
+        .ocean { color: #5A7A99; }
+        .gold { color: #DBB85E; }
+        .copper { color: #BC8D26; }
+        .bg-ink { background: #002855; }
+        .bg-cream { background: #FCF7F2; }
+        .bg-gold { background: #DBB85E; }
+        .bg-copper { background: #BC8D26; }
+        .border-ink { border-color: #002855; }
+        .border-copper { border-color: #BC8D26; }
+        .border-gold { border-color: #DBB85E; }
         .diamond-clip { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
-        .premium-card { background: #FFFEF2; border: 1px solid rgba(0,53,83,0.15); box-shadow: 0 1px 0 rgba(0,53,83,0.04), 0 8px 24px -16px rgba(0,53,83,0.2); }
+        .premium-card { background: #FCF7F2; border: 1px solid rgba(0,40,85,0.15); box-shadow: 0 1px 0 rgba(0,40,85,0.04), 0 8px 24px -16px rgba(0,40,85,0.2); }
         /* Scrollbar */
         .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
-        .scrollbar-thin::-webkit-scrollbar-track { background: rgba(0,53,83,0.05); }
-        .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(0,53,83,0.3); border-radius: 3px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: rgba(0,40,85,0.05); }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(0,40,85,0.3); border-radius: 3px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         /* Animations */
@@ -662,7 +662,7 @@ export default function AvanteCRM() {
         .animate-pulse { animation: pulse 2s cubic-bezier(.4,0,.6,1) infinite; }
         /* ── HEADER ── */
         .crm-header {
-          background: #003553;
+          background: #002855;
           border-bottom: 2px solid rgba(255,219,64,0.25);
           width: 100%;
           position: sticky;
@@ -687,23 +687,33 @@ export default function AvanteCRM() {
           text-decoration: none;
         }
         .crm-brand-text { display: none; }
+        /* Top-row nav hidden on mobile; second row used instead */
+        .crm-header-inner > .crm-nav { display: none; }
+        /* Mobile: nav tabs live on their own row below the top bar */
+        .crm-nav-row {
+          width: 100%;
+          max-width: 1400px;
+          margin: 0 auto;
+          border-top: 1px solid rgba(255,255,255,0.08);
+        }
         .crm-nav {
           display: flex;
           align-items: center;
           gap: 2px;
-          flex: 1;
           overflow-x: auto;
           -ms-overflow-style: none;
           scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+          padding: 0 8px;
         }
         .crm-nav::-webkit-scrollbar { display: none; }
         .crm-nav-btn {
           display: flex;
           align-items: center;
           gap: 5px;
-          padding: 7px 10px;
+          padding: 10px 12px;
           font-family: 'Cinzel', 'Copperplate', serif;
-          font-size: 9px;
+          font-size: 10px;
           font-weight: 600;
           letter-spacing: 0.15em;
           white-space: nowrap;
@@ -715,7 +725,7 @@ export default function AvanteCRM() {
           flex-shrink: 0;
         }
         .crm-nav-btn:hover { color: #fff; }
-        .crm-nav-btn.active { background: #FDB940; color: #003553; }
+        .crm-nav-btn.active { background: #DBB85E; color: #002855; }
         .crm-log-btn {
           flex-shrink: 0;
           display: flex;
@@ -726,17 +736,23 @@ export default function AvanteCRM() {
           font-size: 9px;
           font-weight: 700;
           letter-spacing: 0.2em;
-          background: #D78433;
-          color: #FFFEF2;
+          background: #BC8D26;
+          color: #FCF7F2;
           border: none;
           cursor: pointer;
           white-space: nowrap;
         }
-        .crm-log-btn:hover { background: #FDB940; color: #003553; }
-        /* Show brand text on wider screens */
-        @media (min-width: 640px) {
+        .crm-log-btn:hover { background: #DBB85E; color: #002855; }
+        /* Wider screens: nav moves back into the top row, second row hidden */
+        @media (min-width: 900px) {
           .crm-header-inner { padding: 0 24px; height: 60px; }
           .crm-brand-text { display: block; }
+          .crm-nav-row { display: none; }
+          .crm-header-inner > .crm-nav {
+            display: flex;
+            flex: 1;
+            padding: 0;
+          }
           .crm-nav-btn { font-size: 10px; padding: 8px 12px; }
           .crm-log-btn { font-size: 10px; padding: 9px 18px; }
         }
@@ -837,10 +853,10 @@ export default function AvanteCRM() {
         .space-y-5 > * + * { margin-top: 20px; }
         .space-y-6 > * + * { margin-top: 24px; }
         /* Border */
-        .border { border: 1px solid rgba(0,53,83,0.2); }
+        .border { border: 1px solid rgba(0,40,85,0.2); }
         .border-2 { border: 2px solid; }
-        .border-b { border-bottom: 1px solid rgba(0,53,83,0.15); }
-        .border-t { border-top: 1px solid rgba(0,53,83,0.15); }
+        .border-b { border-bottom: 1px solid rgba(0,40,85,0.15); }
+        .border-t { border-top: 1px solid rgba(0,40,85,0.15); }
         .border-l-4 { border-left: 4px solid; }
         .border-l-2 { border-left: 2px solid; }
         .rounded { border-radius: 4px; }
@@ -878,13 +894,13 @@ export default function AvanteCRM() {
         /* Resize */
         .resize-none { resize: none; }
         /* Focus */
-        input:focus, select:focus, textarea:focus { outline: none; border-color: #D78433 !important; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #BC8D26 !important; }
         /* Mobile form inputs — prevent zoom on iOS */
         @media (max-width: 639px) {
           input, select, textarea { font-size: 16px !important; }
         }
         /* Hover states */
-        .hover-bg:hover { background: rgba(0,53,83,0.06); }
+        .hover-bg:hover { background: rgba(0,40,85,0.06); }
       `}</style>
 
       <Header view={view} setView={setView} onLog={() => setShowLogModal(true)}
@@ -1085,11 +1101,11 @@ export default function AvanteCRM() {
 
       {toast && (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[80]">
-          <div className="flex items-center gap-3 px-4 py-3 shadow-2xl border-l-4" style={{ background: '#003553', borderLeftColor: toast.type === 'error' ? '#9c2c2c' : '#FDB940', minWidth: '240px', maxWidth: '320px' }}>
-            <div className="w-2 h-2 flex-shrink-0 diamond-clip" style={{ background: toast.type === 'error' ? '#9c2c2c' : '#FDB940' }}></div>
+          <div className="flex items-center gap-3 px-4 py-3 shadow-2xl border-l-4" style={{ background: '#002855', borderLeftColor: toast.type === 'error' ? '#CC233A' : '#DBB85E', minWidth: '240px', maxWidth: '320px' }}>
+            <div className="w-2 h-2 flex-shrink-0 diamond-clip" style={{ background: toast.type === 'error' ? '#CC233A' : '#DBB85E' }}></div>
             <div className="min-w-0">
-              <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>{toast.type === 'error' ? 'ERROR' : 'SAVED'}</p>
-              <p className="text-xs truncate" style={{ color: '#FFFEF2', fontWeight: 500 }}>{toast.message}</p>
+              <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 600 }}>{toast.type === 'error' ? 'ERROR' : 'SAVED'}</p>
+              <p className="text-xs truncate" style={{ color: '#FCF7F2', fontWeight: 500 }}>{toast.message}</p>
             </div>
           </div>
         </div>
@@ -1135,28 +1151,28 @@ export default function AvanteCRM() {
 // =================== Confirm Modal ===================
 function ConfirmModal({ title, message, confirmLabel, danger, onCancel, onConfirm }) {
   return createPortal(
-    <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:20, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)" }} onClick={onCancel}>
-      <div style={{ background:'#FFFEF2', maxWidth:360, width:'100%', border:'2px solid #D78433', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' }} onClick={(e) => e.stopPropagation()}>
+    <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:20, background:"rgba(0,40,85,0.82)", backdropFilter:"blur(4px)" }} onClick={onCancel}>
+      <div style={{ background:'#FCF7F2', maxWidth:360, width:'100%', border:'2px solid #BC8D26', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div style={{ padding:'12px 16px', background:'#003553', display:'flex', alignItems:'center', gap:10 }}>
-          <div className="w-2 h-2 diamond-clip" style={{ background: danger ? '#9c2c2c' : '#FDB940', flexShrink:0 }}></div>
+        <div style={{ padding:'12px 16px', background:'#002855', display:'flex', alignItems:'center', gap:10 }}>
+          <div className="w-2 h-2 diamond-clip" style={{ background: danger ? '#CC233A' : '#DBB85E', flexShrink:0 }}></div>
           <div>
-            <p className="font-display" style={{ fontSize:8, letterSpacing:'0.4em', color:'#FDB940', fontWeight:600 }}>{danger ? 'DESTRUCTIVE ACTION' : 'CONFIRM'}</p>
-            <h2 className="font-display" style={{ color:'#FFFEF2', fontWeight:700, fontSize:14, letterSpacing:'0.06em', marginTop:2 }}>{title}</h2>
+            <p className="font-display" style={{ fontSize:8, letterSpacing:'0.4em', color:'#DBB85E', fontWeight:600 }}>{danger ? 'DESTRUCTIVE ACTION' : 'CONFIRM'}</p>
+            <h2 className="font-display" style={{ color:'#FCF7F2', fontWeight:700, fontSize:14, letterSpacing:'0.06em', marginTop:2 }}>{title}</h2>
           </div>
         </div>
         {/* Body */}
         <div style={{ padding:'14px 16px' }}>
-          <p style={{ fontSize:12, color:'#003553', lineHeight:1.5, whiteSpace:'pre-line' }}>{message}</p>
+          <p style={{ fontSize:12, color:'#002855', lineHeight:1.5, whiteSpace:'pre-line' }}>{message}</p>
         </div>
         {/* Actions */}
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'0 16px 14px' }}>
           <button type="button" onClick={onCancel}
-            style={{ padding:'7px 16px', border:'1px solid rgba(0,53,83,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#003553', cursor:'pointer', fontWeight:600 }}>
+            style={{ padding:'7px 16px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
             CANCEL
           </button>
           <button type="button" onClick={onConfirm} autoFocus
-            style={{ padding:'7px 16px', background: danger ? '#9c2c2c' : '#003553', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FFFEF2', cursor:'pointer', fontWeight:700 }}>
+            style={{ padding:'7px 16px', background: danger ? '#CC233A' : '#002855', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FCF7F2', cursor:'pointer', fontWeight:700 }}>
             {confirmLabel || 'CONFIRM'}
           </button>
         </div>
@@ -1190,11 +1206,11 @@ function Header({ view, setView, onLog, visits, clients, onNavigate }) {
         <div className="crm-logo-wrap">
           <AvanteLogo height={40} />
           <div className="crm-brand-text" style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 12 }}>
-            <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.35em', color: '#FDB940', fontWeight: 600, margin: 0 }}>SALES CRM</p>
-            <p className="font-display" style={{ fontSize: 7, letterSpacing: '0.2em', color: '#FFFEF2', opacity: 0.5, margin: '2px 0 0' }}>DARE TO FORWARD</p>
+            <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.35em', color: '#DBB85E', fontWeight: 600, margin: 0 }}>SALES CRM</p>
+            <p className="font-display" style={{ fontSize: 7, letterSpacing: '0.2em', color: '#FCF7F2', opacity: 0.5, margin: '2px 0 0' }}>DARE TO FORWARD</p>
           </div>
         </div>
-        {/* Navigation */}
+        {/* Navigation — desktop only (hidden on mobile via CSS) */}
         <nav className="crm-nav">
           {tabs.map(t => {
             const Icon = t.icon;
@@ -1208,14 +1224,14 @@ function Header({ view, setView, onLog, visits, clients, onNavigate }) {
           })}
         </nav>
         {/* Right side — Notifications + Log Visit */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 'auto' }}>
           <button
             onClick={() => setView('notifications')}
-            style={{ position: 'relative', background: view === 'notifications' ? 'rgba(253,185,64,0.2)' : notifCount > 0 ? 'rgba(253,185,64,0.1)' : 'none', border: notifCount > 0 ? '1px solid #FDB940' : '1px solid rgba(255,255,255,0.2)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: notifCount > 0 ? '#FDB940' : 'rgba(255,255,255,0.5)', transition: 'all 0.2s' }}
+            style={{ position: 'relative', background: view === 'notifications' ? 'rgba(219,184,94,0.2)' : notifCount > 0 ? 'rgba(219,184,94,0.1)' : 'none', border: notifCount > 0 ? '1px solid #DBB85E' : '1px solid rgba(255,255,255,0.2)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: notifCount > 0 ? '#DBB85E' : 'rgba(255,255,255,0.5)', transition: 'all 0.2s' }}
             title="Notifications">
             <Bell style={{ width: 15, height: 15 }} />
             {notifCount > 0 && (
-              <span style={{ background: '#9c2c2c', color: '#FFFEF2', fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center', lineHeight: 1.6 }}>
+              <span style={{ background: '#CC233A', color: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center', lineHeight: 1.6 }}>
                 {notifCount > 99 ? '99+' : notifCount}
               </span>
             )}
@@ -1225,6 +1241,22 @@ function Header({ view, setView, onLog, visits, clients, onNavigate }) {
             <span>LOG VISIT</span>
           </button>
         </div>
+      </div>
+
+      {/* Second row — mobile only (hidden on desktop via CSS): scrollable nav tabs */}
+      <div className="crm-nav-row">
+        <nav className="crm-nav">
+          {tabs.map(t => {
+            const Icon = t.icon;
+            return (
+              <button key={`m-${t.id}`} onClick={() => setView(t.id)}
+                className={'crm-nav-btn' + (view === t.id ? ' active' : '')}>
+                <Icon style={{ width: 13, height: 13, flexShrink: 0 }} />
+                <span>{t.label.toUpperCase()}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );
@@ -1262,18 +1294,18 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
   }, [clients, visits, activeRep]);
 
   const overdue = overdueByRep[repToShow] || [];
-  const statusColors = { New: '#006C90', Contacted: '#FDB940', Converted: '#2d8659', Lost: '#9c2c2c' };
+  const statusColors = { New: '#5A7A99', Contacted: '#DBB85E', Converted: '#2d8659', Lost: '#CC233A' };
 
   return (
     <div className="premium-card p-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 diamond-clip" style={{ background: '#9c2c2c' }}></div>
+          <div className="w-2 h-2 diamond-clip" style={{ background: '#CC233A' }}></div>
           <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
             OVERDUE FOLLOW-UPS
           </h2>
         </div>
-        <span className="font-display text-[9px] tracking-[0.15em]" style={{ color: '#9c2c2c', fontWeight: 600 }}>
+        <span className="font-display text-[9px] tracking-[0.15em]" style={{ color: '#CC233A', fontWeight: 600 }}>
           TOP 5 PER REP · &gt;30 DAYS
         </span>
       </div>
@@ -1286,10 +1318,10 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
             const active = overdueRep === r;
             return (
               <button key={r} onClick={() => setOverdueRep(r)}
-                style={{ padding: '5px 12px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: '1px solid', borderColor: active ? '#003553' : 'rgba(0,53,83,0.2)', background: active ? '#003553' : 'transparent', color: active ? '#FFFEF2' : '#003553', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                style={{ padding: '5px 12px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: '1px solid', borderColor: active ? '#002855' : 'rgba(0,40,85,0.2)', background: active ? '#002855' : 'transparent', color: active ? '#FCF7F2' : '#002855', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {r.toUpperCase()}
                 {count > 0 && (
-                  <span style={{ background: active ? '#FDB940' : '#9c2c2c', color: active ? '#003553' : '#FFFEF2', borderRadius: 10, padding: '1px 6px', fontSize: 8, fontWeight: 700 }}>{count}</span>
+                  <span style={{ background: active ? '#DBB85E' : '#CC233A', color: active ? '#002855' : '#FCF7F2', borderRadius: 10, padding: '1px 6px', fontSize: 8, fontWeight: 700 }}>{count}</span>
                 )}
               </button>
             );
@@ -1308,23 +1340,23 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
           {overdue.map((c, i) => (
             <div key={c.id}
               onClick={() => onNavigate && onNavigate('leads', c.id)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 8px', borderBottom: i < overdue.length - 1 ? '1px solid rgba(0,53,83,0.08)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.04)'}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 8px', borderBottom: i < overdue.length - 1 ? '1px solid rgba(0,40,85,0.08)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.04)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                <span style={{ fontSize: 10, color: 'rgba(0,53,83,0.3)', fontFamily: 'monospace', fontWeight: 600, width: 16, flexShrink: 0 }}>{i + 1}</span>
+                <span style={{ fontSize: 10, color: 'rgba(0,40,85,0.3)', fontFamily: 'monospace', fontWeight: 600, width: 16, flexShrink: 0 }}>{i + 1}</span>
                 <div style={{ minWidth: 0 }}>
                   <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.venue}</p>
-                  <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>
+                  <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>
                     {c.accountManager} · {c.lastDate ? c.lastDate : 'Never contacted'}
                   </p>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                <span style={{ padding: '2px 8px', background: statusColors[c.status] || '#006C90', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>
+                <span style={{ padding: '2px 8px', background: statusColors[c.status] || '#5A7A99', color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>
                   {c.status?.toUpperCase()}
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: c.daysAgo >= 60 ? '#9c2c2c' : '#D78433', fontFamily: 'Cinzel, serif', minWidth: 52, textAlign: 'right' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: c.daysAgo >= 60 ? '#CC233A' : '#BC8D26', fontFamily: 'Cinzel, serif', minWidth: 52, textAlign: 'right' }}>
                   {c.daysAgo === 999 ? 'Never' : `${c.daysAgo}d`}
                 </span>
               </div>
@@ -1468,7 +1500,7 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
     }
   };
 
-  const statusColors = { Open: '#D78433', Won: '#2d8659', Lost: '#9c2c2c' };
+  const statusColors = { Open: '#BC8D26', Won: '#2d8659', Lost: '#CC233A' };
   const canSave = form.clientId && form.items.length > 0 && orderTotal > 0;
 
   return (
@@ -1477,13 +1509,13 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
         {/* Header */}
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 diamond-clip" style={{ background: '#FDB940' }}></div>
+            <div className="w-2 h-2 diamond-clip" style={{ background: '#DBB85E' }}></div>
             <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
               PIPELINE FORECAST {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
             </h2>
           </div>
           <button onClick={() => openForm()}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#BC8D26', border: 'none', color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
             <Plus style={{ width: 12, height: 12 }} /> ADD PROSPECT
           </button>
         </div>
@@ -1503,8 +1535,8 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
                 <span className="italic ocean">vs monthly target {ZAR(monthTarget)}</span>
                 <span className="font-display copper" style={{ fontWeight: 700 }}>{pipelinePct}%</span>
               </div>
-              <div style={{ height: 6, background: 'rgba(0,53,83,0.1)', borderRadius: 3 }}>
-                <div style={{ height: '100%', width: `${pipelinePct}%`, background: pipelinePct >= 100 ? '#2d8659' : '#FDB940', borderRadius: 3, transition: 'width 0.6s' }}></div>
+              <div style={{ height: 6, background: 'rgba(0,40,85,0.1)', borderRadius: 3 }}>
+                <div style={{ height: '100%', width: `${pipelinePct}%`, background: pipelinePct >= 100 ? '#2d8659' : '#DBB85E', borderRadius: 3, transition: 'width 0.6s' }}></div>
               </div>
             </div>
           )}
@@ -1512,17 +1544,17 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
 
         {/* Prospect rows */}
         {openProspects.length === 0 ? (
-          <div style={{ padding: '16px 0', textAlign: 'center', borderTop: '1px solid rgba(0,53,83,0.1)' }}>
+          <div style={{ padding: '16px 0', textAlign: 'center', borderTop: '1px solid rgba(0,40,85,0.1)' }}>
             <p className="italic ocean" style={{ fontSize: 12 }}>No open prospects — add one to start forecasting.</p>
           </div>
         ) : (
-          <div style={{ borderTop: '1px solid rgba(0,53,83,0.1)' }}>
+          <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)' }}>
             {openProspects.map((p, i) => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderBottom: i < openProspects.length - 1 ? '1px solid rgba(0,53,83,0.07)' : 'none' }}>
-                <div style={{ width: 4, alignSelf: 'stretch', background: '#FDB940', flexShrink: 0, borderRadius: 2 }}></div>
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderBottom: i < openProspects.length - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none' }}>
+                <div style={{ width: 4, alignSelf: 'stretch', background: '#DBB85E', flexShrink: 0, borderRadius: 2 }}></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="font-display ink" style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.clientName}</p>
-                  <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.salesRep}{p.expectedDate ? ` · by ${p.expectedDate}` : ''}{p.skuNotes ? ` · ${p.skuNotes}` : ''}
                   </p>
                 </div>
@@ -1533,14 +1565,14 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
                   <option value="Won">WON</option>
                   <option value="Lost">LOST</option>
                 </select>
-                <button onClick={() => openForm(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,53,83,0.3)', flexShrink: 0 }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#D78433'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.3)'}>
+                <button onClick={() => openForm(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,40,85,0.3)', flexShrink: 0 }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#BC8D26'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,40,85,0.3)'}>
                   <Edit2 style={{ width: 13, height: 13 }} />
                 </button>
-                <button onClick={() => onDelete(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,53,83,0.3)', flexShrink: 0 }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.3)'}>
+                <button onClick={() => onDelete(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,40,85,0.3)', flexShrink: 0 }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#CC233A'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,40,85,0.3)'}>
                   <Trash2 style={{ width: 13, height: 13 }} />
                 </button>
               </div>
@@ -1550,13 +1582,13 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
 
         {/* Won / Lost summary */}
         {filtered.filter(p => p.status !== 'Open').length > 0 && (
-          <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(0,53,83,0.1)' }}>
+          <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(0,40,85,0.1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
               <div style={{ width: 8, height: 8, background: '#2d8659', borderRadius: 2 }}></div>
               <span className="ink">Won: <strong>{ZAR(filtered.filter(p => p.status === 'Won').reduce((s, p) => s + p.amount, 0))}</strong></span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
-              <div style={{ width: 8, height: 8, background: '#9c2c2c', borderRadius: 2 }}></div>
+              <div style={{ width: 8, height: 8, background: '#CC233A', borderRadius: 2 }}></div>
               <span className="ink">Lost: <strong>{ZAR(filtered.filter(p => p.status === 'Lost').reduce((s, p) => s + p.amount, 0))}</strong></span>
             </div>
           </div>
@@ -1567,16 +1599,16 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
       {modalOpen && createPortal(
         <div
           onClick={() => setModalOpen(false)}
-          style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 16px', background:'rgba(0,53,83,0.82)', backdropFilter:'blur(3px)' }}>
+          style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 16px', background:'rgba(0,40,85,0.82)', backdropFilter:'blur(3px)' }}>
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background:'#FFFEF2', width:'100%', maxWidth:460, border:'2px solid #D78433', maxHeight:'calc(100vh - 40px)', overflowY:'auto', overflowX:'hidden', position:'relative' }}>
+            style={{ background:'#FCF7F2', width:'100%', maxWidth:460, border:'2px solid #BC8D26', maxHeight:'calc(100vh - 40px)', overflowY:'auto', overflowX:'hidden', position:'relative' }}>
 
             {/* ── Header ── */}
-            <div style={{ background:'#003553', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+            <div style={{ background:'#002855', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
               <div>
-                <p style={{ fontFamily:"'Cinzel',serif", fontSize:8, letterSpacing:'0.4em', color:'#FDB940', fontWeight:600, margin:0 }}>PIPELINE FORECAST</p>
-                <h2 style={{ fontFamily:"'Cinzel',serif", color:'#FFFEF2', fontWeight:700, fontSize:17, letterSpacing:'0.06em', margin:'3px 0 0' }}>
+                <p style={{ fontFamily:"'Cinzel',serif", fontSize:8, letterSpacing:'0.4em', color:'#DBB85E', fontWeight:600, margin:0 }}>PIPELINE FORECAST</p>
+                <h2 style={{ fontFamily:"'Cinzel',serif", color:'#FCF7F2', fontWeight:700, fontSize:17, letterSpacing:'0.06em', margin:'3px 0 0' }}>
                   {editingId ? 'EDIT PROSPECT' : 'ADD PROSPECT'}
                 </h2>
               </div>
@@ -1588,12 +1620,12 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
 
               {/* Sales Rep */}
               <div>
-                <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#D78433', fontWeight:600, marginBottom:8 }}>SALES REP</p>
+                <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, marginBottom:8 }}>SALES REP</p>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6 }}>
                   {SALES_REPS.map(r => (
                     <button key={r} type="button"
                       onClick={() => { setForm(f => ({ ...f, salesRep:r, clientId:'' })); setClientSearch(''); }}
-                      style={{ padding:'9px 4px', fontFamily:"'Cinzel',serif", fontSize:10, fontWeight:700, letterSpacing:'0.15em', border:'1px solid', borderColor: form.salesRep===r ? '#003553' : 'rgba(0,53,83,0.2)', background: form.salesRep===r ? '#003553' : '#FFFEF2', color: form.salesRep===r ? '#FFFEF2' : '#003553', cursor:'pointer' }}>
+                      style={{ padding:'9px 4px', fontFamily:"'Cinzel',serif", fontSize:10, fontWeight:700, letterSpacing:'0.15em', border:'1px solid', borderColor: form.salesRep===r ? '#002855' : 'rgba(0,40,85,0.2)', background: form.salesRep===r ? '#002855' : '#FCF7F2', color: form.salesRep===r ? '#FCF7F2' : '#002855', cursor:'pointer' }}>
                       {r.toUpperCase()}
                     </button>
                   ))}
@@ -1602,31 +1634,31 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
 
               {/* Client dropdown */}
               <div>
-                <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#D78433', fontWeight:600, marginBottom:8 }}>CLIENT / VENUE *</p>
-                <div style={{ display:'flex', alignItems:'center', gap:8, border:'1px solid rgba(0,53,83,0.2)', padding:'0 10px', marginBottom:6, background:'#FFFEF2' }}>
-                  <Search style={{ width:14, height:14, color:'#006C90', flexShrink:0 }} />
+                <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, marginBottom:8 }}>CLIENT / VENUE *</p>
+                <div style={{ display:'flex', alignItems:'center', gap:8, border:'1px solid rgba(0,40,85,0.2)', padding:'0 10px', marginBottom:6, background:'#FCF7F2' }}>
+                  <Search style={{ width:14, height:14, color:'#5A7A99', flexShrink:0 }} />
                   <input
                     type="text"
                     placeholder="Filter venues..."
                     value={clientSearch}
                     onChange={e => setClientSearch(e.target.value)}
-                    style={{ flex:1, border:'none', background:'transparent', padding:'9px 0', fontFamily:"'Libre Baskerville',serif", fontSize:13, color:'#003553', outline:'none' }}
+                    style={{ flex:1, border:'none', background:'transparent', padding:'9px 0', fontFamily:"'Libre Baskerville',serif", fontSize:13, color:'#002855', outline:'none' }}
                   />
                   {clientSearch && (
-                    <button onClick={() => setClientSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:'#006C90', fontSize:16, lineHeight:1 }}>×</button>
+                    <button onClick={() => setClientSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:'#5A7A99', fontSize:16, lineHeight:1 }}>×</button>
                   )}
                 </div>
                 <select
                   value={form.clientId}
                   onChange={e => setForm(f => ({ ...f, clientId:e.target.value }))}
-                  style={{ width:'100%', padding:'10px 12px', border:'1px solid rgba(0,53,83,0.25)', background:'#FFFEF2', fontFamily:"'Libre Baskerville',serif", fontSize:14, color: form.clientId ? '#003553' : 'rgba(0,53,83,0.4)', outline:'none', boxSizing:'border-box' }}>
+                  style={{ width:'100%', padding:'10px 12px', border:'1px solid rgba(0,40,85,0.25)', background:'#FCF7F2', fontFamily:"'Libre Baskerville',serif", fontSize:14, color: form.clientId ? '#002855' : 'rgba(0,40,85,0.4)', outline:'none', boxSizing:'border-box' }}>
                   <option value="">— Select a venue —</option>
                   {repClients.map(c => (
                     <option key={c.id} value={c.id}>{c.venue}{c.location ? ` · ${c.location}` : ''}</option>
                   ))}
                 </select>
                 {selectedClient && (
-                  <div style={{ marginTop:5, padding:'7px 10px', background:'rgba(0,108,144,0.06)', borderLeft:'2px solid #D78433', fontSize:11, color:'#006C90', fontStyle:'italic' }}>
+                  <div style={{ marginTop:5, padding:'7px 10px', background:'rgba(90,122,153,0.06)', borderLeft:'2px solid #BC8D26', fontSize:11, color:'#5A7A99', fontStyle:'italic' }}>
                     {selectedClient.channel || '—'} · {selectedClient.status} · {selectedClient.location || 'No location'}
                   </div>
                 )}
@@ -1634,71 +1666,71 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
 
               {/* Expected close date */}
               <div>
-                <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#D78433', fontWeight:600, marginBottom:8 }}>EXPECTED CLOSE DATE</p>
+                <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, marginBottom:8 }}>EXPECTED CLOSE DATE</p>
                 <input
                   type="date"
                   value={form.expectedDate}
                   onChange={e => setForm(f => ({ ...f, expectedDate:e.target.value }))}
-                  style={{ width:'100%', padding:'10px 12px', border:'1px solid rgba(0,53,83,0.25)', background:'#FFFEF2', fontFamily:"'Libre Baskerville',serif", fontSize:14, color:'#003553', outline:'none', boxSizing:'border-box' }}
+                  style={{ width:'100%', padding:'10px 12px', border:'1px solid rgba(0,40,85,0.25)', background:'#FCF7F2', fontFamily:"'Libre Baskerville',serif", fontSize:14, color:'#002855', outline:'none', boxSizing:'border-box' }}
                 />
               </div>
 
               {/* SKU line items */}
               <div>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-                  <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#D78433', fontWeight:600, margin:0 }}>PROJECTED ORDER — SKUs</p>
+                  <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, margin:0 }}>PROJECTED ORDER — SKUs</p>
                   <select
                     value=""
                     onChange={e => { const sku = effectiveSkus.find(s => s.id === e.target.value); if (sku) addSku(sku); e.target.value = ''; }}
-                    style={{ padding:'6px 10px', border:'1px solid rgba(0,53,83,0.25)', background:'#FFFEF2', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.1em', color:'#003553', cursor:'pointer', fontWeight:700, outline:'none' }}>
+                    style={{ padding:'6px 10px', border:'1px solid rgba(0,40,85,0.25)', background:'#FCF7F2', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.1em', color:'#002855', cursor:'pointer', fontWeight:700, outline:'none' }}>
                     <option value="">+ ADD SKU</option>
                     {effectiveSkus.map(s => <option key={s.id} value={s.id}>{s.name} — {ZAR(s.price)}</option>)}
                   </select>
                 </div>
 
                 {form.items.length === 0 ? (
-                  <div style={{ border:'2px dashed rgba(0,53,83,0.15)', padding:'18px 12px', textAlign:'center' }}>
-                    <p style={{ fontSize:11, color:'#006C90', fontStyle:'italic', margin:0 }}>No SKUs added — use the dropdown above.</p>
+                  <div style={{ border:'2px dashed rgba(0,40,85,0.15)', padding:'18px 12px', textAlign:'center' }}>
+                    <p style={{ fontSize:11, color:'#5A7A99', fontStyle:'italic', margin:0 }}>No SKUs added — use the dropdown above.</p>
                   </div>
                 ) : (
-                  <div style={{ border:'1px solid rgba(0,53,83,0.15)', overflow:'hidden' }}>
+                  <div style={{ border:'1px solid rgba(0,40,85,0.15)', overflow:'hidden' }}>
                     {/* Header row */}
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 52px 76px 24px', gap:4, padding:'7px 10px', background:'#003553' }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 52px 76px 24px', gap:4, padding:'7px 10px', background:'#002855' }}>
                       {['SKU','QTY','UNIT R',''].map((h,i) => (
-                        <p key={i} style={{ fontFamily:"'Cinzel',serif", fontSize:8, letterSpacing:'0.15em', color:'#FDB940', fontWeight:600, margin:0, textAlign: i>0?'right':'left' }}>{h}</p>
+                        <p key={i} style={{ fontFamily:"'Cinzel',serif", fontSize:8, letterSpacing:'0.15em', color:'#DBB85E', fontWeight:600, margin:0, textAlign: i>0?'right':'left' }}>{h}</p>
                       ))}
                     </div>
                     {/* Item rows */}
                     {form.items.map((it, idx) => {
                       const lineTotal = (Number(it.unitPrice)||0) * (Number(it.qty)||0);
                       return (
-                        <div key={it.skuId} style={{ display:'grid', gridTemplateColumns:'1fr 52px 76px 24px', gap:4, padding:'8px 10px', borderBottom: idx < form.items.length-1 ? '1px solid rgba(0,53,83,0.08)' : 'none', alignItems:'center', background: idx%2===0 ? '#FFFEF2' : 'rgba(0,53,83,0.02)' }}>
+                        <div key={it.skuId} style={{ display:'grid', gridTemplateColumns:'1fr 52px 76px 24px', gap:4, padding:'8px 10px', borderBottom: idx < form.items.length-1 ? '1px solid rgba(0,40,85,0.08)' : 'none', alignItems:'center', background: idx%2===0 ? '#FCF7F2' : 'rgba(0,40,85,0.02)' }}>
                           <div>
-                            <p style={{ fontFamily:"'Cinzel',serif", fontWeight:700, fontSize:11, color:'#003553', margin:0 }}>{it.name}</p>
-                            <p style={{ fontSize:9, color:'#D78433', fontStyle:'italic', margin:'2px 0 0' }}>{ZAR(lineTotal)}</p>
+                            <p style={{ fontFamily:"'Cinzel',serif", fontWeight:700, fontSize:11, color:'#002855', margin:0 }}>{it.name}</p>
+                            <p style={{ fontSize:9, color:'#BC8D26', fontStyle:'italic', margin:'2px 0 0' }}>{ZAR(lineTotal)}</p>
                           </div>
                           <input type="number" min="1" step="1" value={it.qty}
                             onChange={e => updateItem(it.skuId,'qty',e.target.value)}
-                            style={{ padding:'5px 4px', border:'1px solid rgba(0,53,83,0.2)', background:'#FFFEF2', fontFamily:"'Cinzel',serif", fontSize:12, fontWeight:700, color:'#003553', textAlign:'center', outline:'none', width:'100%', boxSizing:'border-box' }} />
+                            style={{ padding:'5px 4px', border:'1px solid rgba(0,40,85,0.2)', background:'#FCF7F2', fontFamily:"'Cinzel',serif", fontSize:12, fontWeight:700, color:'#002855', textAlign:'center', outline:'none', width:'100%', boxSizing:'border-box' }} />
                           <input type="number" min="0" step="0.01" value={it.unitPrice}
                             onChange={e => updateItem(it.skuId,'unitPrice',e.target.value)}
-                            style={{ padding:'5px 6px', border:'1px solid rgba(0,53,83,0.2)', background:'#FFFEF2', fontFamily:"'Cinzel',serif", fontSize:11, fontWeight:700, color:'#003553', textAlign:'right', outline:'none', width:'100%', boxSizing:'border-box' }} />
+                            style={{ padding:'5px 6px', border:'1px solid rgba(0,40,85,0.2)', background:'#FCF7F2', fontFamily:"'Cinzel',serif", fontSize:11, fontWeight:700, color:'#002855', textAlign:'right', outline:'none', width:'100%', boxSizing:'border-box' }} />
                           <button onClick={() => removeItem(it.skuId)}
-                            style={{ background:'none', border:'none', cursor:'pointer', padding:'3px', color:'rgba(0,53,83,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}
-                            onMouseEnter={e => e.currentTarget.style.color='#9c2c2c'}
-                            onMouseLeave={e => e.currentTarget.style.color='rgba(0,53,83,0.3)'}>
+                            style={{ background:'none', border:'none', cursor:'pointer', padding:'3px', color:'rgba(0,40,85,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}
+                            onMouseEnter={e => e.currentTarget.style.color='#CC233A'}
+                            onMouseLeave={e => e.currentTarget.style.color='rgba(0,40,85,0.3)'}>
                             <Trash2 style={{ width:12, height:12 }} />
                           </button>
                         </div>
                       );
                     })}
                     {/* Total row */}
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 52px 76px 24px', gap:4, padding:'10px 10px', background:'#003553' }}>
-                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', color:'#FDB940', fontWeight:600, margin:0, gridColumn:'1/4', textAlign:'right' }}>PROJECTED TOTAL EX VAT</p>
-                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:14, fontWeight:700, color:'#FDB940', textAlign:'right', margin:0, gridColumn:'4/4' }}></p>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 52px 76px 24px', gap:4, padding:'10px 10px', background:'#002855' }}>
+                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', color:'#DBB85E', fontWeight:600, margin:0, gridColumn:'1/4', textAlign:'right' }}>PROJECTED TOTAL EX VAT</p>
+                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:14, fontWeight:700, color:'#DBB85E', textAlign:'right', margin:0, gridColumn:'4/4' }}></p>
                     </div>
-                    <div style={{ padding:'6px 10px 10px', background:'#003553', textAlign:'right' }}>
-                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:16, fontWeight:700, color:'#FDB940', margin:0 }}>{ZAR(orderTotal)}</p>
+                    <div style={{ padding:'6px 10px 10px', background:'#002855', textAlign:'right' }}>
+                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:16, fontWeight:700, color:'#DBB85E', margin:0 }}>{ZAR(orderTotal)}</p>
                     </div>
                   </div>
                 )}
@@ -1706,19 +1738,19 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
 
               {/* Error message */}
               {saveError && (
-                <div style={{ padding:'10px 12px', borderLeft:'3px solid #9c2c2c', background:'rgba(156,44,44,0.07)', fontSize:11, color:'#9c2c2c' }}>
+                <div style={{ padding:'10px 12px', borderLeft:'3px solid #CC233A', background:'rgba(204,35,58,0.07)', fontSize:11, color:'#CC233A' }}>
                   <strong style={{ fontFamily:"'Cinzel',serif", letterSpacing:'0.15em' }}>ERROR:</strong> {saveError}
                 </div>
               )}
 
               {/* Actions */}
-              <div style={{ display:'flex', gap:10, paddingTop:6, borderTop:'1px solid rgba(0,53,83,0.12)' }}>
+              <div style={{ display:'flex', gap:10, paddingTop:6, borderTop:'1px solid rgba(0,40,85,0.12)' }}>
                 <button onClick={() => setModalOpen(false)}
-                  style={{ flex:1, padding:'11px', border:'1px solid rgba(0,53,83,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#003553', cursor:'pointer', fontWeight:600 }}>
+                  style={{ flex:1, padding:'11px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
                   CANCEL
                 </button>
                 <button onClick={handleSave} disabled={saving || !canSave}
-                  style={{ flex:2, padding:'11px', background: canSave ? '#D78433' : 'rgba(215,132,51,0.35)', border:'none', fontFamily:"'Cinzel',serif", fontSize:10, letterSpacing:'0.2em', color:'#FFFEF2', cursor: canSave ? 'pointer' : 'not-allowed', fontWeight:700 }}>
+                  style={{ flex:2, padding:'11px', background: canSave ? '#BC8D26' : 'rgba(188,141,38,0.35)', border:'none', fontFamily:"'Cinzel',serif", fontSize:10, letterSpacing:'0.2em', color:'#FCF7F2', cursor: canSave ? 'pointer' : 'not-allowed', fontWeight:700 }}>
                   {saving ? 'SAVING...' : !form.clientId ? 'SELECT A CLIENT FIRST' : form.items.length === 0 ? 'ADD AT LEAST ONE SKU' : editingId ? 'UPDATE PROSPECT' : 'ADD TO PIPELINE'}
                 </button>
               </div>
@@ -1803,7 +1835,7 @@ function NotificationsPage({ visits, clients, onSelectClient }) {
     return map;
   }, [filtered, repFilter]);
 
-  const typeColors = { visit: { bg: 'rgba(45,134,89,0.1)', color: '#2d8659', label: 'VISIT' }, client: { bg: 'rgba(0,108,144,0.1)', color: '#006C90', label: 'CLIENT' } };
+  const typeColors = { visit: { bg: 'rgba(45,134,89,0.1)', color: '#2d8659', label: 'VISIT' }, client: { bg: 'rgba(90,122,153,0.1)', color: '#5A7A99', label: 'CLIENT' } };
 
   return (
     <div className="space-y-4 fade-up">
@@ -1821,39 +1853,39 @@ function NotificationsPage({ visits, clients, onSelectClient }) {
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {/* Type filter */}
-        <div style={{ display: 'flex', border: '1px solid rgba(0,53,83,0.2)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', border: '1px solid rgba(0,40,85,0.2)', overflow: 'hidden' }}>
           {['All', 'Visit', 'Client'].map(t => (
             <button key={t} onClick={() => setFilter(t)}
-              style={{ padding: '7px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: 'none', background: filter === t ? '#003553' : 'transparent', color: filter === t ? '#FFFEF2' : '#003553', cursor: 'pointer' }}>
+              style={{ padding: '7px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: 'none', background: filter === t ? '#002855' : 'transparent', color: filter === t ? '#FCF7F2' : '#002855', cursor: 'pointer' }}>
               {t.toUpperCase()}
             </button>
           ))}
         </div>
         {/* Rep filter */}
-        <div style={{ display: 'flex', border: '1px solid rgba(0,53,83,0.2)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', border: '1px solid rgba(0,40,85,0.2)', overflow: 'hidden' }}>
           {['All', ...SALES_REPS].map(r => (
             <button key={r} onClick={() => setRepFilter(r)}
-              style={{ padding: '7px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: 'none', background: repFilter === r ? '#D78433' : 'transparent', color: repFilter === r ? '#FFFEF2' : '#003553', cursor: 'pointer' }}>
+              style={{ padding: '7px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: 'none', background: repFilter === r ? '#BC8D26' : 'transparent', color: repFilter === r ? '#FCF7F2' : '#002855', cursor: 'pointer' }}>
               {r === 'All' ? 'ALL REPS' : `@${r.toUpperCase()}`}
             </button>
           ))}
         </div>
-        <p style={{ fontSize: 11, fontStyle: 'italic', color: '#006C90', margin: 0 }}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</p>
+        <p style={{ fontSize: 11, fontStyle: 'italic', color: '#5A7A99', margin: 0 }}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</p>
       </div>
 
       {/* Content */}
       {filtered.length === 0 ? (
         <div className="premium-card" style={{ padding: 40, textAlign: 'center' }}>
-          <Bell style={{ width: 32, height: 32, color: 'rgba(0,53,83,0.15)', margin: '0 auto 12px', display: 'block' }} />
-          <p style={{ fontSize: 14, color: '#006C90', fontStyle: 'italic' }}>No tag notifications match your filters.</p>
+          <Bell style={{ width: 32, height: 32, color: 'rgba(0,40,85,0.15)', margin: '0 auto 12px', display: 'block' }} />
+          <p style={{ fontSize: 14, color: '#5A7A99', fontStyle: 'italic' }}>No tag notifications match your filters.</p>
         </div>
       ) : (
         Object.entries(byRep).map(([rep, items]) => (
           <div key={rep} className="premium-card" style={{ overflow: 'hidden' }}>
             {/* Rep header */}
-            <div style={{ padding: '12px 16px', background: '#003553', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '12px 16px', background: '#002855', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ padding: '3px 12px', background: '#D78433', color: '#FFFEF2', fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700 }}>@{rep.toUpperCase()}</span>
+                <span style={{ padding: '3px 12px', background: '#BC8D26', color: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700 }}>@{rep.toUpperCase()}</span>
                 <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontStyle: 'italic' }}>{items.length} tag{items.length !== 1 ? 's' : ''}</span>
               </div>
             </div>
@@ -1862,8 +1894,8 @@ function NotificationsPage({ visits, clients, onSelectClient }) {
             {items.map((item, i) => (
               <div key={item.key}
                 onClick={() => onSelectClient && onSelectClient(item.clientId)}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px', borderBottom: i < items.length - 1 ? '1px solid rgba(0,53,83,0.07)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.03)'}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px', borderBottom: i < items.length - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.03)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
 
                 {/* Type badge */}
@@ -1876,24 +1908,24 @@ function NotificationsPage({ visits, clients, onSelectClient }) {
                 {/* Main content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                    <p style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 14, color: '#003553', margin: 0 }}>{item.clientName}</p>
-                    {item.date && <span style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>{item.date}</span>}
-                    {item.clientLocation && <span style={{ fontSize: 10, color: 'rgba(0,53,83,0.4)' }}>{item.clientLocation}</span>}
+                    <p style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 14, color: '#002855', margin: 0 }}>{item.clientName}</p>
+                    {item.date && <span style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>{item.date}</span>}
+                    {item.clientLocation && <span style={{ fontSize: 10, color: 'rgba(0,40,85,0.4)' }}>{item.clientLocation}</span>}
                   </div>
-                  <p style={{ fontSize: 11, color: '#006C90', fontStyle: 'italic', margin: '3px 0 0' }}>{item.subtitle}</p>
-                  {item.notes && <p style={{ fontSize: 11, color: '#003553', margin: '6px 0 0', lineHeight: 1.5 }}>📝 {item.notes}</p>}
-                  {item.followUp && <p style={{ fontSize: 11, color: '#D78433', margin: '4px 0 0' }}>→ {item.followUp}</p>}
+                  <p style={{ fontSize: 11, color: '#5A7A99', fontStyle: 'italic', margin: '3px 0 0' }}>{item.subtitle}</p>
+                  {item.notes && <p style={{ fontSize: 11, color: '#002855', margin: '6px 0 0', lineHeight: 1.5 }}>📝 {item.notes}</p>}
+                  {item.followUp && <p style={{ fontSize: 11, color: '#BC8D26', margin: '4px 0 0' }}>→ {item.followUp}</p>}
                   {/* All tagged reps */}
                   {item.taggedReps.length > 1 && (
                     <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
                       {item.taggedReps.map(r => (
-                        <span key={r} style={{ padding: '2px 7px', background: 'rgba(215,132,51,0.12)', color: '#D78433', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>@{r.toUpperCase()}</span>
+                        <span key={r} style={{ padding: '2px 7px', background: 'rgba(188,141,38,0.12)', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>@{r.toUpperCase()}</span>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <ChevronRight style={{ width: 16, height: 16, color: '#D78433', flexShrink: 0, marginTop: 4 }} />
+                <ChevronRight style={{ width: 16, height: 16, color: '#BC8D26', flexShrink: 0, marginTop: 4 }} />
               </div>
             ))}
           </div>
@@ -1958,7 +1990,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
   // Stage counts for pipeline summary
   const stages = ['New', 'Contacted', 'Converted', 'Lost'];
   const stageCounts = Object.fromEntries(stages.map(s => [s, filteredClients.filter(c => c.status === s).length]));
-  const stageColors = { New: '#006C90', Contacted: '#FDB940', Converted: '#2d8659', Lost: '#9c2c2c' };
+  const stageColors = { New: '#5A7A99', Contacted: '#DBB85E', Converted: '#2d8659', Lost: '#CC233A' };
 
   return (
     <div className="space-y-4 md:space-y-6 fade-up">
@@ -1973,7 +2005,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
               const d = new Date(y, m - 2, 1);
               setActiveMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
             }}
-            style={{ background: 'none', border: '1px solid rgba(0,53,83,0.2)', cursor: 'pointer', padding: '4px 10px', color: '#003553', fontFamily: "'Cinzel',serif", fontSize: 14, fontWeight: 700 }}
+            style={{ background: 'none', border: '1px solid rgba(0,40,85,0.2)', cursor: 'pointer', padding: '4px 10px', color: '#002855', fontFamily: "'Cinzel',serif", fontSize: 14, fontWeight: 700 }}
             title="Previous month">‹</button>
 
           <div>
@@ -1984,7 +2016,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
             {!isCurrentMonth && (
               <button
                 onClick={() => setActiveMonth(monthISO())}
-                style={{ marginTop: 4, background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#D78433', fontWeight: 600, padding: 0 }}>
+                style={{ marginTop: 4, background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#BC8D26', fontWeight: 600, padding: 0 }}>
                 ← BACK TO CURRENT MONTH
               </button>
             )}
@@ -1998,7 +2030,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
               const nextStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
               if (nextStr <= monthISO()) setActiveMonth(nextStr);
             }}
-            style={{ background: 'none', border: '1px solid rgba(0,53,83,0.2)', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', padding: '4px 10px', color: isCurrentMonth ? 'rgba(0,53,83,0.3)' : '#003553', fontFamily: "'Cinzel',serif", fontSize: 14, fontWeight: 700 }}
+            style={{ background: 'none', border: '1px solid rgba(0,40,85,0.2)', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', padding: '4px 10px', color: isCurrentMonth ? 'rgba(0,40,85,0.3)' : '#002855', fontFamily: "'Cinzel',serif", fontSize: 14, fontWeight: 700 }}
             title="Next month"
             disabled={isCurrentMonth}>›</button>
         </div>
@@ -2086,16 +2118,16 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
       {/* ── QUICK NAV CARDS — tap to go to each section ── */}
       <div className="grid-3">
         {[
-          { id: 'leads', label: 'Leads & Clients', sub: `${filteredClients.length} venues`, icon: Users, color: '#006C90' },
-          { id: 'visits', label: 'Visit Log', sub: `${filteredVisits.length} this month`, icon: ClipboardList, color: '#D78433' },
-          { id: 'manager', label: 'Manager Portal', sub: 'Targets & Export', icon: Settings, color: '#003553' },
+          { id: 'leads', label: 'Leads & Clients', sub: `${filteredClients.length} venues`, icon: Users, color: '#5A7A99' },
+          { id: 'visits', label: 'Visit Log', sub: `${filteredVisits.length} this month`, icon: ClipboardList, color: '#BC8D26' },
+          { id: 'manager', label: 'Manager Portal', sub: 'Targets & Export', icon: Settings, color: '#002855' },
         ].map(item => {
           const Icon = item.icon;
           return (
             <button key={item.id} onClick={() => onNavigate(item.id)}
               className="premium-card p-4 text-left hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-3">
               <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center" style={{ background: item.color }}>
-                <Icon className="w-5 h-5" style={{ color: '#FFFEF2' }} />
+                <Icon className="w-5 h-5" style={{ color: '#FCF7F2' }} />
               </div>
               <div className="min-w-0">
                 <p className="font-display text-xs tracking-[0.1em] ink truncate" style={{ fontWeight: 700 }}>{item.label.toUpperCase()}</p>
@@ -2122,7 +2154,7 @@ function RepToggle({ active, onChange }) {
             key={r}
             onClick={() => onChange(r)}
             className={`px-2.5 md:px-4 py-1.5 md:py-2 font-display text-[9px] md:text-[11px] tracking-[0.2em] transition-all ${isActive ? 'bg-ink' : 'hover:'} ${i > 0 ? 'border-l border' : ''}`}
-            style={{ fontWeight: 600, color: isActive ? '#FFFEF2' : '#003553' }}
+            style={{ fontWeight: 600, color: isActive ? '#FCF7F2' : '#002855' }}
           >
             {r === 'All' ? 'ALL' : r.toUpperCase()}
           </button>
@@ -2132,7 +2164,7 @@ function RepToggle({ active, onChange }) {
   );
 }
 
-function SparkLine({ data = [], todayDay = 31, color = '#D78433' }) {
+function SparkLine({ data = [], todayDay = 31, color = '#BC8D26' }) {
   if (!data || data.every(v => v === 0)) return null;
   const visible = data.slice(0, todayDay);
   const max = Math.max(...visible, 1);
@@ -2153,8 +2185,8 @@ function SparkLine({ data = [], todayDay = 31, color = '#D78433' }) {
 }
 
 function KPICard({ label, value, subtitle, target, targetValue, progress, icon: Icon, accent, sparkData, todayDay }) {
-  const colors = { copper: '#D78433', ocean: '#006C90', gold: '#FDB940', ink: '#003553' };
-  const col = colors[accent] || '#D78433';
+  const colors = { copper: '#BC8D26', ocean: '#5A7A99', gold: '#DBB85E', ink: '#002855' };
+  const col = colors[accent] || '#BC8D26';
   return (
     <div className="premium-card p-4 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-12 h-12 opacity-[0.07]" style={{ background: col, clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', transform: 'translate(30%, -30%)' }}></div>
@@ -2177,7 +2209,7 @@ function KPICard({ label, value, subtitle, target, targetValue, progress, icon: 
             <span className="italic ocean">Target: {targetValue}</span>
             <span className="font-display" style={{ color: col, fontWeight: 700 }}>{progress}%</span>
           </div>
-          <div style={{ height: 3, background: 'rgba(0,53,83,0.1)' }}>
+          <div style={{ height: 3, background: 'rgba(0,40,85,0.1)' }}>
             <div style={{ height: '100%', width: `${Math.min(progress, 100)}%`, background: col, transition: 'width 0.5s' }}></div>
           </div>
         </div>
@@ -2231,7 +2263,7 @@ function Leaderboard({ clients, visits, targets }) {
       {repStats.map((s, i) => (
         <div key={s.rep} className="border border p-3 hover:border-copper/40 transition-colors">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center font-display text-xs bg-ink" style={{ color: '#FFFEF2', fontWeight: 700 }}>{i + 1}</div>
+            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center font-display text-xs bg-ink" style={{ color: '#FCF7F2', fontWeight: 700 }}>{i + 1}</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="font-display text-sm tracking-[0.1em] ink truncate" style={{ fontWeight: 700 }}>{s.rep.toUpperCase()}</h3>
@@ -2253,7 +2285,7 @@ function Leaderboard({ clients, visits, targets }) {
                 <span className="ocean" style={{ fontWeight: 600 }}>VISITS</span>
                 <span className="copper" style={{ fontWeight: 700 }}>{s.visitPct}%</span>
               </div>
-              <div className="h-1 "><div className="h-full" style={{ width: `${s.visitPct}%`, background: '#006C90' }}></div></div>
+              <div className="h-1 "><div className="h-full" style={{ width: `${s.visitPct}%`, background: '#5A7A99' }}></div></div>
             </div>
           </div>
         </div>
@@ -2270,7 +2302,7 @@ function RecentVisits({ visits, clients }) {
     <div className="space-y-2">
       {visits.map(v => {
         const c = clients.find(c => c.id === v.clientId);
-        const outcomeColor = v.outcome === 'Sold In' ? '#006C90' : v.outcome === 'Rejected' ? '#9c2c2c' : '#D78433';
+        const outcomeColor = v.outcome === 'Sold In' ? '#5A7A99' : v.outcome === 'Rejected' ? '#CC233A' : '#BC8D26';
         return (
           <div key={v.id} className="border-l-2 pl-3 py-2" style={{ borderColor: outcomeColor }}>
             <div className="flex items-baseline justify-between">
@@ -2289,7 +2321,7 @@ function PipelineGrid({ clients }) {
   const stages = ['New', 'Contacted', 'Converted', 'Lost'];
   const counts = stages.map(s => ({ stage: s, count: clients.filter(c => c.status === s).length }));
   const max = Math.max(...counts.map(c => c.count), 1);
-  const colors = { New: '#006C90', Contacted: '#FDB940', Converted: '#2d8659', Lost: '#9c2c2c' };
+  const colors = { New: '#5A7A99', Contacted: '#DBB85E', Converted: '#2d8659', Lost: '#CC233A' };
   return (
     <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
       {counts.map(c => (
@@ -2333,26 +2365,26 @@ function AnnualRevenueTracker({ visits, targets }) {
     <div>
       {/* Summary row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
-        <div style={{ textAlign: 'center', padding: '12px 8px', background: 'rgba(0,53,83,0.04)', borderLeft: '3px solid #D78433' }}>
-          <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.25em', color: '#D78433', fontWeight: 600 }}>ANNUAL TARGET</p>
+        <div style={{ textAlign: 'center', padding: '12px 8px', background: 'rgba(0,40,85,0.04)', borderLeft: '3px solid #BC8D26' }}>
+          <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.25em', color: '#BC8D26', fontWeight: 600 }}>ANNUAL TARGET</p>
           <p className="font-display ink" style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>{ZAR(annualTarget)}</p>
         </div>
-        <div style={{ textAlign: 'center', padding: '12px 8px', background: 'rgba(0,53,83,0.04)', borderLeft: '3px solid #006C90' }}>
-          <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.25em', color: '#006C90', fontWeight: 600 }}>ACTUAL YTD</p>
+        <div style={{ textAlign: 'center', padding: '12px 8px', background: 'rgba(0,40,85,0.04)', borderLeft: '3px solid #5A7A99' }}>
+          <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.25em', color: '#5A7A99', fontWeight: 600 }}>ACTUAL YTD</p>
           <p className="font-display ink" style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>{ZAR(totalActual)}</p>
         </div>
-        <div style={{ textAlign: 'center', padding: '12px 8px', background: 'rgba(0,53,83,0.04)', borderLeft: `3px solid ${pct >= 100 ? '#2d6e4e' : '#FDB940'}` }}>
-          <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.25em', color: pct >= 100 ? '#2d6e4e' : '#D78433', fontWeight: 600 }}>ACHIEVEMENT</p>
+        <div style={{ textAlign: 'center', padding: '12px 8px', background: 'rgba(0,40,85,0.04)', borderLeft: `3px solid ${pct >= 100 ? '#2d6e4e' : '#DBB85E'}` }}>
+          <p className="font-display" style={{ fontSize: 8, letterSpacing: '0.25em', color: pct >= 100 ? '#2d6e4e' : '#BC8D26', fontWeight: 600 }}>ACHIEVEMENT</p>
           <p className="font-display ink" style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>{pct}%</p>
         </div>
       </div>
 
       {/* Progress bar */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ height: 8, background: 'rgba(0,53,83,0.1)', borderRadius: 4 }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#2d6e4e' : '#D78433', borderRadius: 4, transition: 'width 0.8s' }}></div>
+        <div style={{ height: 8, background: 'rgba(0,40,85,0.1)', borderRadius: 4 }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#2d6e4e' : '#BC8D26', borderRadius: 4, transition: 'width 0.8s' }}></div>
         </div>
-        <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 4 }}>
+        <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 4 }}>
           {ZAR(annualTarget - totalActual)} remaining to annual target
         </p>
       </div>
@@ -2369,19 +2401,19 @@ function AnnualRevenueTracker({ visits, targets }) {
               <g key={m.month}>
                 {/* Target bar (outline) */}
                 <rect x={x} y={chartH - targetH} width={barW} height={targetH}
-                  fill="none" stroke="rgba(0,53,83,0.15)" strokeWidth="1" />
+                  fill="none" stroke="rgba(0,40,85,0.15)" strokeWidth="1" />
                 {/* Actual bar */}
                 <rect x={x + 2} y={chartH - salesH} width={barW - 4} height={salesH}
-                  fill={isCurrentMonth ? '#D78433' : (m.sales >= m.target ? '#2d6e4e' : '#006C90')} opacity={0.8} />
+                  fill={isCurrentMonth ? '#BC8D26' : (m.sales >= m.target ? '#2d6e4e' : '#5A7A99')} opacity={0.8} />
                 {/* Month label */}
                 <text x={x + barW / 2} y={chartH + 14} textAnchor="middle"
-                  style={{ fontSize: 8, fontFamily: 'Cinzel, serif', fontWeight: isCurrentMonth ? 700 : 400, fill: isCurrentMonth ? '#D78433' : '#003553', letterSpacing: '0.05em' }}>
+                  style={{ fontSize: 8, fontFamily: 'Cinzel, serif', fontWeight: isCurrentMonth ? 700 : 400, fill: isCurrentMonth ? '#BC8D26' : '#002855', letterSpacing: '0.05em' }}>
                   {m.month.toUpperCase()}
                 </text>
                 {/* Amount label if any sales */}
                 {m.sales > 0 && (
                   <text x={x + barW / 2} y={chartH - salesH - 3} textAnchor="middle"
-                    style={{ fontSize: 7, fontFamily: 'Cinzel, serif', fontWeight: 600, fill: '#003553' }}>
+                    style={{ fontSize: 7, fontFamily: 'Cinzel, serif', fontWeight: 600, fill: '#002855' }}>
                     {(m.sales / 1000).toFixed(0)}k
                   </text>
                 )}
@@ -2391,17 +2423,17 @@ function AnnualRevenueTracker({ visits, targets }) {
         </svg>
       </div>
       <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#006C90' }}>
-          <div style={{ width: 12, height: 8, background: '#006C90', opacity: 0.8 }}></div> Actual
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#5A7A99' }}>
+          <div style={{ width: 12, height: 8, background: '#5A7A99', opacity: 0.8 }}></div> Actual
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#2d6e4e' }}>
           <div style={{ width: 12, height: 8, background: '#2d6e4e', opacity: 0.8 }}></div> Target met
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#D78433' }}>
-          <div style={{ width: 12, height: 8, background: '#D78433', opacity: 0.8 }}></div> Current month
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#BC8D26' }}>
+          <div style={{ width: 12, height: 8, background: '#BC8D26', opacity: 0.8 }}></div> Current month
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'rgba(0,53,83,0.4)' }}>
-          <div style={{ width: 12, height: 8, border: '1px solid rgba(0,53,83,0.3)' }}></div> Target
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'rgba(0,40,85,0.4)' }}>
+          <div style={{ width: 12, height: 8, border: '1px solid rgba(0,40,85,0.3)' }}></div> Target
         </div>
       </div>
     </div>
@@ -2418,12 +2450,12 @@ function MonthlyCloseTable({ visits, targets }) {
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
-          <tr style={{ background: '#003553' }}>
-            <th style={{ padding: '8px 12px', textAlign: 'left', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: '0.2em', color: '#FDB940', fontWeight: 600 }}>AGENT</th>
+          <tr style={{ background: '#002855' }}>
+            <th style={{ padding: '8px 12px', textAlign: 'left', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: '0.2em', color: '#DBB85E', fontWeight: 600 }}>AGENT</th>
             {months.map(m => (
               <th key={m} style={{ padding: '8px 6px', textAlign: 'right', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{m.toUpperCase()}</th>
             ))}
-            <th style={{ padding: '8px 12px', textAlign: 'right', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: '0.15em', color: '#FDB940', fontWeight: 600 }}>TOTAL</th>
+            <th style={{ padding: '8px 12px', textAlign: 'right', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: '0.15em', color: '#DBB85E', fontWeight: 600 }}>TOTAL</th>
           </tr>
         </thead>
         <tbody>
@@ -2439,10 +2471,10 @@ function MonthlyCloseTable({ visits, targets }) {
             const currentMonthIdx = new Date().getMonth();
 
             return (
-              <tr key={rep} style={{ background: ri % 2 === 0 ? '#FFFEF2' : 'rgba(0,53,83,0.03)', borderBottom: '1px solid rgba(0,53,83,0.1)' }}>
-                <td style={{ padding: '10px 12px', fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#003553', fontSize: 12, letterSpacing: '0.08em' }}>
+              <tr key={rep} style={{ background: ri % 2 === 0 ? '#FCF7F2' : 'rgba(0,40,85,0.03)', borderBottom: '1px solid rgba(0,40,85,0.1)' }}>
+                <td style={{ padding: '10px 12px', fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#002855', fontSize: 12, letterSpacing: '0.08em' }}>
                   {rep.toUpperCase()}
-                  {repTarget > 0 && <div style={{ fontSize: 9, color: '#006C90', fontWeight: 400, fontStyle: 'italic', marginTop: 1 }}>Target: {ZAR(repTarget)}/mo</div>}
+                  {repTarget > 0 && <div style={{ fontSize: 9, color: '#5A7A99', fontWeight: 400, fontStyle: 'italic', marginTop: 1 }}>Target: {ZAR(repTarget)}/mo</div>}
                 </td>
                 {monthSales.map((sales, idx) => {
                   const isCurrentMonth = idx === currentMonthIdx;
@@ -2451,22 +2483,22 @@ function MonthlyCloseTable({ visits, targets }) {
                     <td key={idx} style={{
                       padding: '10px 6px', textAlign: 'right', fontSize: 11,
                       fontFamily: 'Cinzel, serif', fontWeight: sales > 0 ? 700 : 400,
-                      color: sales === 0 ? 'rgba(0,53,83,0.25)' : metTarget ? '#2d6e4e' : isCurrentMonth ? '#D78433' : '#003553',
-                      background: isCurrentMonth ? 'rgba(215,132,51,0.06)' : 'transparent',
+                      color: sales === 0 ? 'rgba(0,40,85,0.25)' : metTarget ? '#2d6e4e' : isCurrentMonth ? '#BC8D26' : '#002855',
+                      background: isCurrentMonth ? 'rgba(188,141,38,0.06)' : 'transparent',
                     }}>
                       {sales === 0 ? '—' : `${(sales / 1000).toFixed(0)}k`}
                     </td>
                   );
                 })}
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#D78433', fontSize: 12 }}>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#BC8D26', fontSize: 12 }}>
                   {ZAR(totalSales)}
                 </td>
               </tr>
             );
           })}
           {/* Team total row */}
-          <tr style={{ background: '#003553', borderTop: '2px solid #D78433' }}>
-            <td style={{ padding: '10px 12px', fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#FDB940', fontSize: 11, letterSpacing: '0.15em' }}>TEAM TOTAL</td>
+          <tr style={{ background: '#002855', borderTop: '2px solid #BC8D26' }}>
+            <td style={{ padding: '10px 12px', fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#DBB85E', fontSize: 11, letterSpacing: '0.15em' }}>TEAM TOTAL</td>
             {months.map((m, idx) => {
               const monthStr = `${year}-${String(idx + 1).padStart(2, '0')}`;
               const total = visits
@@ -2477,14 +2509,14 @@ function MonthlyCloseTable({ visits, targets }) {
                 <td key={idx} style={{
                   padding: '10px 6px', textAlign: 'right', fontSize: 11,
                   fontFamily: 'Cinzel, serif', fontWeight: total > 0 ? 700 : 400,
-                  color: total === 0 ? 'rgba(255,255,255,0.3)' : isCurrentMonth ? '#FDB940' : '#FFFEF2',
-                  background: isCurrentMonth ? 'rgba(253,185,64,0.1)' : 'transparent',
+                  color: total === 0 ? 'rgba(255,255,255,0.3)' : isCurrentMonth ? '#DBB85E' : '#FCF7F2',
+                  background: isCurrentMonth ? 'rgba(219,184,94,0.1)' : 'transparent',
                 }}>
                   {total === 0 ? '—' : `${(total / 1000).toFixed(0)}k`}
                 </td>
               );
             })}
-            <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#FDB940', fontSize: 12 }}>
+            <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#DBB85E', fontSize: 12 }}>
               {ZAR(visits.reduce((s, v) => s + (v.saleAmount || 0), 0))}
             </td>
           </tr>
@@ -2752,24 +2784,24 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
   return (
     <div className="space-y-5 md:space-y-8 fade-up">
       {/* Hero — compact on mobile */}
-      <div className="relative overflow-hidden border-2 border-ink" style={{ background: '#003553' }}>
+      <div className="relative overflow-hidden border-2 border-ink" style={{ background: '#002855' }}>
         <RaysBackdrop opacity={0.1} />
         <div className="relative p-4 md:p-10">
           <div className="flex items-center gap-3 mb-3">
             <AvanteLogo height={44} />
             <div>
-              <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>STRATEGIC EXECUTION</p>
-              <h1 className="font-display text-xl md:text-4xl" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.06em' }}>MANAGER PORTAL</h1>
+              <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 600 }}>STRATEGIC EXECUTION</p>
+              <h1 className="font-display text-xl md:text-4xl" style={{ color: '#FCF7F2', fontWeight: 700, letterSpacing: '0.06em' }}>MANAGER PORTAL</h1>
             </div>
           </div>
           {/* Action buttons — row on desktop, 2-col grid on mobile */}
           <div className="grid grid-cols-2 md:flex md:flex-row gap-2 mt-2">
             {savedFlash && (
-              <span className="col-span-2 inline-flex items-center justify-center gap-2 px-3 py-2 font-display text-[10px] tracking-[0.2em]" style={{ color: '#003553', background: '#FDB940', fontWeight: 700 }}>
+              <span className="col-span-2 inline-flex items-center justify-center gap-2 px-3 py-2 font-display text-[10px] tracking-[0.2em]" style={{ color: '#002855', background: '#DBB85E', fontWeight: 700 }}>
                 <Save className="w-3.5 h-3.5" /> SAVED
               </span>
             )}
-<button onClick={handleSave} disabled={!dirty} className={`col-span-2 md:col-span-1 flex items-center justify-center gap-2 px-5 py-2.5 font-display text-xs tracking-[0.2em] transition-colors ${dirty ? 'bg-copper' : 'bg-copper/40 cursor-not-allowed'}`} style={{ color: '#FFFEF2', fontWeight: 700 }}>
+<button onClick={handleSave} disabled={!dirty} className={`col-span-2 md:col-span-1 flex items-center justify-center gap-2 px-5 py-2.5 font-display text-xs tracking-[0.2em] transition-colors ${dirty ? 'bg-copper' : 'bg-copper/40 cursor-not-allowed'}`} style={{ color: '#FCF7F2', fontWeight: 700 }}>
               <Save className="w-4 h-4" /> SAVE TARGETS
             </button>
           </div>
@@ -2780,7 +2812,7 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
       <div className="premium-card p-4 md:p-6 relative overflow-hidden">
         <div className="flex items-start gap-3 mb-3">
           <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-ink">
-            <FileSpreadsheet className="w-5 h-5" style={{ color: '#FDB940' }} />
+            <FileSpreadsheet className="w-5 h-5" style={{ color: '#DBB85E' }} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-display text-[9px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>DATA EXPORT</p>
@@ -2788,10 +2820,10 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
             <p className="italic text-xs ocean mt-0.5">All clients, visits, SKUs, targets &amp; performance in one workbook.</p>
           </div>
         </div>
-        <button onClick={exportToExcel} className="w-full flex items-center justify-center gap-2 bg-ink px-4 py-3 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>
+        <button onClick={exportToExcel} className="w-full flex items-center justify-center gap-2 bg-ink px-4 py-3 font-display text-xs tracking-[0.25em]" style={{ color: '#FCF7F2', fontWeight: 700 }}>
           <Download className="w-4 h-4" /> DOWNLOAD .XLSX
         </button>
-        <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 6, textAlign: 'center' }}>
+        <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 6, textAlign: 'center' }}>
           Download weekly and email to matthew@breakfreebeverages.com
         </p>
 
@@ -2804,10 +2836,10 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
           <h2 className="font-display text-sm tracking-[0.3em] ink" style={{ fontWeight: 700 }}>TEAM AGGREGATE TARGETS</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <AggregateCard label="Total Revenue Target" value={ZAR(teamTotals.revenue)} icon={DollarSign} color="#D78433" />
-          <AggregateCard label="Total Visits Target" value={teamTotals.visits} icon={Activity} color="#006C90" />
-          <AggregateCard label="Private Sales Visits" value={teamTotals.privateSales} icon={Wine} color="#FDB940" />
-          <AggregateCard label="Trade Retail Visits" value={teamTotals.tradeRetail} icon={Briefcase} color="#003553" />
+          <AggregateCard label="Total Revenue Target" value={ZAR(teamTotals.revenue)} icon={DollarSign} color="#BC8D26" />
+          <AggregateCard label="Total Visits Target" value={teamTotals.visits} icon={Activity} color="#5A7A99" />
+          <AggregateCard label="Private Sales Visits" value={teamTotals.privateSales} icon={Wine} color="#DBB85E" />
+          <AggregateCard label="Trade Retail Visits" value={teamTotals.tradeRetail} icon={Briefcase} color="#002855" />
         </div>
       </div>
 
@@ -2822,8 +2854,8 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
           {SKU_CATALOGUE.map(sku => (
-            <div key={sku.id} style={{ padding: '10px 12px', border: '1px solid rgba(0,53,83,0.15)', background: '#FFFEF2' }}>
-              <p className="font-display" style={{ fontSize: 9, letterSpacing: '0.2em', color: '#D78433', fontWeight: 600, marginBottom: 4 }}>{sku.name.toUpperCase()}</p>
+            <div key={sku.id} style={{ padding: '10px 12px', border: '1px solid rgba(0,40,85,0.15)', background: '#FCF7F2' }}>
+              <p className="font-display" style={{ fontSize: 9, letterSpacing: '0.2em', color: '#BC8D26', fontWeight: 600, marginBottom: 4 }}>{sku.name.toUpperCase()}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span className="font-display ink" style={{ fontSize: 12, fontWeight: 700, flexShrink: 0 }}>R</span>
                 <input
@@ -2832,7 +2864,7 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
                   step="0.01"
                   value={skuDraftPrices[sku.id] ?? sku.price}
                   onChange={e => setSkuDraftPrices(prev => ({ ...prev, [sku.id]: parseFloat(e.target.value) || 0 }))}
-                  style={{ flex: 1, padding: '6px 8px', border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 13, fontWeight: 700, color: '#003553', outline: 'none', width: '100%' }}
+                  style={{ flex: 1, padding: '6px 8px', border: '1px solid rgba(0,40,85,0.2)', background: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 13, fontWeight: 700, color: '#002855', outline: 'none', width: '100%' }}
                 />
               </div>
             </div>
@@ -2840,11 +2872,11 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8 }}>
           <button onClick={() => setSkuDraftPrices({})}
-            style={{ padding: '8px 16px', border: '1px solid rgba(0,53,83,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', color: '#003553', cursor: 'pointer', fontWeight: 600 }}>
+            style={{ padding: '8px 16px', border: '1px solid rgba(0,40,85,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', color: '#002855', cursor: 'pointer', fontWeight: 600 }}>
             RESET TO DEFAULT
           </button>
           <button onClick={() => { saveSkuPrices(skuDraftPrices); showToastMsg('SKU prices saved!'); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', background: '#BC8D26', border: 'none', color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
             <Save style={{ width: 14, height: 14 }} /> SAVE PRICES
           </button>
         </div>
@@ -2896,13 +2928,13 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
       {/* Save reminder bar — sits above mobile bottom nav */}
       {dirty && (
         <div className="sticky bottom-20 md:bottom-4 z-30 max-w-2xl mx-auto">
-          <div className="flex items-center justify-between gap-3 p-3 md:p-4 border-2 border-copper shadow-2xl" style={{ background: '#003553' }}>
+          <div className="flex items-center justify-between gap-3 p-3 md:p-4 border-2 border-copper shadow-2xl" style={{ background: '#002855' }}>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-gold diamond-clip animate-pulse flex-shrink-0"></div>
-              <p className="font-display text-[9px] md:text-xs tracking-[0.15em]" style={{ color: '#FFFEF2', fontWeight: 600 }}>UNSAVED CHANGES</p>
+              <p className="font-display text-[9px] md:text-xs tracking-[0.15em]" style={{ color: '#FCF7F2', fontWeight: 600 }}>UNSAVED CHANGES</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={handleSave} className="flex items-center gap-1.5 bg-copper px-3 md:px-4 py-2 font-display text-[9px] md:text-[10px] tracking-[0.2em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>
+              <button onClick={handleSave} className="flex items-center gap-1.5 bg-copper px-3 md:px-4 py-2 font-display text-[9px] md:text-[10px] tracking-[0.2em]" style={{ color: '#FCF7F2', fontWeight: 700 }}>
                 <Save className="w-3.5 h-3.5" /> SAVE
               </button>
             </div>
@@ -2941,7 +2973,7 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
       <div className="flex items-center justify-between pb-3 mb-3 border-b border">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 flex items-center justify-center bg-ink">
-            <span className="font-display text-sm" style={{ color: '#FDB940', fontWeight: 700 }}>{rep[0]}</span>
+            <span className="font-display text-sm" style={{ color: '#DBB85E', fontWeight: 700 }}>{rep[0]}</span>
           </div>
           <div>
             <h3 className="font-display text-base tracking-[0.1em] ink" style={{ fontWeight: 700 }}>{rep.toUpperCase()}</h3>
@@ -2999,15 +3031,15 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
           const actual = perf?.visits || 0;
           const pct = computedVisits > 0 ? Math.min(100, Math.round((actual / computedVisits) * 100)) : 0;
           return (
-            <div style={{ background: 'rgba(0,53,83,0.04)', padding: '10px 12px', borderLeft: '2px solid rgba(0,53,83,0.2)' }}>
+            <div style={{ background: 'rgba(0,40,85,0.04)', padding: '10px 12px', borderLeft: '2px solid rgba(0,40,85,0.2)' }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Activity className="w-3 h-3 copper" />
                 <label className="font-display text-[9px] tracking-[0.2em] copper" style={{ fontWeight: 600 }}>TOTAL VISITS</label>
-                <span style={{ fontSize: 8, fontStyle: 'italic', color: '#006C90', marginLeft: 4 }}>auto-calculated</span>
+                <span style={{ fontSize: 8, fontStyle: 'italic', color: '#5A7A99', marginLeft: 4 }}>auto-calculated</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-display ink text-sm flex-1" style={{ fontWeight: 700, fontSize: 18 }}>{computedVisits}</span>
-                <span style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>= Private + Trade</span>
+                <span style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>= Private + Trade</span>
               </div>
               <div className="flex items-center justify-between mt-1.5 text-[10px]">
                 <span className="ocean italic">Total visits · actual: <span className="ink font-display" style={{ fontWeight: 700 }}>{actual}</span></span>
@@ -3026,40 +3058,40 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
 
 // =================== Leads Page ===================
 function KanbanView({ filtered, onSelect, onDelete, updateClient }) {
-  const statusColors = { New: '#006C90', Contacted: '#D78433', Converted: '#2d8659', Lost: '#9c2c2c' };
-  const statusBg = { New: 'rgba(0,108,144,0.08)', Contacted: 'rgba(215,132,51,0.08)', Converted: 'rgba(45,134,89,0.08)', Lost: 'rgba(156,44,44,0.08)' };
+  const statusColors = { New: '#5A7A99', Contacted: '#BC8D26', Converted: '#2d8659', Lost: '#CC233A' };
+  const statusBg = { New: 'rgba(90,122,153,0.08)', Contacted: 'rgba(188,141,38,0.08)', Converted: 'rgba(45,134,89,0.08)', Lost: 'rgba(204,35,58,0.08)' };
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, overflowX: 'auto', minWidth: 0 }}>
       {STATUSES.map(status => {
         const cols = filtered.filter(c => c.status === status);
         return (
-          <div key={status} style={{ background: statusBg[status] || 'rgba(0,53,83,0.04)', border: `1px solid ${statusColors[status]}22`, minWidth: 200 }}>
+          <div key={status} style={{ background: statusBg[status] || 'rgba(0,40,85,0.04)', border: `1px solid ${statusColors[status]}22`, minWidth: 200 }}>
             {/* Column header */}
             <div style={{ padding: '10px 12px', borderBottom: `2px solid ${statusColors[status]}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: statusColors[status] }}>
-              <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.25em', fontWeight: 700, color: '#FFFEF2' }}>{status.toUpperCase()}</span>
+              <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.25em', fontWeight: 700, color: '#FCF7F2' }}>{status.toUpperCase()}</span>
               <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '1px 8px' }}>{cols.length}</span>
             </div>
             {/* Cards */}
             <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 560, overflowY: 'auto' }}>
               {cols.length === 0 && (
-                <p style={{ fontSize: 11, color: 'rgba(0,53,83,0.3)', fontStyle: 'italic', textAlign: 'center', padding: '16px 0' }}>No clients</p>
+                <p style={{ fontSize: 11, color: 'rgba(0,40,85,0.3)', fontStyle: 'italic', textAlign: 'center', padding: '16px 0' }}>No clients</p>
               )}
               {cols.map(c => (
                 <div key={c.id}
                   onClick={() => onSelect(c)}
-                  style={{ background: '#FFFEF2', border: '1px solid rgba(0,53,83,0.12)', padding: '10px 12px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,53,83,0.12)'}
+                  style={{ background: '#FCF7F2', border: '1px solid rgba(0,40,85,0.12)', padding: '10px 12px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,40,85,0.12)'}
                   onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
-                  <p style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 11, color: '#003553', marginBottom: 4, lineHeight: 1.3 }}>{c.venue}</p>
-                  <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginBottom: 6 }}>
+                  <p style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 11, color: '#002855', marginBottom: 4, lineHeight: 1.3 }}>{c.venue}</p>
+                  <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginBottom: 6 }}>
                     {c.accountManager}{c.location ? ` · ${c.location}` : ''}
                   </p>
                   {/* Client Tags */}
                   {c.clientTags && c.clientTags.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6 }}>
                       {c.clientTags.map(tag => (
-                        <span key={tag} style={{ padding: '2px 6px', background: 'rgba(0,108,144,0.12)', color: '#006C90', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.1em', fontWeight: 700 }}>@{tag}</span>
+                        <span key={tag} style={{ padding: '2px 6px', background: 'rgba(90,122,153,0.12)', color: '#5A7A99', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.1em', fontWeight: 700 }}>@{tag}</span>
                       ))}
                     </div>
                   )}
@@ -3067,13 +3099,13 @@ function KanbanView({ filtered, onSelect, onDelete, updateClient }) {
                   {c.tags && c.tags.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6 }}>
                       {c.tags.map(tag => (
-                        <span key={tag} style={{ padding: '2px 6px', background: 'rgba(215,132,51,0.15)', color: '#D78433', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.1em', fontWeight: 700 }}>{tag}</span>
+                        <span key={tag} style={{ padding: '2px 6px', background: 'rgba(188,141,38,0.15)', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.1em', fontWeight: 700 }}>{tag}</span>
                       ))}
                     </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span style={{ fontSize: 9, color: '#D78433', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>{c.channel}</span>
-                    {c.priority && <span style={{ fontSize: 8, color: 'rgba(0,53,83,0.4)', fontStyle: 'italic' }}>{c.priority}</span>}
+                    <span style={{ fontSize: 9, color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>{c.channel}</span>
+                    {c.priority && <span style={{ fontSize: 8, color: 'rgba(0,40,85,0.4)', fontStyle: 'italic' }}>{c.priority}</span>}
                   </div>
                 </div>
               ))}
@@ -3125,16 +3157,16 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* List / Kanban toggle */}
-            <div style={{ display: 'flex', border: '1px solid rgba(0,53,83,0.2)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', border: '1px solid rgba(0,40,85,0.2)', overflow: 'hidden' }}>
               {[['list','≡ LIST'], ['kanban','⊞ KANBAN']].map(([mode, label]) => (
                 <button key={mode} onClick={() => setViewMode(mode)}
-                  style={{ padding: '8px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: 'none', background: viewMode === mode ? '#003553' : 'transparent', color: viewMode === mode ? '#FFFEF2' : '#003553', cursor: 'pointer' }}>
+                  style={{ padding: '8px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: 'none', background: viewMode === mode ? '#002855' : 'transparent', color: viewMode === mode ? '#FCF7F2' : '#002855', cursor: 'pointer' }}>
                   {label}
                 </button>
               ))}
             </div>
             <button onClick={() => onAddNew && onAddNew()}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: '#D78433', border: 'none', color: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: '#BC8D26', border: 'none', color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
               <span style={{ fontSize: 16, fontWeight: 300 }}>+</span> ADD NEW CLIENT
             </button>
           </div>
@@ -3143,12 +3175,12 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
 
       {/* Search + filters */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', padding: '0 12px' }}>
-          <Search style={{ width: 16, height: 16, color: '#006C90', flexShrink: 0 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(0,40,85,0.25)', background: '#FCF7F2', padding: '0 12px' }}>
+          <Search style={{ width: 16, height: 16, color: '#5A7A99', flexShrink: 0 }} />
           <input type="text" placeholder="Search venue, contact, location..."
             value={search} onChange={(e) => setSearch(e.target.value)}
-            style={{ flex: 1, border: 'none', background: 'transparent', padding: '12px 0', fontFamily: "'Libre Baskerville', Georgia, serif", fontSize: 14, color: '#003553', outline: 'none' }} />
-          {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006C90', fontSize: 18, lineHeight: 1 }}>×</button>}
+            style={{ flex: 1, border: 'none', background: 'transparent', padding: '12px 0', fontFamily: "'Libre Baskerville', Georgia, serif", fontSize: 14, color: '#002855', outline: 'none' }} />
+          {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5A7A99', fontSize: 18, lineHeight: 1 }}>×</button>}
         </div>
         {/* 4-col filter row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
@@ -3157,7 +3189,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
           <FilterSelect label="Location" value={filterLocation} onChange={setFilterLocation} options={['All', ...LOCATIONS]} />
           <FilterSelect label="Status" value={filterStatus} onChange={setFilterStatus} options={['All', ...STATUSES]} />
         </div>
-        <p style={{ fontSize: 11, fontStyle: 'italic', color: '#006C90', margin: 0 }}>
+        <p style={{ fontSize: 11, fontStyle: 'italic', color: '#5A7A99', margin: 0 }}>
           {filtered.length} of {clients.length} clients{search ? ` matching "${search}"` : ''}
         </p>
       </div>
@@ -3169,12 +3201,12 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
       <div className="premium-card" style={{ overflow: 'hidden' }}>
         {filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center' }}>
-            <p style={{ fontStyle: 'italic', color: '#006C90', fontSize: 14 }}>
+            <p style={{ fontStyle: 'italic', color: '#5A7A99', fontSize: 14 }}>
               {search ? `No clients found matching "${search}"` : 'No clients match your filters.'}
             </p>
             {search && (
               <button onClick={() => setSearch('')}
-                style={{ marginTop: 12, padding: '8px 20px', background: '#D78433', color: '#FFFEF2', border: 'none', cursor: 'pointer', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700 }}>
+                style={{ marginTop: 12, padding: '8px 20px', background: '#BC8D26', color: '#FCF7F2', border: 'none', cursor: 'pointer', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700 }}>
                 CLEAR SEARCH
               </button>
             )}
@@ -3185,15 +3217,15 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
               <div key={c.id}>
                 {/* Confirm delete inline banner */}
                 {confirmDeleteId === c.id && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#fdf0f0', borderTop: i === 0 ? 'none' : '1px solid rgba(156,44,44,0.2)', borderLeft: '3px solid #9c2c2c' }}>
-                    <p style={{ fontSize: 12, color: '#9c2c2c', fontStyle: 'italic', margin: 0 }}>Remove <strong>{c.venue}</strong>? This cannot be undone.</p>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#fdf0f0', borderTop: i === 0 ? 'none' : '1px solid rgba(204,35,58,0.2)', borderLeft: '3px solid #CC233A' }}>
+                    <p style={{ fontSize: 12, color: '#CC233A', fontStyle: 'italic', margin: 0 }}>Remove <strong>{c.venue}</strong>? This cannot be undone.</p>
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                       <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                        style={{ padding: '5px 12px', border: '1px solid rgba(0,53,83,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#003553', cursor: 'pointer', fontWeight: 600 }}>
+                        style={{ padding: '5px 12px', border: '1px solid rgba(0,40,85,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#002855', cursor: 'pointer', fontWeight: 600 }}>
                         CANCEL
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); onDelete && onDelete(c.id); }}
-                        style={{ padding: '5px 12px', background: '#9c2c2c', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#FFFEF2', cursor: 'pointer', fontWeight: 700 }}>
+                        style={{ padding: '5px 12px', background: '#CC233A', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#FCF7F2', cursor: 'pointer', fontWeight: 700 }}>
                         DELETE
                       </button>
                     </div>
@@ -3202,13 +3234,13 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
                 <div onClick={() => onSelect(c)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-                    borderTop: i === 0 ? 'none' : '1px solid rgba(0,53,83,0.1)',
-                    borderLeft: `3px solid ${c.channel === 'Private Sales' ? '#D78433' : '#006C90'}`,
+                    borderTop: i === 0 ? 'none' : '1px solid rgba(0,40,85,0.1)',
+                    borderLeft: `3px solid ${c.channel === 'Private Sales' ? '#BC8D26' : '#5A7A99'}`,
                     cursor: 'pointer', transition: 'background 0.12s',
-                    background: '#FFFEF2',
+                    background: '#FCF7F2',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,53,83,0.04)'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#FFFEF2'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.04)'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#FCF7F2'}
                 >
                   {/* Venue + notes */}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -3216,17 +3248,17 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
                       <span className="font-display ink" style={{ fontWeight: 700, fontSize: 13 }}>{c.venue}</span>
                       <StatusBadge status={c.status} />
                     </div>
-                    <p style={{ fontSize: 11, color: '#006C90', fontStyle: 'italic', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <p style={{ fontSize: 11, color: '#5A7A99', fontStyle: 'italic', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {[c.firstName, c.lastName].filter(Boolean).join(' ')}
                       {c.location ? ((c.firstName || c.lastName) ? ' · ' : '') + c.location : ''}
                     </p>
                   </div>
                   {/* Channel badge */}
-                  <span style={{ fontSize: 9, fontFamily: "'Cinzel', serif", fontWeight: 600, letterSpacing: '0.15em', padding: '2px 6px', border: `1px solid ${c.channel === 'Private Sales' ? '#D78433' : '#006C90'}`, color: c.channel === 'Private Sales' ? '#D78433' : '#006C90', flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, fontFamily: "'Cinzel', serif", fontWeight: 600, letterSpacing: '0.15em', padding: '2px 6px', border: `1px solid ${c.channel === 'Private Sales' ? '#BC8D26' : '#5A7A99'}`, color: c.channel === 'Private Sales' ? '#BC8D26' : '#5A7A99', flexShrink: 0 }}>
                     {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : '—'}
                   </span>
                   {/* Rep */}
-                  <span className="font-display" style={{ fontSize: 11, fontWeight: 700, color: '#003553', flexShrink: 0, minWidth: 48, textAlign: 'right' }}>
+                  <span className="font-display" style={{ fontSize: 11, fontWeight: 700, color: '#002855', flexShrink: 0, minWidth: 48, textAlign: 'right' }}>
                     {c.accountManager === 'Unassigned' ? '—' : c.accountManager}
                   </span>
                   {/* Sales */}
@@ -3238,15 +3270,15 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(confirmDeleteId === c.id ? null : c.id); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: confirmDeleteId === c.id ? '#9c2c2c' : 'rgba(0,53,83,0.25)', flexShrink: 0, transition: 'color 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
-                      onMouseLeave={e => e.currentTarget.style.color = confirmDeleteId === c.id ? '#9c2c2c' : 'rgba(0,53,83,0.25)'}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: confirmDeleteId === c.id ? '#CC233A' : 'rgba(0,40,85,0.25)', flexShrink: 0, transition: 'color 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.color = '#CC233A'}
+                      onMouseLeave={e => e.currentTarget.style.color = confirmDeleteId === c.id ? '#CC233A' : 'rgba(0,40,85,0.25)'}
                       title="Delete client"
                     >
                       <Trash2 style={{ width: 14, height: 14 }} />
                     </button>
                   )}
-                  <ChevronRight style={{ width: 16, height: 16, color: '#D78433', flexShrink: 0 }} />
+                  <ChevronRight style={{ width: 16, height: 16, color: '#BC8D26', flexShrink: 0 }} />
                 </div>
               </div>
             ))}
@@ -3267,7 +3299,7 @@ function FilterSelect({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        style={{ width: '100%', padding: '8px 10px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Libre Baskerville', Georgia, serif", fontSize: 13, color: '#003553', cursor: 'pointer', outline: 'none' }}
+        style={{ width: '100%', padding: '8px 10px', border: '1px solid rgba(0,40,85,0.25)', background: '#FCF7F2', fontFamily: "'Libre Baskerville', Georgia, serif", fontSize: 13, color: '#002855', cursor: 'pointer', outline: 'none' }}
       >
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
@@ -3277,12 +3309,12 @@ function FilterSelect({ label, value, onChange, options }) {
 
 function StatusBadge({ status }) {
   const colors = {
-    New: { bg: '#006C90', text: '#FFFEF2' },
-    Contacted: { bg: '#FDB940', text: '#003553' },
-    Qualified: { bg: '#D78433', text: '#FFFEF2' },
-    Prospect: { bg: '#003553', text: '#FFFEF2' },
-    Converted: { bg: '#2d8659', text: '#FFFEF2' },
-    Lost: { bg: '#9c2c2c', text: '#FFFEF2' },
+    New: { bg: '#5A7A99', text: '#FCF7F2' },
+    Contacted: { bg: '#DBB85E', text: '#002855' },
+    Qualified: { bg: '#BC8D26', text: '#FCF7F2' },
+    Prospect: { bg: '#002855', text: '#FCF7F2' },
+    Converted: { bg: '#2d8659', text: '#FCF7F2' },
+    Lost: { bg: '#CC233A', text: '#FCF7F2' },
   };
   const c = colors[status] || colors.New;
   return (
@@ -3323,7 +3355,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
   }, [visits, clients, search, filterChannel]);
 
   const totalRevenue = orders.reduce((s, o) => s + (o.saleAmount || 0), 0);
-  const statusColors = { New: '#006C90', Contacted: '#FDB940', Converted: '#2d8659', Lost: '#9c2c2c' };
+  const statusColors = { New: '#5A7A99', Contacted: '#DBB85E', Converted: '#2d8659', Lost: '#CC233A' };
 
   return (
     <div className="fade-up space-y-5">
@@ -3342,21 +3374,21 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
 
       {/* Filters */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', padding: '0 12px' }}>
-          <Search style={{ width: 16, height: 16, color: '#006C90', flexShrink: 0 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(0,40,85,0.25)', background: '#FCF7F2', padding: '0 12px' }}>
+          <Search style={{ width: 16, height: 16, color: '#5A7A99', flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search venue, rep, SKU, date..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ flex: 1, border: 'none', background: 'transparent', padding: '12px 0', fontFamily: "'Libre Baskerville', Georgia, serif", fontSize: 14, color: '#003553', outline: 'none' }}
+            style={{ flex: 1, border: 'none', background: 'transparent', padding: '12px 0', fontFamily: "'Libre Baskerville', Georgia, serif", fontSize: 14, color: '#002855', outline: 'none' }}
           />
-          {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006C90', fontSize: 18, lineHeight: 1 }}>×</button>}
+          {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5A7A99', fontSize: 18, lineHeight: 1 }}>×</button>}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {['All', 'Private Sales', 'Trade Retail'].map(ch => (
             <button key={ch} onClick={() => setFilterChannel(ch)}
-              style={{ padding: '6px 14px', border: `1px solid ${filterChannel === ch ? '#003553' : 'rgba(0,53,83,0.2)'}`, background: filterChannel === ch ? '#003553' : 'none', color: filterChannel === ch ? '#FFFEF2' : '#003553', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 600, cursor: 'pointer' }}>
+              style={{ padding: '6px 14px', border: `1px solid ${filterChannel === ch ? '#002855' : 'rgba(0,40,85,0.2)'}`, background: filterChannel === ch ? '#002855' : 'none', color: filterChannel === ch ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 600, cursor: 'pointer' }}>
               {ch === 'All' ? 'ALL' : ch === 'Private Sales' ? 'PRIVATE' : 'RETAIL'}
             </button>
           ))}
@@ -3366,7 +3398,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
       {/* Order list */}
       {orders.length === 0 ? (
         <div className="premium-card" style={{ padding: 40, textAlign: 'center' }}>
-          <p style={{ fontStyle: 'italic', color: '#006C90', fontSize: 14 }}>No orders found{search ? ` matching "${search}"` : ''}.</p>
+          <p style={{ fontStyle: 'italic', color: '#5A7A99', fontSize: 14 }}>No orders found{search ? ` matching "${search}"` : ''}.</p>
         </div>
       ) : (
         <div className="premium-card" style={{ overflow: 'hidden' }}>
@@ -3376,21 +3408,21 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
             const skuCount = order.items.length;
             const totalQty = order.items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
             return (
-              <div key={order.id} style={{ borderTop: i === 0 ? 'none' : '1px solid rgba(0,53,83,0.1)' }}>
+              <div key={order.id} style={{ borderTop: i === 0 ? 'none' : '1px solid rgba(0,40,85,0.1)' }}>
 
                 {/* Delete confirm banner */}
                 {isConfirming && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#fdf0f0', borderLeft: '3px solid #9c2c2c' }}>
-                    <p style={{ fontSize: 12, color: '#9c2c2c', fontStyle: 'italic', margin: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#fdf0f0', borderLeft: '3px solid #CC233A' }}>
+                    <p style={{ fontSize: 12, color: '#CC233A', fontStyle: 'italic', margin: 0 }}>
                       Delete order for <strong>{order.clientName}</strong> on {order.date}? Cannot be undone.
                     </p>
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0, marginLeft: 12 }}>
                       <button onClick={() => setConfirmDeleteId(null)}
-                        style={{ padding: '5px 12px', border: '1px solid rgba(0,53,83,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#003553', cursor: 'pointer', fontWeight: 600 }}>
+                        style={{ padding: '5px 12px', border: '1px solid rgba(0,40,85,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#002855', cursor: 'pointer', fontWeight: 600 }}>
                         CANCEL
                       </button>
                       <button onClick={() => { setConfirmDeleteId(null); onDeleteVisit && onDeleteVisit(order.id); }}
-                        style={{ padding: '5px 12px', background: '#9c2c2c', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#FFFEF2', cursor: 'pointer', fontWeight: 700 }}>
+                        style={{ padding: '5px 12px', background: '#CC233A', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#FCF7F2', cursor: 'pointer', fontWeight: 700 }}>
                         DELETE
                       </button>
                     </div>
@@ -3398,7 +3430,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
                 )}
 
                 {/* Order summary row */}
-                <div style={{ display: 'flex', alignItems: 'center', background: isOpen ? 'rgba(0,53,83,0.04)' : '#FFFEF2', borderLeft: `3px solid ${order.clientChannel === 'Private Sales' ? '#D78433' : '#006C90'}`, transition: 'background 0.12s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', background: isOpen ? 'rgba(0,40,85,0.04)' : '#FCF7F2', borderLeft: `3px solid ${order.clientChannel === 'Private Sales' ? '#BC8D26' : '#5A7A99'}`, transition: 'background 0.12s' }}>
                   <div
                     onClick={() => { setExpandedOrderId(isOpen ? null : order.id); setConfirmDeleteId(null); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 12px 13px 16px', cursor: 'pointer', flex: 1, minWidth: 0 }}
@@ -3406,32 +3438,32 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
                     {/* Date */}
                     <div style={{ flexShrink: 0, minWidth: 80 }}>
                       <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12 }}>{order.date || '—'}</p>
-                      <p style={{ fontSize: 9, color: '#006C90', fontStyle: 'italic' }}>{order.salesRep}</p>
+                      <p style={{ fontSize: 9, color: '#5A7A99', fontStyle: 'italic' }}>{order.salesRep}</p>
                     </div>
                     {/* Venue */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p className="font-display ink" style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.clientName}</p>
-                      <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>
+                      <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>
                         {order.clientLocation || ''}{order.clientLocation && order.clientChannel ? ' · ' : ''}{order.clientChannel === 'Private Sales' ? 'Private' : order.clientChannel === 'Trade Retail' ? 'Retail' : ''}
                       </p>
                     </div>
                     {/* SKU summary */}
                     <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                      <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic' }}>{skuCount} SKU{skuCount !== 1 ? 's' : ''} · {totalQty} units</p>
+                      <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>{skuCount} SKU{skuCount !== 1 ? 's' : ''} · {totalQty} units</p>
                     </div>
                     {/* Total */}
                     <div style={{ flexShrink: 0, minWidth: 72, textAlign: 'right' }}>
                       <p className="font-display copper" style={{ fontWeight: 700, fontSize: 13 }}>{ZAR(order.saleAmount || 0)}</p>
                     </div>
-                    <ChevronDown style={{ width: 16, height: 16, color: '#D78433', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                    <ChevronDown style={{ width: 16, height: 16, color: '#BC8D26', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                   </div>
                   {/* Delete button */}
                   <button
                     type="button"
                     onClick={() => { setConfirmDeleteId(isConfirming ? null : order.id); setExpandedOrderId(null); }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '13px 14px', color: isConfirming ? '#9c2c2c' : 'rgba(0,53,83,0.2)', flexShrink: 0, transition: 'color 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
-                    onMouseLeave={e => e.currentTarget.style.color = isConfirming ? '#9c2c2c' : 'rgba(0,53,83,0.2)'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '13px 14px', color: isConfirming ? '#CC233A' : 'rgba(0,40,85,0.2)', flexShrink: 0, transition: 'color 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#CC233A'}
+                    onMouseLeave={e => e.currentTarget.style.color = isConfirming ? '#CC233A' : 'rgba(0,40,85,0.2)'}
                     title="Delete order"
                   >
                     <Trash2 style={{ width: 14, height: 14 }} />
@@ -3440,25 +3472,25 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
 
                 {/* Expanded SKU breakdown */}
                 {isOpen && (
-                  <div style={{ background: 'rgba(0,53,83,0.02)', borderTop: '1px solid rgba(0,53,83,0.08)', padding: '0 16px 16px' }}>
+                  <div style={{ background: 'rgba(0,40,85,0.02)', borderTop: '1px solid rgba(0,40,85,0.08)', padding: '0 16px 16px' }}>
                     {/* Order meta */}
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '12px 0 10px', borderBottom: '1px solid rgba(0,53,83,0.08)', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '12px 0 10px', borderBottom: '1px solid rgba(0,40,85,0.08)', marginBottom: 10 }}>
                       <div>
-                        <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#D78433', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>DATE</p>
+                        <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>DATE</p>
                         <p className="font-display ink" style={{ fontSize: 12, fontWeight: 700 }}>{order.date || '—'}</p>
                       </div>
                       <div>
-                        <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#D78433', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>SALES REP</p>
+                        <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>SALES REP</p>
                         <p className="font-display ink" style={{ fontSize: 12, fontWeight: 700 }}>{order.salesRep || '—'}</p>
                       </div>
                       <div>
-                        <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#D78433', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>OUTCOME</p>
+                        <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>OUTCOME</p>
                         <p className="font-display ink" style={{ fontSize: 12, fontWeight: 700 }}>{order.outcome || '—'}</p>
                       </div>
                       {order.notes && (
                         <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#D78433', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>NOTES</p>
-                          <p style={{ fontSize: 11, color: '#003553', fontStyle: 'italic' }}>{order.notes}</p>
+                          <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>NOTES</p>
+                          <p style={{ fontSize: 11, color: '#002855', fontStyle: 'italic' }}>{order.notes}</p>
                         </div>
                       )}
                     </div>
@@ -3466,9 +3498,9 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
                     {/* SKU table */}
                     <div>
                       {/* Header */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, padding: '6px 8px', background: '#003553' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, padding: '6px 8px', background: '#002855' }}>
                         {['SKU', 'QTY', 'UNIT R', 'DISC', 'LINE'].map(h => (
-                          <p key={h} style={{ fontSize: 8, letterSpacing: '0.2em', color: '#FDB940', fontFamily: "'Cinzel',serif", fontWeight: 600, textAlign: h !== 'SKU' ? 'right' : 'left' }}>{h}</p>
+                          <p key={h} style={{ fontSize: 8, letterSpacing: '0.2em', color: '#DBB85E', fontFamily: "'Cinzel',serif", fontWeight: 600, textAlign: h !== 'SKU' ? 'right' : 'left' }}>{h}</p>
                         ))}
                       </div>
                       {/* Rows */}
@@ -3477,22 +3509,22 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
                         const discounted = Number(it.listPrice) > Number(it.unitPrice);
                         const discAmt = discounted ? (Number(it.listPrice) - Number(it.unitPrice)) * Number(it.qty) : 0;
                         return (
-                          <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, padding: '9px 8px', borderBottom: idx < order.items.length - 1 ? '1px solid rgba(0,53,83,0.08)' : 'none', background: idx % 2 === 0 ? '#FFFEF2' : 'rgba(0,53,83,0.02)' }}>
+                          <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, padding: '9px 8px', borderBottom: idx < order.items.length - 1 ? '1px solid rgba(0,40,85,0.08)' : 'none', background: idx % 2 === 0 ? '#FCF7F2' : 'rgba(0,40,85,0.02)' }}>
                             <div>
                               <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12 }}>{it.name}</p>
-                              {discounted && <p style={{ fontSize: 9, color: '#D78433', fontStyle: 'italic' }}>from {ZAR(it.listPrice)}</p>}
+                              {discounted && <p style={{ fontSize: 9, color: '#BC8D26', fontStyle: 'italic' }}>from {ZAR(it.listPrice)}</p>}
                             </div>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: '#003553', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{it.qty}</p>
-                            <p style={{ fontSize: 12, fontWeight: discounted ? 700 : 400, color: discounted ? '#D78433' : '#003553', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(it.unitPrice)}</p>
-                            <p style={{ fontSize: 12, color: discounted ? '#D78433' : 'rgba(0,53,83,0.3)', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{discounted ? `-${ZAR(discAmt)}` : '—'}</p>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: '#003553', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(lineTotal)}</p>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: '#002855', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{it.qty}</p>
+                            <p style={{ fontSize: 12, fontWeight: discounted ? 700 : 400, color: discounted ? '#BC8D26' : '#002855', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(it.unitPrice)}</p>
+                            <p style={{ fontSize: 12, color: discounted ? '#BC8D26' : 'rgba(0,40,85,0.3)', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{discounted ? `-${ZAR(discAmt)}` : '—'}</p>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: '#002855', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(lineTotal)}</p>
                           </div>
                         );
                       })}
                       {/* Total row */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, padding: '10px 8px', background: '#003553', marginTop: 1 }}>
-                        <p style={{ fontSize: 9, letterSpacing: '0.2em', color: '#FDB940', fontFamily: "'Cinzel',serif", fontWeight: 700, gridColumn: '1 / 5', textAlign: 'right' }}>TOTAL EX VAT</p>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: '#FDB940', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(order.saleAmount || 0)}</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, padding: '10px 8px', background: '#002855', marginTop: 1 }}>
+                        <p style={{ fontSize: 9, letterSpacing: '0.2em', color: '#DBB85E', fontFamily: "'Cinzel',serif", fontWeight: 700, gridColumn: '1 / 5', textAlign: 'right' }}>TOTAL EX VAT</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: '#DBB85E', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(order.saleAmount || 0)}</p>
                       </div>
                     </div>
                   </div>
@@ -3522,7 +3554,7 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
             <RepToggle active={filterRep} onChange={setFilterRep} />
             <button onClick={onLog}
               className="flex items-center gap-2 px-4 py-2.5 font-display text-[10px] tracking-[0.2em]"
-              style={{ background: '#D78433', color: '#FFFEF2', fontWeight: 700 }}>
+              style={{ background: '#BC8D26', color: '#FCF7F2', fontWeight: 700 }}>
               <Plus className="w-4 h-4" /> LOG VISIT
             </button>
           </div>
@@ -3534,13 +3566,13 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
           <ClipboardList className="w-10 h-10 mx-auto mb-3 ocean opacity-40" />
           <p className="font-display text-sm tracking-[0.2em] ink mb-2" style={{ fontWeight: 700 }}>NO VISITS LOGGED YET</p>
           <p className="italic text-sm ocean mb-5">Start tracking your call cycle.</p>
-          <button onClick={onLog} className="bg-copper px-6 py-3 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>LOG YOUR FIRST VISIT</button>
+          <button onClick={onLog} className="bg-copper px-6 py-3 font-display text-xs tracking-[0.25em]" style={{ color: '#FCF7F2', fontWeight: 700 }}>LOG YOUR FIRST VISIT</button>
         </div>
       ) : (
         <div className="space-y-2">
           {filtered.map(v => {
             const c = clients.find(c => c.id === v.clientId);
-            const outcomeColor = v.outcome === 'Sold In' ? '#2d8659' : v.outcome === 'Rejected' ? '#9c2c2c' : '#D78433';
+            const outcomeColor = v.outcome === 'Sold In' ? '#2d8659' : v.outcome === 'Rejected' ? '#CC233A' : '#BC8D26';
             return (
               <div key={v.id} className="premium-card border-l-4" style={{ borderLeftColor: outcomeColor }}>
                 {/* Main row — always visible */}
@@ -3549,7 +3581,7 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
                     {/* Venue + outcome */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-display ink text-sm truncate" style={{ fontWeight: 700 }}>{c?.venue || 'Unknown'}</span>
-                      <span className="text-[9px] font-display tracking-wider px-1.5 py-0.5 flex-shrink-0" style={{ background: outcomeColor, color: '#FFFEF2', fontWeight: 600 }}>{v.outcome.toUpperCase()}</span>
+                      <span className="text-[9px] font-display tracking-wider px-1.5 py-0.5 flex-shrink-0" style={{ background: outcomeColor, color: '#FCF7F2', fontWeight: 600 }}>{v.outcome.toUpperCase()}</span>
                     </div>
                     {/* Meta line */}
                     <p className="text-[11px] ocean italic mt-0.5">
@@ -3569,13 +3601,13 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button type="button" onClick={() => onEmail(v)} className="p-2 hover: border border" title="Email order">
-                      <Mail className="w-3.5 h-3.5" style={{ color: '#006C90' }} />
+                      <Mail className="w-3.5 h-3.5" style={{ color: '#5A7A99' }} />
                     </button>
                     <button type="button" onClick={() => onEdit(v)} className="p-2 hover: border border">
                       <Edit2 className="w-3.5 h-3.5 ocean" />
                     </button>
                     <button type="button" onClick={() => onDelete(v.id)} className="p-2  border border">
-                      <Trash2 className="w-3.5 h-3.5" style={{ color: '#9c2c2c' }} />
+                      <Trash2 className="w-3.5 h-3.5" style={{ color: '#CC233A' }} />
                     </button>
                   </div>
                 </div>
@@ -3837,18 +3869,18 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
   };
 
   return (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:'8px', background:"rgba(0,53,83,0.78)", backdropFilter:"blur(4px)", overflowY:"auto", overflowX:"hidden" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background:"#FFFEF2", width:"100%", maxWidth:560, maxHeight:"94vh", overflowY:"auto", overflowX:"hidden", border:"2px solid #D78433", position:"relative", margin:"8px 0", flexShrink:0 }}>
+    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:'8px', background:"rgba(0,40,85,0.78)", backdropFilter:"blur(4px)", overflowY:"auto", overflowX:"hidden" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background:"#FCF7F2", width:"100%", maxWidth:560, maxHeight:"94vh", overflowY:"auto", overflowX:"hidden", border:"2px solid #BC8D26", position:"relative", margin:"8px 0", flexShrink:0 }}>
         <div className="absolute top-0 left-0 right-0 h-1 bg-copper z-10"></div>
         {/* Header */}
-        <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#003553' }}>
+        <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#002855' }}>
           <RaysBackdrop opacity={0.06} />
           <div className="flex items-center justify-between gap-4 relative">
             <div className="flex items-center gap-3">
               <AvanteLogo height={36} />
               <div>
-                <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>{isEdit ? 'AMEND RECORD' : 'DARE TO FORWARD'}</p>
-                <h2 className="font-display text-xl md:text-2xl mt-0.5" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.08em' }}>{isEdit ? 'EDIT VISIT' : 'LOG A VISIT'}</h2>
+                <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 600 }}>{isEdit ? 'AMEND RECORD' : 'DARE TO FORWARD'}</p>
+                <h2 className="font-display text-xl md:text-2xl mt-0.5" style={{ color: '#FCF7F2', fontWeight: 700, letterSpacing: '0.08em' }}>{isEdit ? 'EDIT VISIT' : 'LOG A VISIT'}</h2>
               </div>
             </div>
             <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', padding: '4px 8px', fontSize: 22, fontWeight: 200, lineHeight: 1, flexShrink: 0 }}>✕</button>
@@ -3861,7 +3893,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>SALES MEMBER</label>
             <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
               {SALES_REPS.map(r => (
-                <button key={r} type="button" onClick={() => { setSalesRep(r); setClientId(''); }} className={`py-3 font-display text-xs tracking-[0.2em] border transition-all ${salesRep === r ? 'bg-ink border-ink' : 'bg-cream border hover:border-copper'}`} style={{ color: salesRep === r ? '#FFFEF2' : '#003553', fontWeight: 700 }}>
+                <button key={r} type="button" onClick={() => { setSalesRep(r); setClientId(''); }} className={`py-3 font-display text-xs tracking-[0.2em] border transition-all ${salesRep === r ? 'bg-ink border-ink' : 'bg-cream border hover:border-copper'}`} style={{ color: salesRep === r ? '#FCF7F2' : '#002855', fontWeight: 700 }}>
                   {r.toUpperCase()}
                 </button>
               ))}
@@ -3924,7 +3956,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
             </div>
             <div>
               <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>FOLLOW-UP DATE</label>
-              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper" style={{ color: followUpDate ? '#003553' : 'rgba(0,53,83,0.4)' }} />
+              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper" style={{ color: followUpDate ? '#002855' : 'rgba(0,40,85,0.4)' }} />
             </div>
           </div>
 
@@ -3940,7 +3972,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                     if (sku) addSku(sku);
                     e.target.value = '';
                   }}
-                  style={{ padding: '6px 10px', border: '1px solid rgba(0,53,83,0.25)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.12em', color: '#003553', cursor: 'pointer', fontWeight: 700 }}
+                  style={{ padding: '6px 10px', border: '1px solid rgba(0,40,85,0.25)', background: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.12em', color: '#002855', cursor: 'pointer', fontWeight: 700 }}
                 >
                   <option value="">+ ADD SKU</option>
                   {effectiveSkus.map(sku => (
@@ -3987,7 +4019,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                             <input type="number" min="0" step="0.01" value={it.unitPrice}
                               onChange={(e) => updateItem(it.skuId, 'unitPrice', e.target.value)}
                               className="w-full px-2 py-2 border border bg-cream text-sm text-right focus:outline-none focus:border-copper"
-                              style={{ color: discounted ? '#D78433' : '#003553' }} />
+                              style={{ color: discounted ? '#BC8D26' : '#002855' }} />
                           </div>
                           <div>
                             <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>DISC %</p>
@@ -4000,7 +4032,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                                 updateItem(it.skuId, 'unitPrice', newPrice.toFixed(2));
                               }}
                               className="w-full px-2 py-2 border border bg-cream text-sm text-center focus:outline-none focus:border-copper"
-                              style={{ color: discountPct > 0 ? '#D78433' : '#003553' }} />
+                              style={{ color: discountPct > 0 ? '#BC8D26' : '#002855' }} />
                           </div>
                           <div>
                             <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>TOTAL</p>
@@ -4040,7 +4072,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                           <input type="number" min="0" step="0.01" value={it.unitPrice}
                             onChange={(e) => updateItem(it.skuId, 'unitPrice', e.target.value)}
                             className="w-full px-2 py-1 border border bg-cream text-xs text-right focus:outline-none focus:border-copper"
-                            style={{ color: discounted ? '#D78433' : '#003553' }} />
+                            style={{ color: discounted ? '#BC8D26' : '#002855' }} />
                         </div>
                         <div className="col-span-2">
                           <input type="number" min="0" max="100" step="1"
@@ -4052,7 +4084,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                               updateItem(it.skuId, 'unitPrice', newPrice.toFixed(2));
                             }}
                             className="w-full px-2 py-1 border border bg-cream text-xs text-center focus:outline-none focus:border-copper"
-                            style={{ color: discountPct > 0 ? '#D78433' : '#003553' }} />
+                            style={{ color: discountPct > 0 ? '#BC8D26' : '#002855' }} />
                         </div>
                         <div className="col-span-1 text-right">
                           <span className="font-display text-xs ink" style={{ fontWeight: 700 }}>{ZAR(lineTotal)}</span>
@@ -4066,9 +4098,9 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                     );
                   })}
                 </div>
-                <div className="grid grid-cols-12 gap-2 px-3 py-3" style={{ background: '#003553' }}>
-                  <div className="col-span-8 font-display text-[10px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>ORDER TOTAL (EX VAT)</div>
-                  <div className="col-span-4 text-right font-display text-base" style={{ color: '#FFFEF2', fontWeight: 700 }}>{ZAR(orderTotal)}</div>
+                <div className="grid grid-cols-12 gap-2 px-3 py-3" style={{ background: '#002855' }}>
+                  <div className="col-span-8 font-display text-[10px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 600 }}>ORDER TOTAL (EX VAT)</div>
+                  <div className="col-span-4 text-right font-display text-base" style={{ color: '#FCF7F2', fontWeight: 700 }}>{ZAR(orderTotal)}</div>
                 </div>
               </div>
             )}
@@ -4089,7 +4121,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
           {/* Tag agents */}
           <div>
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>TAG AGENTS</label>
-            <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginBottom: 8 }}>Tag team members who should be notified or are involved in this visit.</p>
+            <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginBottom: 8 }}>Tag team members who should be notified or are involved in this visit.</p>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {SALES_REPS.map(rep => {
                 const tagged = (taggedReps || []).includes(rep);
@@ -4098,14 +4130,14 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                     onClick={() => setTaggedReps(prev =>
                       tagged ? prev.filter(r => r !== rep) : [...(prev || []), rep]
                     )}
-                    style={{ padding: '7px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, border: '1px solid', borderColor: tagged ? '#D78433' : 'rgba(0,53,83,0.2)', background: tagged ? '#D78433' : 'transparent', color: tagged ? '#FFFEF2' : '#003553', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    style={{ padding: '7px 14px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, border: '1px solid', borderColor: tagged ? '#BC8D26' : 'rgba(0,40,85,0.2)', background: tagged ? '#BC8D26' : 'transparent', color: tagged ? '#FCF7F2' : '#002855', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                     {tagged && <span style={{ fontSize: 10 }}>✓</span>} @{rep.toUpperCase()}
                   </button>
                 );
               })}
             </div>
             {(taggedReps || []).length > 0 && (
-              <p style={{ fontSize: 10, color: '#D78433', fontStyle: 'italic', marginTop: 6 }}>
+              <p style={{ fontSize: 10, color: '#BC8D26', fontStyle: 'italic', marginTop: 6 }}>
                 Tagged: {taggedReps.map(r => `@${r}`).join(', ')}
               </p>
             )}
@@ -4113,7 +4145,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
 
           {/* Actions */}
           {validationError && (
-            <div className="px-3 py-2 border-l-4 text-xs" style={{ borderLeftColor: '#9c2c2c', background: 'rgba(156,44,44,0.08)', color: '#9c2c2c' }}>
+            <div className="px-3 py-2 border-l-4 text-xs" style={{ borderLeftColor: '#CC233A', background: 'rgba(204,35,58,0.08)', color: '#CC233A' }}>
               <span className="font-display tracking-wider" style={{ fontWeight: 700 }}>ERROR:</span> {validationError}
             </div>
           )}
@@ -4121,12 +4153,12 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
           <div className="pt-4 border-t border space-y-2 md:space-y-0 md:flex md:items-center md:justify-between md:gap-3 md:flex-wrap">
             <button type="button" onClick={handleEmailOrder}
               className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.25em] border"
-              style={{ color: '#006C90', fontWeight: 700, borderColor: '#006C90' }}>
+              style={{ color: '#5A7A99', fontWeight: 700, borderColor: '#5A7A99' }}>
               <Mail className="w-4 h-4" /> EMAIL ORDER
             </button>
             <div className="flex items-center gap-2">
               <button type="button" onClick={onClose} className="flex-1 md:flex-none px-5 py-3 font-display text-xs tracking-[0.25em] ink border border" style={{ fontWeight: 700 }}>CANCEL</button>
-              <button type="button" onClick={handleSave} className="flex-1 md:flex-none bg-ink px-6 py-3 font-display text-xs tracking-[0.25em] flex items-center justify-center gap-2" style={{ color: '#FFFEF2', fontWeight: 700 }}>
+              <button type="button" onClick={handleSave} className="flex-1 md:flex-none bg-ink px-6 py-3 font-display text-xs tracking-[0.25em] flex items-center justify-center gap-2" style={{ color: '#FCF7F2', fontWeight: 700 }}>
                 {isEdit ? 'UPDATE' : 'SAVE'} <ArrowUpRight className="w-4 h-4" />
               </button>
             </div>
@@ -4217,14 +4249,14 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
   };
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:70, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
-      <div style={{ background:"#FFFEF2", width:"100%", maxWidth:520, margin:"16px 0", border:"2px solid #D78433" }} onClick={(e) => e.stopPropagation()}>
-        <div className="p-5 flex items-center justify-between gap-4" style={{ background: '#003553' }}>
+    <div style={{ position:"fixed", inset:0, zIndex:70, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,40,85,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
+      <div style={{ background:"#FCF7F2", width:"100%", maxWidth:520, margin:"16px 0", border:"2px solid #BC8D26" }} onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 flex items-center justify-between gap-4" style={{ background: '#002855' }}>
           <div className="flex items-center gap-3">
-            <Mail className="w-5 h-5" style={{ color: '#FDB940' }} />
+            <Mail className="w-5 h-5" style={{ color: '#DBB85E' }} />
             <div>
-              <p className="font-display text-[10px] tracking-[0.4em]" style={{ color: '#FDB940', fontWeight: 600 }}>SEND ORDER CONFIRMATION</p>
-              <h2 className="font-display text-xl mt-0.5" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.06em' }}>EMAIL ORDER</h2>
+              <p className="font-display text-[10px] tracking-[0.4em]" style={{ color: '#DBB85E', fontWeight: 600 }}>SEND ORDER CONFIRMATION</p>
+              <h2 className="font-display text-xl mt-0.5" style={{ color: '#FCF7F2', fontWeight: 700, letterSpacing: '0.06em' }}>EMAIL ORDER</h2>
             </div>
           </div>
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', padding: '4px 8px', fontSize: 22, fontWeight: 200, lineHeight: 1, flexShrink: 0 }}>✕</button>
@@ -4236,7 +4268,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
             <p className="font-display text-[10px] tracking-[0.3em] copper mb-1" style={{ fontWeight: 600 }}>FROM</p>
             <div className="flex items-center gap-3 p-3  border border">
               <div className="w-8 h-8 flex items-center justify-center bg-ink">
-                <span className="font-display text-sm" style={{ color: '#FDB940', fontWeight: 700 }}>{salesRep[0]}</span>
+                <span className="font-display text-sm" style={{ color: '#DBB85E', fontWeight: 700 }}>{salesRep[0]}</span>
               </div>
               <div className="min-w-0">
                 <p className="font-display text-sm ink" style={{ fontWeight: 700 }}>{salesRep} · Avante Cape Brandy</p>
@@ -4276,7 +4308,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
               </p>
             )}
             {error && (
-              <div className="mt-2 px-3 py-2 border-l-4 text-xs" style={{ borderLeftColor: '#9c2c2c', background: 'rgba(156,44,44,0.08)', color: '#9c2c2c' }}>
+              <div className="mt-2 px-3 py-2 border-l-4 text-xs" style={{ borderLeftColor: '#CC233A', background: 'rgba(204,35,58,0.08)', color: '#CC233A' }}>
                 <span className="font-display tracking-wider" style={{ fontWeight: 700 }}>ERROR:</span> {error}
               </div>
             )}
@@ -4321,8 +4353,41 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
 
           <div>
             <p className="font-display text-[10px] tracking-[0.3em] copper mb-2" style={{ fontWeight: 600 }}>SEND VIA</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              {/* Gmail web compose */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              {/* Gmail — opens the Gmail mobile app via its custom URL scheme, falls back to Gmail web on desktop */}
+              <a
+                href={(() => {
+                  const list = parseRecipients(recipient).filter(e => isValidEmail(e));
+                  if (list.length === 0) return '#';
+                  const to = encodeURIComponent(list.join(','));
+                  const su = encodeURIComponent(composed.subject);
+                  const bo = encodeURIComponent(composed.body);
+                  // googlegmail:// is the scheme registered by the Gmail app on iOS & Android
+                  return `googlegmail://co?to=${to}&subject=${su}&body=${bo}`;
+                })()}
+                onClick={(e) => {
+                  const list = parseRecipients(recipient);
+                  if (list.length === 0) { e.preventDefault(); setError('Please enter at least one recipient.'); return; }
+                  const invalid = list.filter(em => !isValidEmail(em));
+                  if (invalid.length > 0) { e.preventDefault(); setError(`Invalid: ${invalid.join(', ')}`); return; }
+                  setError('');
+                  // If the Gmail app isn't installed, googlegmail:// fails silently
+                  // on most mobile browsers. After a short delay, fall back to
+                  // Gmail web compose in a new tab.
+                  const to = encodeURIComponent(list.join(','));
+                  const su = encodeURIComponent(composed.subject);
+                  const bo = encodeURIComponent(composed.body);
+                  const webUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${su}&body=${bo}`;
+                  setTimeout(() => {
+                    if (!document.hidden) window.open(webUrl, '_blank', 'noopener,noreferrer');
+                  }, 800);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.2em] hover:opacity-90 no-underline border border"
+                style={{ background: '#FCF7F2', color: '#002855', fontWeight: 700, textDecoration: 'none' }}
+              >
+                <Mail className="w-4 h-4" /> GMAIL APP
+              </a>
+              {/* Gmail web compose — always opens in browser */}
               <a
                 href={(() => {
                   const list = parseRecipients(recipient).filter(e => isValidEmail(e));
@@ -4342,9 +4407,9 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.2em] hover:opacity-90 no-underline border border"
-                style={{ background: '#FFFEF2', color: '#003553', fontWeight: 700, textDecoration: 'none' }}
+                style={{ background: '#FCF7F2', color: '#002855', fontWeight: 700, textDecoration: 'none' }}
               >
-                <Mail className="w-4 h-4" /> GMAIL
+                <Mail className="w-4 h-4" /> GMAIL WEB
               </a>
               {/* Outlook web compose */}
               <a
@@ -4366,7 +4431,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.2em] hover:opacity-90 no-underline border border"
-                style={{ background: '#FFFEF2', color: '#003553', fontWeight: 700, textDecoration: 'none' }}
+                style={{ background: '#FCF7F2', color: '#002855', fontWeight: 700, textDecoration: 'none' }}
               >
                 <Mail className="w-4 h-4" /> OUTLOOK
               </a>
@@ -4386,15 +4451,15 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
                 }}
                 target="_top"
                 className="flex items-center justify-center gap-2 px-4 py-3 font-display text-xs tracking-[0.2em] hover:opacity-90 no-underline"
-                style={{ background: '#006C90', color: '#FFFEF2', fontWeight: 700, textDecoration: 'none' }}
+                style={{ background: '#5A7A99', color: '#FCF7F2', fontWeight: 700, textDecoration: 'none' }}
               >
                 <Mail className="w-4 h-4" /> OS MAIL APP
               </a>
             </div>
-            <p className="text-[10px] italic ocean mt-2">Pick the one your team uses. Gmail and Outlook open in a new browser tab — no setup required.</p>
+            <p className="text-[10px] italic ocean mt-2">On mobile, "GMAIL APP" opens the Gmail app directly. If it doesn't open (app not installed), Gmail web will open instead after a moment. "GMAIL WEB", "OUTLOOK" and "OS MAIL APP" always open in browser/default app.</p>
           </div>
           {client?.email && !includesClient && (
-            <p className="text-[11px] italic" style={{ color: '#D78433' }}>
+            <p className="text-[11px] italic" style={{ color: '#BC8D26' }}>
               Tip: Click "+ ADD CLIENT EMAIL" above to also send to <strong>{client.email}</strong>.
             </p>
           )}
@@ -4442,7 +4507,7 @@ function CopyEmailButton({ recipient, buildMailtoUrl, composed }) {
       onClick={copy}
       title="Copy the full email (recipients, subject, body) to your clipboard so you can paste into any mail app"
       className="flex items-center gap-2 px-4 py-2.5 font-display text-[10px] tracking-[0.25em] border border hover:"
-      style={{ color: '#003553', fontWeight: 700 }}
+      style={{ color: '#002855', fontWeight: 700 }}
     >
       {copied ? '✓ COPIED TO CLIPBOARD' : 'COPY EMAIL TEXT'}
     </button>
@@ -4495,16 +4560,16 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
   };
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background:"#FFFEF2", width:"100%", maxWidth:672, maxHeight:"92vh", overflowY:"auto", border:"2px solid #D78433" }}>
+    <div style={{ position:"fixed", inset:0, zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,40,85,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background:"#FCF7F2", width:"100%", maxWidth:672, maxHeight:"92vh", overflowY:"auto", border:"2px solid #BC8D26" }}>
 
         {/* Header */}
-        <div className="p-4 flex items-center justify-between sticky top-0 z-10" style={{ background: '#003553' }}>
+        <div className="p-4 flex items-center justify-between sticky top-0 z-10" style={{ background: '#002855' }}>
           <div className="flex items-center gap-3">
-            <UserPlus className="w-5 h-5 flex-shrink-0" style={{ color: '#FDB940' }} />
+            <UserPlus className="w-5 h-5 flex-shrink-0" style={{ color: '#DBB85E' }} />
             <div>
-              <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>NEW CLIENT</p>
-              <h2 className="font-display text-lg" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.06em' }}>ADD TO {defaultRep.toUpperCase()}'S BOOK</h2>
+              <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 600 }}>NEW CLIENT</p>
+              <h2 className="font-display text-lg" style={{ color: '#FCF7F2', fontWeight: 700, letterSpacing: '0.06em' }}>ADD TO {defaultRep.toUpperCase()}'S BOOK</h2>
             </div>
           </div>
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', padding: '4px', lineHeight: 1, fontSize: 22, fontWeight: 300 }}>✕</button>
@@ -4519,7 +4584,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
               onChange={(e) => setF('venue', e.target.value)}
               placeholder="e.g. The Grand Hotel"
               className="w-full px-3 py-3 border-2 bg-cream font-body text-sm focus:outline-none"
-              style={{ borderColor: !form.venue.trim() && error ? '#9c2c2c' : 'rgba(0,53,83,0.2)' }}
+              style={{ borderColor: !form.venue.trim() && error ? '#CC233A' : 'rgba(0,40,85,0.2)' }}
               autoFocus
             />
           </div>
@@ -4532,7 +4597,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
                 <button key={ch} type="button"
                   onClick={() => setF('channel', ch)}
                   className={`py-3 font-display text-xs tracking-[0.15em] border-2 transition-all ${form.channel === ch ? 'bg-ink border-ink' : 'bg-cream border'}`}
-                  style={{ color: form.channel === ch ? '#FFFEF2' : '#003553', fontWeight: 700 }}>
+                  style={{ color: form.channel === ch ? '#FCF7F2' : '#002855', fontWeight: 700 }}>
                   {ch.toUpperCase()}
                 </button>
               ))}
@@ -4600,7 +4665,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
                 <button key={r} type="button"
                   onClick={() => setF('accountManager', r)}
                   className={`py-2.5 font-display text-xs tracking-[0.15em] border transition-all ${form.accountManager === r ? 'bg-ink border-ink' : 'bg-cream border'}`}
-                  style={{ color: form.accountManager === r ? '#FFFEF2' : '#003553', fontWeight: 700 }}>
+                  style={{ color: form.accountManager === r ? '#FCF7F2' : '#002855', fontWeight: 700 }}>
                   {r.toUpperCase()}
                 </button>
               ))}
@@ -4615,7 +4680,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
 
           {/* Error display */}
           {error && (
-            <div className="px-3 py-3 border-l-4 text-xs" style={{ borderLeftColor: '#9c2c2c', background: 'rgba(156,44,44,0.08)', color: '#9c2c2c' }}>
+            <div className="px-3 py-3 border-l-4 text-xs" style={{ borderLeftColor: '#CC233A', background: 'rgba(204,35,58,0.08)', color: '#CC233A' }}>
               <span className="font-display tracking-wider" style={{ fontWeight: 700 }}>ERROR: </span>{error}
             </div>
           )}
@@ -4635,7 +4700,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
               onClick={handleCreate}
               disabled={saving}
               className={`flex-1 flex items-center justify-center gap-2 py-3 font-display text-xs tracking-[0.2em] transition-all ${saving ? 'opacity-60 cursor-not-allowed' : ''}`}
-              style={{ background: '#D78433', color: '#FFFEF2', fontWeight: 700 }}
+              style={{ background: '#BC8D26', color: '#FCF7F2', fontWeight: 700 }}
             >
               {saving ? (
                 <>
@@ -4730,22 +4795,22 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
   }, [client.lastContacted]);
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,53,83,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={handleClose}>
-      <div style={{ background:"#FFFEF2", width:"100%", maxWidth:580, margin:"16px 0", border:"2px solid #D78433", maxHeight:"95vh", overflowY:"auto" }} onClick={(e) => e.stopPropagation()}>
+    <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,40,85,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={handleClose}>
+      <div style={{ background:"#FCF7F2", width:"100%", maxWidth:580, margin:"16px 0", border:"2px solid #BC8D26", maxHeight:"95vh", overflowY:"auto" }} onClick={(e) => e.stopPropagation()}>
 
         {/* Unsaved changes warning */}
         {showUnsaved && (
-          <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,53,83,0.85)', padding:20 }}>
+          <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,40,85,0.85)', padding:20 }}>
             <div className="premium-card" style={{ maxWidth:340, width:'100%', padding:28, textAlign:'center' }}>
-              <p className="font-display" style={{ fontSize:11, letterSpacing:'0.3em', color:'#D78433', fontWeight:600, marginBottom:8 }}>UNSAVED CHANGES</p>
-              <p style={{ fontSize:13, color:'#003553', marginBottom:20 }}>You have unsaved edits on <strong>{client.venue}</strong>. Save before leaving?</p>
+              <p className="font-display" style={{ fontSize:11, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, marginBottom:8 }}>UNSAVED CHANGES</p>
+              <p style={{ fontSize:13, color:'#002855', marginBottom:20 }}>You have unsaved edits on <strong>{client.venue}</strong>. Save before leaving?</p>
               <div style={{ display:'flex', gap:8 }}>
                 <button onClick={() => { setShowUnsaved(false); onClose(); }}
-                  style={{ flex:1, padding:'10px', border:'1px solid rgba(0,53,83,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#003553', cursor:'pointer', fontWeight:600 }}>
+                  style={{ flex:1, padding:'10px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
                   DISCARD
                 </button>
                 <button onClick={() => { save(); setShowUnsaved(false); onClose(); }}
-                  style={{ flex:1, padding:'10px', background:'#D78433', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FFFEF2', cursor:'pointer', fontWeight:700 }}>
+                  style={{ flex:1, padding:'10px', background:'#BC8D26', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FCF7F2', cursor:'pointer', fontWeight:700 }}>
                   SAVE & CLOSE
                 </button>
               </div>
@@ -4755,18 +4820,18 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
 
         {/* Delete confirmation */}
         {showDeleteConfirm && (
-          <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,53,83,0.85)', padding:20 }}>
+          <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,40,85,0.85)', padding:20 }}>
             <div className="premium-card" style={{ maxWidth:360, width:'100%', padding:28, textAlign:'center' }}>
-              <p className="font-display" style={{ fontSize:11, letterSpacing:'0.3em', color:'#9c2c2c', fontWeight:600, marginBottom:8 }}>DELETE CLIENT</p>
-              <p style={{ fontSize:14, color:'#003553', marginBottom:6 }}>Remove <strong>{client.venue}</strong>?</p>
-              <p style={{ fontSize:11, color:'#9c2c2c', fontStyle:'italic', marginBottom:20 }}>This cannot be undone.</p>
+              <p className="font-display" style={{ fontSize:11, letterSpacing:'0.3em', color:'#CC233A', fontWeight:600, marginBottom:8 }}>DELETE CLIENT</p>
+              <p style={{ fontSize:14, color:'#002855', marginBottom:6 }}>Remove <strong>{client.venue}</strong>?</p>
+              <p style={{ fontSize:11, color:'#CC233A', fontStyle:'italic', marginBottom:20 }}>This cannot be undone.</p>
               <div style={{ display:'flex', gap:8 }}>
                 <button onClick={() => setShowDeleteConfirm(false)}
-                  style={{ flex:1, padding:'11px', border:'1px solid rgba(0,53,83,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#003553', cursor:'pointer', fontWeight:600 }}>
+                  style={{ flex:1, padding:'11px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
                   CANCEL
                 </button>
                 <button onClick={async () => { setShowDeleteConfirm(false); await onDelete(); }}
-                  style={{ flex:1, padding:'11px', background:'#9c2c2c', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FFFEF2', cursor:'pointer', fontWeight:700 }}>
+                  style={{ flex:1, padding:'11px', background:'#CC233A', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FCF7F2', cursor:'pointer', fontWeight:700 }}>
                   DELETE
                 </button>
               </div>
@@ -4774,21 +4839,21 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
           </div>
         )}
 
-        <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#003553' }}>
+        <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#002855' }}>
           <RaysBackdrop opacity={0.06} />
           <div className="flex items-start justify-between gap-4 relative">
             <div className="flex items-start gap-3">
               <AvanteLogo height={36} />
               <div>
-                <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>{client.channel?.toUpperCase() || 'NO CHANNEL'}</p>
-                <h2 className="font-display text-xl md:text-3xl mt-0.5" style={{ color: '#FFFEF2', fontWeight: 700, letterSpacing: '0.05em' }}>{client.venue}</h2>
-                <p className="italic text-xs mt-0.5" style={{ color: '#FDB940' }}>{client.location || 'No location'}</p>
+                <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 600 }}>{client.channel?.toUpperCase() || 'NO CHANNEL'}</p>
+                <h2 className="font-display text-xl md:text-3xl mt-0.5" style={{ color: '#FCF7F2', fontWeight: 700, letterSpacing: '0.05em' }}>{client.venue}</h2>
+                <p className="italic text-xs mt-0.5" style={{ color: '#DBB85E' }}>{client.location || 'No location'}</p>
               </div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
               {onPlaceOrder && (
                 <button type="button" onClick={() => onPlaceOrder(client)}
-                  style={{ padding:'7px 14px', background:'#D78433', border:'none', color:'#FFFEF2', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                  style={{ padding:'7px 14px', background:'#BC8D26', border:'none', color:'#FCF7F2', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
                   <span style={{ fontSize:13, fontWeight:300 }}>+</span> PLACE ORDER
                 </button>
               )}
@@ -4817,7 +4882,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
             </div>
             <div>
               <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>LAST VISIT</p>
-              <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginTop: 2 }}>Last contact</p>
+              <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 2 }}>Last contact</p>
               <p className="font-display text-base ink mt-1" style={{ fontWeight: 700 }}>
                 {client.lastContacted ? client.lastContacted + (daysSinceLast !== null ? ` (${daysSinceLast} days ago)` : '') : '—'}
               </p>
@@ -4838,7 +4903,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                 setForm(f => ({ ...f, status: newStatus }));
                 await onUpdate({ status: newStatus });
               }}
-              style={{ padding: '6px 10px', border: '1px solid rgba(0,53,83,0.2)', background: '#FFFEF2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, color: '#003553', cursor: 'pointer', outline: 'none' }}
+              style={{ padding: '6px 10px', border: '1px solid rgba(0,40,85,0.2)', background: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, color: '#002855', cursor: 'pointer', outline: 'none' }}
             >
               {STATUSES.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
             </select>
@@ -4877,7 +4942,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
           {/* === TAG AGENTS === */}
           <div className="pt-4 border-t border">
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>TAG AGENTS</label>
-            <p style={{ fontSize: 10, color: '#006C90', fontStyle: 'italic', marginBottom: 10 }}>Tag team members who should follow up or are involved with this client.</p>
+            <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginBottom: 10 }}>Tag team members who should follow up or are involved with this client.</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {SALES_REPS.map(rep => {
                 const currentTags = form.clientTags || [];
@@ -4891,7 +4956,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                       setForm(f => ({ ...f, clientTags: next }));
                       onUpdate({ clientTags: next });
                     }}
-                    style={{ padding: '8px 16px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, border: '1px solid', borderColor: tagged ? '#D78433' : 'rgba(0,53,83,0.2)', background: tagged ? '#D78433' : 'transparent', color: tagged ? '#FFFEF2' : '#003553', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s' }}>
+                    style={{ padding: '8px 16px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, border: '1px solid', borderColor: tagged ? '#BC8D26' : 'rgba(0,40,85,0.2)', background: tagged ? '#BC8D26' : 'transparent', color: tagged ? '#FCF7F2' : '#002855', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s' }}>
                     {tagged && <span style={{ fontSize: 10 }}>✓</span>} @{rep.toUpperCase()}
                   </button>
                 );
@@ -4900,7 +4965,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
             {(form.clientTags || []).length > 0 && (
               <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {(form.clientTags || []).map(r => (
-                  <span key={r} style={{ padding: '3px 10px', background: 'rgba(215,132,51,0.15)', color: '#D78433', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.15em', fontWeight: 700 }}>@{r.toUpperCase()} TAGGED</span>
+                  <span key={r} style={{ padding: '3px 10px', background: 'rgba(188,141,38,0.15)', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.15em', fontWeight: 700 }}>@{r.toUpperCase()} TAGGED</span>
                 ))}
               </div>
             )}
@@ -4928,10 +4993,10 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                     <div className="col-span-2 text-right ocean italic">{s.lastDate || '—'}</div>
                   </div>
                 ))}
-                <div className="grid grid-cols-12 gap-2 px-3 py-2.5" style={{ background: '#003553' }}>
-                  <div className="col-span-6 font-display text-[10px] tracking-[0.3em]" style={{ color: '#FDB940', fontWeight: 600 }}>LIFETIME TOTAL</div>
-                  <div className="col-span-2 text-center font-display" style={{ color: '#FFFEF2', fontWeight: 700 }}>{skuTotals.reduce((s, x) => s + x.qty, 0)}</div>
-                  <div className="col-span-4 text-right font-display text-base" style={{ color: '#FFFEF2', fontWeight: 700 }}>{ZAR(skuTotals.reduce((s, x) => s + x.revenue, 0))}</div>
+                <div className="grid grid-cols-12 gap-2 px-3 py-2.5" style={{ background: '#002855' }}>
+                  <div className="col-span-6 font-display text-[10px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 600 }}>LIFETIME TOTAL</div>
+                  <div className="col-span-2 text-center font-display" style={{ color: '#FCF7F2', fontWeight: 700 }}>{skuTotals.reduce((s, x) => s + x.qty, 0)}</div>
+                  <div className="col-span-4 text-right font-display text-base" style={{ color: '#FCF7F2', fontWeight: 700 }}>{ZAR(skuTotals.reduce((s, x) => s + x.revenue, 0))}</div>
                 </div>
               </div>
             </div>
@@ -4949,10 +5014,10 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                   const isHistorical = v.isHistorical;
                   // Historical entries get a muted ocean blue; logged visits get outcome-based color
                   const outcomeColor = isHistorical
-                    ? '#006C90'
+                    ? '#5A7A99'
                     : v.outcome === 'Sold In' ? '#2d8659'
-                    : v.outcome === 'Rejected' ? '#9c2c2c'
-                    : '#D78433';
+                    : v.outcome === 'Rejected' ? '#CC233A'
+                    : '#BC8D26';
                   const isLatest = idx === 0 && !isHistorical;
                   return (
                     <div key={v.id} className="relative pl-6">
@@ -4966,25 +5031,25 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                         <div className="absolute left-[5px] top-5 bottom-[-12px] w-px bg-ink/15"></div>
                       )}
                       <div className={`border ${isLatest ? 'border-copper' : isHistorical ? 'border border-dashed' : 'border'} bg-cream`}>
-                        <div className="flex items-baseline justify-between gap-2 px-3 py-2 border-b border" style={{ background: isLatest ? 'rgba(253,185,64,0.08)' : isHistorical ? 'rgba(0,108,144,0.04)' : 'transparent' }}>
+                        <div className="flex items-baseline justify-between gap-2 px-3 py-2 border-b border" style={{ background: isLatest ? 'rgba(219,184,94,0.08)' : isHistorical ? 'rgba(90,122,153,0.04)' : 'transparent' }}>
                           <div className="flex items-baseline gap-3 flex-wrap">
                             <span className="font-display ink text-sm tracking-wide" style={{ fontWeight: 700 }}>{v.date || 'No date'}</span>
                             <span className="text-[10px] font-display tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>BY {v.salesRep?.toUpperCase() || '—'}</span>
                             {v.contactMethod && <span className="text-[9px] italic ocean">via {v.contactMethod}</span>}
-                            {isLatest && <span className="text-[9px] font-display tracking-[0.2em] px-1.5 py-0.5" style={{ background: '#FDB940', color: '#003553', fontWeight: 700 }}>LATEST</span>}
-                            {isHistorical && <span className="text-[9px] font-display tracking-[0.2em] px-1.5 py-0.5 border" style={{ borderColor: '#006C90', color: '#006C90', fontWeight: 700 }}>IMPORTED</span>}
+                            {isLatest && <span className="text-[9px] font-display tracking-[0.2em] px-1.5 py-0.5" style={{ background: '#DBB85E', color: '#002855', fontWeight: 700 }}>LATEST</span>}
+                            {isHistorical && <span className="text-[9px] font-display tracking-[0.2em] px-1.5 py-0.5 border" style={{ borderColor: '#5A7A99', color: '#5A7A99', fontWeight: 700 }}>IMPORTED</span>}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-display tracking-wider px-2 py-0.5" style={{ background: outcomeColor, color: '#FFFEF2', fontWeight: 600 }}>
+                            <span className="text-[10px] font-display tracking-wider px-2 py-0.5" style={{ background: outcomeColor, color: '#FCF7F2', fontWeight: 600 }}>
                               {(v.outcome || 'VISIT').toUpperCase()}
                             </span>
                             {v.saleAmount > 0 && <span className="font-display text-sm copper" style={{ fontWeight: 700 }}>{ZAR(v.saleAmount)}</span>}
                             {!isHistorical && onDeleteVisit && (
                               <button type="button"
                                 onClick={() => onDeleteVisit(v.id)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'rgba(0,53,83,0.25)', flexShrink: 0, lineHeight: 1 }}
-                                onMouseEnter={e => e.currentTarget.style.color = '#9c2c2c'}
-                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,53,83,0.25)'}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'rgba(0,40,85,0.25)', flexShrink: 0, lineHeight: 1 }}
+                                onMouseEnter={e => e.currentTarget.style.color = '#CC233A'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,40,85,0.25)'}
                                 title="Delete this visit">
                                 <Trash2 style={{ width: 12, height: 12 }} />
                               </button>
@@ -5032,7 +5097,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                               <p className="font-display text-[9px] tracking-[0.2em] copper mb-0.5" style={{ fontWeight: 600 }}>TAGGED</p>
                               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                                 {v.taggedReps.map(r => (
-                                  <span key={r} style={{ padding: '2px 8px', background: 'rgba(215,132,51,0.15)', color: '#D78433', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>@{r.toUpperCase()}</span>
+                                  <span key={r} style={{ padding: '2px 8px', background: 'rgba(188,141,38,0.15)', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>@{r.toUpperCase()}</span>
                                 ))}
                               </div>
                             </div>
@@ -5072,7 +5137,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
             {edit ? (
               <>
                 <button type="button" onClick={() => { setForm(client); setEdit(false); }} className="px-5 py-2.5 font-display text-xs tracking-[0.25em] ink" style={{ fontWeight: 700 }}>CANCEL</button>
-                <button type="button" onClick={save} className="bg-copper hover:bg-gold px-6 py-2.5 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>SAVE CHANGES</button>
+                <button type="button" onClick={save} className="bg-copper hover:bg-gold px-6 py-2.5 font-display text-xs tracking-[0.25em]" style={{ color: '#FCF7F2', fontWeight: 700 }}>SAVE CHANGES</button>
               </>
             ) : (
               <>
@@ -5095,10 +5160,10 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                     setTimeout(() => setTagsSaved(false), 2000);
                   }}
                   className="px-6 py-2.5 font-display text-xs tracking-[0.25em]"
-                  style={{ background: tagsSaved ? '#2d8659' : 'transparent', color: tagsSaved ? '#FFFEF2' : '#003553', border: '1px solid', borderColor: tagsSaved ? '#2d8659' : 'rgba(0,53,83,0.25)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  style={{ background: tagsSaved ? '#2d8659' : 'transparent', color: tagsSaved ? '#FCF7F2' : '#002855', border: '1px solid', borderColor: tagsSaved ? '#2d8659' : 'rgba(0,40,85,0.25)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Save style={{ width: 13, height: 13 }} /> {tagsSaved ? 'TAGS SAVED' : 'SAVE TAGS'}
                 </button>
-                <button type="button" onClick={() => setEdit(true)} className="bg-ink hover:bg-copper px-6 py-2.5 font-display text-xs tracking-[0.25em]" style={{ color: '#FFFEF2', fontWeight: 700 }}>EDIT CLIENT</button>
+                <button type="button" onClick={() => setEdit(true)} className="bg-ink hover:bg-copper px-6 py-2.5 font-display text-xs tracking-[0.25em]" style={{ color: '#FCF7F2', fontWeight: 700 }}>EDIT CLIENT</button>
               </>
             )}
           </div>
