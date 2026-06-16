@@ -1416,13 +1416,38 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], onNavig
 
   const withAmount = b2bClients.filter(c => Number(c.prospectedAmount) > 0);
 
-  const monthTarget = useMemo(() => {
-    if (!targets) return 0;
-    if (activeRep === 'All') return SALES_REPS.reduce((s, r) => s + (targets[r]?.revenue || 0), 0);
-    return targets[activeRep]?.revenue || 0;
-  }, [activeRep, targets]);
+  // Build 6-month forecast
+  // Rule: if status === 'Invoiced / Paid' → 50% this month, 50% next month
+  //        otherwise → full amount sits in current month (pipeline view)
+  const sixMonthForecast = useMemo(() => {
+    const now = new Date();
+    // Build 6 month buckets starting from current month
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      return {
+        label: d.toLocaleString('default', { month: 'short' }).toUpperCase(),
+        year: d.getFullYear(),
+        monthIdx: d.getMonth(),
+        amount: 0,
+      };
+    });
 
-  const pipelinePct = monthTarget > 0 ? Math.min(100, Math.round((totalPipeline / monthTarget) * 100)) : 0;
+    b2bClients.forEach(c => {
+      const amt = Number(c.prospectedAmount) || 0;
+      if (!amt) return;
+
+      if (c.status === 'Invoiced / Paid') {
+        // 50% this month, 50% next month
+        if (months[0]) months[0].amount += amt * 0.5;
+        if (months[1]) months[1].amount += amt * 0.5;
+      }
+      // Other statuses contribute to the pipeline total only (not placed into future months yet)
+    });
+
+    return months;
+  }, [b2bClients]);
+
+  const maxMonthAmount = Math.max(...sixMonthForecast.map(m => m.amount), 1);
 
   return (
     <div className="premium-card p-4">
@@ -1439,8 +1464,8 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], onNavig
         </span>
       </div>
 
-      {/* Total + progress bar */}
-      <div className="flex items-end justify-between gap-4 mb-3">
+      {/* Total */}
+      <div className="flex items-end justify-between gap-4 mb-4">
         <div>
           <p className="font-display text-[10px] tracking-[0.25em] copper" style={{ fontWeight: 600 }}>PROJECTED B2B PIPELINE</p>
           <p className="font-display text-2xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(totalPipeline)}</p>
@@ -1448,6 +1473,42 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], onNavig
             {withAmount.length} client{withAmount.length !== 1 ? 's' : ''} with prospected amounts
           </p>
         </div>
+      </div>
+
+      {/* 6-Month Revenue Forecast Bar */}
+      <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)', paddingTop: 12, marginBottom: 12 }}>
+        <p className="font-display text-[9px] tracking-[0.25em] copper mb-3" style={{ fontWeight: 600 }}>6-MONTH REVENUE FORECAST · INVOICED / PAID CLIENTS</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>
+          {sixMonthForecast.map((m, i) => {
+            const barPct = maxMonthAmount > 0 ? (m.amount / maxMonthAmount) * 100 : 0;
+            const isCurrentMonth = i === 0;
+            return (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                {/* Bar */}
+                <div style={{ width: '100%', height: 60, display: 'flex', alignItems: 'flex-end', background: 'rgba(0,40,85,0.04)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{
+                    width: '100%',
+                    height: `${Math.max(barPct, m.amount > 0 ? 8 : 0)}%`,
+                    background: m.amount > 0 ? (isCurrentMonth ? '#BC8D26' : '#DBB85E') : 'transparent',
+                    transition: 'height 0.5s',
+                    borderRadius: '2px 2px 0 0',
+                  }} />
+                </div>
+                {/* Amount */}
+                <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, fontWeight: 700, color: m.amount > 0 ? '#002855' : 'rgba(0,40,85,0.25)', textAlign: 'center', lineHeight: 1.3 }}>
+                  {m.amount > 0 ? ZAR(m.amount) : '—'}
+                </p>
+                {/* Month label */}
+                <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, fontWeight: 600, color: isCurrentMonth ? '#BC8D26' : '#5A7A99', letterSpacing: '0.1em', textAlign: 'center' }}>
+                  {m.label}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        <p style={{ fontSize: 9, fontStyle: 'italic', color: '#5A7A99', marginTop: 8 }}>
+          When a B2B client reaches <strong>Invoiced / Paid</strong> status, 50% of their prospected amount is allocated to the current month and 50% to the following month.
+        </p>
       </div>
 
       {/* Client rows */}
