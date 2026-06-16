@@ -1297,20 +1297,16 @@ function Header({ view, setView, onLog, visits, clients, onNavigate }) {
 }
 
 // =================== Dashboard ===================
-// ── OVERDUE CLIENTS WIDGET ──────────────────────────────────────────────────
-function OverdueClients({ clients, visits, activeRep, onNavigate }) {
+// ── OVERDUE CLIENTS KANBAN ──────────────────────────────────────────────────
+function OverdueClients({ clients, visits, onNavigate }) {
   const today = new Date();
-  const [overdueRep, setOverdueRep] = useState('All');
 
-  const repToShow = activeRep !== 'All' ? activeRep : overdueRep;
-
+  // Build top-5 overdue list per rep
   const overdueByRep = useMemo(() => {
     const result = {};
-    const repsToCalc = activeRep !== 'All' ? [activeRep] : ['All', ...SALES_REPS];
-
-    repsToCalc.forEach(rep => {
-      const repClients = rep === 'All' ? clients : clients.filter(c => c.accountManager === rep);
-      result[rep] = repClients
+    SALES_REPS.forEach(rep => {
+      result[rep] = clients
+        .filter(c => c.accountManager === rep && c.status !== 'Lost')
         .map(c => {
           const clientVisits = visits.filter(v => v.clientId === c.id);
           const latestVisit = clientVisits.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
@@ -1320,19 +1316,19 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
             : 999;
           return { ...c, lastDate, daysAgo };
         })
-        .filter(c => c.daysAgo >= 30 && c.status !== 'Lost')
+        .filter(c => c.daysAgo >= 30)
         .sort((a, b) => b.daysAgo - a.daysAgo)
         .slice(0, 5);
     });
     return result;
-  }, [clients, visits, activeRep]);
+  }, [clients, visits]);
 
-  const overdue = overdueByRep[repToShow] || [];
-  const statusColors = (s) => getStatusColor(s);
+  const totalOverdue = SALES_REPS.reduce((s, r) => s + (overdueByRep[r]?.length || 0), 0);
 
   return (
     <div className="premium-card p-4">
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 diamond-clip" style={{ background: '#CC233A' }}></div>
           <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
@@ -1340,64 +1336,60 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
           </h2>
         </div>
         <span className="font-display text-[9px] tracking-[0.15em]" style={{ color: '#CC233A', fontWeight: 600 }}>
-          TOP 5 PER REP · &gt;30 DAYS
+          {totalOverdue} CLIENT{totalOverdue !== 1 ? 'S' : ''} · &gt;30 DAYS
         </span>
       </div>
 
-      {/* Rep tabs — only show when viewing All reps */}
-      {activeRep === 'All' && (
-        <div style={{ display: 'flex', gap: 4, marginBottom: 12, flexWrap: 'wrap' }}>
-          {['All', ...SALES_REPS].map(r => {
-            const count = overdueByRep[r]?.length || 0;
-            const active = overdueRep === r;
-            return (
-              <button key={r} onClick={() => setOverdueRep(r)}
-                style={{ padding: '5px 12px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, border: '1px solid', borderColor: active ? '#002855' : 'rgba(0,40,85,0.2)', background: active ? '#002855' : 'transparent', color: active ? '#FCF7F2' : '#002855', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {r.toUpperCase()}
-                {count > 0 && (
-                  <span style={{ background: active ? '#DBB85E' : '#CC233A', color: active ? '#002855' : '#FCF7F2', borderRadius: 10, padding: '1px 6px', fontSize: 8, fontWeight: 700 }}>{count}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* Kanban — one column per rep */}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${SALES_REPS.length}, minmax(160px, 1fr))`, gap: 10, overflowX: 'auto' }}>
+        {SALES_REPS.map(rep => {
+          const cards = overdueByRep[rep] || [];
+          return (
+            <div key={rep} style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              {/* Column header */}
+              <div style={{ padding: '8px 10px', background: '#002855', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, color: '#FCF7F2' }}>{rep.toUpperCase()}</span>
+                {cards.length > 0
+                  ? <span style={{ background: '#CC233A', color: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 8, fontWeight: 700, borderRadius: 10, padding: '1px 7px' }}>{cards.length}</span>
+                  : <span style={{ background: '#2d8659', color: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 8, fontWeight: 700, borderRadius: 10, padding: '1px 7px' }}>✓</span>
+                }
+              </div>
 
-      {overdue.length === 0 ? (
-        <div style={{ padding: '16px 0', textAlign: 'center' }}>
-          <p className="italic ocean" style={{ fontSize: 12 }}>
-            {repToShow === 'All' ? 'All clients contacted within 30 days 🎉' : `${repToShow} is up to date 🎉`}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {overdue.map((c, i) => (
-            <div key={c.id}
-              onClick={() => onNavigate && onNavigate('leads', c.id)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 8px', borderBottom: i < overdue.length - 1 ? '1px solid rgba(0,40,85,0.08)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.04)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                <span style={{ fontSize: 10, color: 'rgba(0,40,85,0.3)', fontFamily: 'monospace', fontWeight: 600, width: 16, flexShrink: 0 }}>{i + 1}</span>
-                <div style={{ minWidth: 0 }}>
-                  <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.venue}</p>
-                  <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>
-                    {c.accountManager} · {c.lastDate ? c.lastDate : 'Never contacted'}
-                  </p>
+              {/* Cards */}
+              {cards.length === 0 ? (
+                <div style={{ padding: '14px 8px', textAlign: 'center', background: 'rgba(45,134,89,0.06)', border: '1px solid rgba(45,134,89,0.15)', borderRadius: 2 }}>
+                  <p style={{ fontSize: 10, color: '#2d8659', fontStyle: 'italic' }}>Up to date 🎉</p>
                 </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                <span style={{ padding: '2px 8px', background: statusColors(c.status), color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>
-                  {c.status?.toUpperCase()}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: c.daysAgo >= 60 ? '#CC233A' : '#BC8D26', fontFamily: 'Cinzel, serif', minWidth: 52, textAlign: 'right' }}>
-                  {c.daysAgo === 999 ? 'Never' : `${c.daysAgo}d`}
-                </span>
-              </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {cards.map((c, i) => (
+                    <div key={c.id}
+                      onClick={() => onNavigate && onNavigate(c.id)}
+                      style={{ background: '#FCF7F2', border: '1px solid rgba(0,40,85,0.1)', borderLeft: `3px solid ${c.daysAgo >= 60 ? '#CC233A' : '#BC8D26'}`, padding: '8px 10px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,40,85,0.12)'}
+                      onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+                      {/* Rank + venue */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                        <span style={{ fontSize: 9, color: 'rgba(0,40,85,0.3)', fontFamily: 'monospace', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+                        <p className="font-display ink" style={{ fontWeight: 700, fontSize: 11, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{c.venue}</p>
+                      </div>
+                      {/* Days overdue + status */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                        <span style={{ padding: '2px 6px', background: getStatusColor(c.status), color: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.08em', fontWeight: 700 }}>
+                          {c.status?.toUpperCase()}
+                        </span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: c.daysAgo >= 60 ? '#CC233A' : '#BC8D26', fontFamily: "'Cinzel',serif" }}>
+                          {c.daysAgo === 999 ? 'Never' : `${c.daysAgo}d`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2939,8 +2931,12 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
 
   return (
     <div className="space-y-4 fade-up">
-      {/* Overdue Follow-ups widget */}
-      <OverdueClients clients={clients} visits={visits} activeRep="All" onNavigate={(v, id) => { if (onSelect && id) { const c = clients.find(cl => cl.id === id); if (c) onSelect(c); } }} />
+      {/* Overdue Follow-ups Kanban */}
+      <OverdueClients
+        clients={clients}
+        visits={visits}
+        onNavigate={(clientId) => { if (onSelect && clientId) { const c = clients.find(cl => cl.id === clientId); if (c) onSelect(c); } }}
+      />
 
       {/* Page header */}
       <div className="pb-3 border-b">
