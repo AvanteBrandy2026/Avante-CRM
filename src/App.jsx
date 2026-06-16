@@ -986,7 +986,7 @@ export default function AvanteCRM() {
             visits={visits}
             updateClient={updateClient}
             onSelect={setSelectedClient}
-            onAddNew={() => setNewClientCtx({ defaultRep: activeRep === 'All' ? 'Alex' : activeRep, onCreated: null })}
+            onAddNew={() => setNewClientCtx({ defaultRep: activeRep === 'All' ? '' : activeRep, onCreated: null })}
             onDelete={async (id) => {
               const c = clients.find(cl => cl.id === id);
               await deleteClient(id);
@@ -1448,17 +1448,6 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [] }) {
             {withAmount.length} client{withAmount.length !== 1 ? 's' : ''} with prospected amounts
           </p>
         </div>
-        {monthTarget > 0 && (
-          <div style={{ flex: 1, maxWidth: 220 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginBottom: 4 }}>
-              <span className="italic ocean">vs monthly target {ZAR(monthTarget)}</span>
-              <span className="font-display copper" style={{ fontWeight: 700 }}>{pipelinePct}%</span>
-            </div>
-            <div style={{ height: 6, background: 'rgba(0,40,85,0.1)', borderRadius: 3 }}>
-              <div style={{ height: '100%', width: `${pipelinePct}%`, background: pipelinePct >= 100 ? '#2d8659' : '#DBB85E', borderRadius: 3, transition: 'width 0.6s' }}></div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Client rows */}
@@ -3358,6 +3347,14 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
   const [emailModalOpen, setEmailModalOpen] = useState(isEmailOnly);
   const [search, setSearch] = useState('');
   const [skuPickerOpen, setSkuPickerOpen] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  // Has the user entered any data worth warning about?
+  const logIsDirty = !isEdit && (!!clientId || !!notes.trim() || items.length > 0);
+
+  const handleLogClose = () => {
+    if (logIsDirty) { setShowCloseConfirm(true); } else { onClose(); }
+  };
 
   // STRICT filter: only this rep's clients (no Unassigned leakage)
   // BUT in edit mode, also include the visit's existing client even if reassigned to someone else.
@@ -3589,9 +3586,29 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
   };
 
   return (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:'8px', background:"rgba(0,40,85,0.78)", backdropFilter:"blur(4px)", overflowY:"auto", overflowX:"hidden" }}>
+    <div onClick={handleLogClose} style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:'8px', background:"rgba(0,40,85,0.78)", backdropFilter:"blur(4px)", overflowY:"auto", overflowX:"hidden" }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background:"#FCF7F2", width:"100%", maxWidth:560, maxHeight:"94vh", overflowY:"auto", overflowX:"hidden", border:"2px solid #BC8D26", position:"relative", margin:"8px 0", flexShrink:0 }}>
         <div className="absolute top-0 left-0 right-0 h-1 bg-copper z-10"></div>
+
+        {/* Unsaved warning */}
+        {showCloseConfirm && (
+          <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,40,85,0.85)', padding:20 }} onClick={e => e.stopPropagation()}>
+            <div className="premium-card" style={{ maxWidth:320, width:'100%', padding:28, textAlign:'center' }}>
+              <p className="font-display" style={{ fontSize:11, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, marginBottom:8 }}>DISCARD VISIT?</p>
+              <p style={{ fontSize:13, color:'#002855', marginBottom:20 }}>You have unsaved data in this visit log. Are you sure you want to close?</p>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={() => setShowCloseConfirm(false)}
+                  style={{ flex:1, padding:'10px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
+                  KEEP EDITING
+                </button>
+                <button onClick={() => { setShowCloseConfirm(false); onClose(); }}
+                  style={{ flex:1, padding:'10px', background:'#CC233A', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FCF7F2', cursor:'pointer', fontWeight:700 }}>
+                  DISCARD
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#002855' }}>
           <RaysBackdrop opacity={0.06} />
@@ -3603,7 +3620,7 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                 <h2 className="font-display text-xl md:text-2xl mt-0.5" style={{ color: '#FCF7F2', fontWeight: 700, letterSpacing: '0.08em' }}>{isEdit ? 'EDIT VISIT' : 'LOG A VISIT'}</h2>
               </div>
             </div>
-            <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', padding: '4px 8px', fontSize: 22, fontWeight: 200, lineHeight: 1, flexShrink: 0 }}>✕</button>
+            <button type="button" onClick={handleLogClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.65)', padding: '4px 8px', fontSize: 22, fontWeight: 200, lineHeight: 1, flexShrink: 0 }}>✕</button>
           </div>
         </div>
 
@@ -4184,7 +4201,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
     channel: 'Private Sales',
     leadSource: 'Cold Call',
     priority: 'Medium',
-    accountManager: defaultRep,
+    accountManager: defaultRep || '',
     status: 'New',
     notes: '',
     paymentTerms: 'COD',
@@ -4192,6 +4209,10 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  const newIsDirty = !!form.venue.trim() || !!form.firstName.trim() || !!form.email.trim();
+  const handleNewClose = () => { if (newIsDirty) { setShowCloseConfirm(true); } else { onClose(); } };
 
   const setF = (k, v) => { setForm(f => ({ ...f, [k]: v })); setError(''); };
 
@@ -4218,8 +4239,28 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
   };
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,40,85,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={onClose}>
+    <div style={{ position:"fixed", inset:0, zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:16, background:"rgba(0,40,85,0.82)", backdropFilter:"blur(4px)", overflowY:"auto" }} onClick={handleNewClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ background:"#FCF7F2", width:"100%", maxWidth:672, maxHeight:"92vh", overflowY:"auto", border:"2px solid #BC8D26" }}>
+
+        {/* Unsaved warning */}
+        {showCloseConfirm && (
+          <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,40,85,0.85)', padding:20 }} onClick={e => e.stopPropagation()}>
+            <div className="premium-card" style={{ maxWidth:320, width:'100%', padding:28, textAlign:'center' }}>
+              <p className="font-display" style={{ fontSize:11, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, marginBottom:8 }}>DISCARD CLIENT?</p>
+              <p style={{ fontSize:13, color:'#002855', marginBottom:20 }}>You have unsaved data in this form. Are you sure you want to close?</p>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={() => setShowCloseConfirm(false)}
+                  style={{ flex:1, padding:'10px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
+                  KEEP EDITING
+                </button>
+                <button onClick={() => { setShowCloseConfirm(false); onClose(); }}
+                  style={{ flex:1, padding:'10px', background:'#CC233A', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FCF7F2', cursor:'pointer', fontWeight:700 }}>
+                  DISCARD
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="p-4 flex items-center justify-between sticky top-0 z-10" style={{ background: '#002855' }}>
@@ -4227,10 +4268,12 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
             <UserPlus className="w-5 h-5 flex-shrink-0" style={{ color: '#DBB85E' }} />
             <div>
               <p className="font-display text-[9px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 600 }}>NEW CLIENT</p>
-              <h2 className="font-display text-lg" style={{ color: '#FCF7F2', fontWeight: 700, letterSpacing: '0.06em' }}>ADD TO {defaultRep.toUpperCase()}'S BOOK</h2>
+              <h2 className="font-display text-lg" style={{ color: '#FCF7F2', fontWeight: 700, letterSpacing: '0.06em' }}>
+                {defaultRep ? `ADD TO ${defaultRep.toUpperCase()}'S BOOK` : 'ADD NEW CLIENT'}
+              </h2>
             </div>
           </div>
-          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', padding: '4px', lineHeight: 1, fontSize: 22, fontWeight: 300 }}>✕</button>
+          <button type="button" onClick={handleNewClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', padding: '4px', lineHeight: 1, fontSize: 22, fontWeight: 300 }}>✕</button>
         </div>
 
         <div className="p-4 space-y-4">
