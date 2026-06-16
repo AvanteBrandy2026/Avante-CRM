@@ -992,6 +992,10 @@ export default function AvanteCRM() {
               await deleteClient(id);
               showToast(`Client removed: ${c?.venue || id}`);
             }}
+            onNavigate={(v, clientId) => {
+              setView(v);
+              if (clientId) { const c = clients.find(cl => cl.id === clientId); if (c) setSelectedClient(c); }
+            }}
           />
         )}
         {view === 'orders' && (
@@ -1844,9 +1848,6 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         clients={clients}
         onNavigate={onNavigate}
       />
-
-      {/* ── OVERDUE CLIENTS ── */}
-      <OverdueClients clients={clients} visits={allVisits} activeRep={activeRep} onNavigate={onNavigate} />
 
       {/* ── LEADERBOARD + RECENT VISITS ── */}
       <div className="grid-lb">
@@ -2908,7 +2909,7 @@ function KanbanView({ filtered, onSelect, onDelete, updateClient, activeChannel 
   );
 }
 
-function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete }) {
+function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete, onNavigate }) {
   const [search, setSearch] = useState('');
   const [filterRep, setFilterRep] = useState('All');
   const [filterChannel, setFilterChannel] = useState('All');
@@ -2938,6 +2939,9 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
 
   return (
     <div className="space-y-4 fade-up">
+      {/* Overdue Follow-ups widget */}
+      <OverdueClients clients={clients} visits={visits} activeRep="All" onNavigate={(v, id) => { if (onSelect && id) { const c = clients.find(cl => cl.id === id); if (c) onSelect(c); } }} />
+
       {/* Page header */}
       <div className="pb-3 border-b">
         <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>CLIENT DATABASE</p>
