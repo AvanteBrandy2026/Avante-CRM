@@ -87,6 +87,39 @@ const LOCATIONS = [
   'KwaZulu-Natal', 'Free State', 'Limpopo', 'Mpumalanga', 'North West',
 ];
 const STATUSES = ['New', 'Contacted', 'Converted', 'Lost'];
+
+// B2B-specific pipeline stages with probability percentages
+const B2B_STATUSES = [
+  { label: 'New',                 pct: 1   },
+  { label: 'Contacted',           pct: 10  },
+  { label: 'Discovery Completed', pct: 40  },
+  { label: 'Pitched',             pct: 60  },
+  { label: 'Converted / Signed',  pct: 80  },
+  { label: 'Invoiced / Paid',     pct: 100 },
+];
+const B2B_STATUS_LABELS = B2B_STATUSES.map(s => s.label);
+
+// Returns the right status list for a given channel
+const getStatusesForChannel = (channel) =>
+  channel === 'B2B' ? B2B_STATUS_LABELS : STATUSES;
+
+// Returns the probability % for a B2B status label, or null for non-B2B
+const getB2BPct = (statusLabel) => {
+  const found = B2B_STATUSES.find(s => s.label === statusLabel);
+  return found ? found.pct : null;
+};
+
+// Unified status colour lookup (standard + B2B)
+const getStatusColor = (status) => ({
+  'New':                 '#5A7A99',
+  'Contacted':           '#BC8D26',
+  'Converted':           '#2d8659',
+  'Lost':                '#CC233A',
+  'Discovery Completed': '#5A7A99',
+  'Pitched':             '#BC8D26',
+  'Converted / Signed':  '#2d8659',
+  'Invoiced / Paid':     '#1a5c38',
+}[status] || '#5A7A99');
 const LEAD_SOURCES = ['Cold Call', 'Referral', 'Walk into Store', 'Email', 'Event', 'Networking', 'Call-cycle', 'Website', 'Online'];
 const PRIORITIES = ['Low', 'Medium', 'High'];
 
@@ -1288,7 +1321,7 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
   }, [clients, visits, activeRep]);
 
   const overdue = overdueByRep[repToShow] || [];
-  const statusColors = { New: '#5A7A99', Contacted: '#DBB85E', Converted: '#2d8659', Lost: '#CC233A' };
+  const statusColors = (s) => getStatusColor(s);
 
   return (
     <div className="premium-card p-4">
@@ -1347,7 +1380,7 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                <span style={{ padding: '2px 8px', background: statusColors[c.status] || '#5A7A99', color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>
+                <span style={{ padding: '2px 8px', background: statusColors(c.status), color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>
                   {c.status?.toUpperCase()}
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: c.daysAgo >= 60 ? '#CC233A' : '#BC8D26', fontFamily: 'Cinzel, serif', minWidth: 52, textAlign: 'right' }}>
@@ -1554,7 +1587,7 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
                 </div>
                 <p className="font-display copper" style={{ fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{ZAR(p.amount)}</p>
                 <select value={p.status} onChange={(e) => onUpdate(p.id, { status: e.target.value })}
-                  style={{ padding: '3px 6px', border: `1px solid ${statusColors[p.status]}`, background: 'transparent', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700, color: statusColors[p.status], cursor: 'pointer', outline: 'none', flexShrink: 0 }}>
+                  style={{ padding: '3px 6px', border: `1px solid ${getStatusColor(p.status)}`, background: 'transparent', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700, color: getStatusColor(p.status), cursor: 'pointer', outline: 'none', flexShrink: 0 }}>
                   <option value="Open">OPEN</option>
                   <option value="Won">WON</option>
                   <option value="Lost">LOST</option>
@@ -3051,19 +3084,24 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
 }
 
 // =================== Leads Page ===================
-function KanbanView({ filtered, onSelect, onDelete, updateClient }) {
-  const statusColors = { New: '#5A7A99', Contacted: '#BC8D26', Converted: '#2d8659', Lost: '#CC233A' };
-  const statusBg = { New: 'rgba(90,122,153,0.08)', Contacted: 'rgba(188,141,38,0.08)', Converted: 'rgba(45,134,89,0.08)', Lost: 'rgba(204,35,58,0.08)' };
+function KanbanView({ filtered, onSelect, onDelete, updateClient, activeChannel }) {
+  // Determine which status columns to show — if filtering by B2B, show B2B stages; otherwise standard
+  const statusCols = activeChannel === 'B2B' ? B2B_STATUS_LABELS : STATUSES;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, overflowX: 'auto', minWidth: 0 }}>
-      {STATUSES.map(status => {
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${statusCols.length}, minmax(180px, 1fr))`, gap: 12, overflowX: 'auto', minWidth: 0 }}>
+      {statusCols.map(status => {
+        const color = getStatusColor(status);
+        const pct = activeChannel === 'B2B' ? getB2BPct(status) : null;
         const cols = filtered.filter(c => c.status === status);
         return (
-          <div key={status} style={{ background: statusBg[status] || 'rgba(0,40,85,0.04)', border: `1px solid ${statusColors[status]}22`, minWidth: 200 }}>
+          <div key={status} style={{ background: `${color}12`, border: `1px solid ${color}33`, minWidth: 180 }}>
             {/* Column header */}
-            <div style={{ padding: '10px 12px', borderBottom: `2px solid ${statusColors[status]}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: statusColors[status] }}>
-              <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.25em', fontWeight: 700, color: '#FCF7F2' }}>{status.toUpperCase()}</span>
+            <div style={{ padding: '10px 12px', borderBottom: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: color }}>
+              <div>
+                <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, color: '#FCF7F2' }}>{status.toUpperCase()}</span>
+                {pct !== null && <span style={{ display: 'block', fontSize: 8, color: 'rgba(255,255,255,0.7)', fontFamily: "'Cinzel',serif", marginTop: 1 }}>{pct}% probability</span>}
+              </div>
               <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '1px 8px' }}>{cols.length}</span>
             </div>
             {/* Cards */}
@@ -3181,7 +3219,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
           <FilterSelect label="Rep" value={filterRep} onChange={setFilterRep} options={['All', ...SALES_REPS, 'Unassigned']} />
           <FilterSelect label="Channel" value={filterChannel} onChange={setFilterChannel} options={['All', ...CHANNELS]} />
           <FilterSelect label="Location" value={filterLocation} onChange={setFilterLocation} options={['All', ...LOCATIONS]} />
-          <FilterSelect label="Status" value={filterStatus} onChange={setFilterStatus} options={['All', ...STATUSES]} />
+          <FilterSelect label="Status" value={filterStatus} onChange={setFilterStatus} options={['All', ...STATUSES, ...B2B_STATUS_LABELS.filter(s => !STATUSES.includes(s))]} />
         </div>
         <p style={{ fontSize: 11, fontStyle: 'italic', color: '#5A7A99', margin: 0 }}>
           {filtered.length} of {clients.length} clients{search ? ` matching "${search}"` : ''}
@@ -3190,7 +3228,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
 
       {/* Kanban or List view */}
       {viewMode === 'kanban' ? (
-        <KanbanView filtered={filtered} onSelect={onSelect} onDelete={onDelete} updateClient={updateClient} />
+        <KanbanView filtered={filtered} onSelect={onSelect} onDelete={onDelete} updateClient={updateClient} activeChannel={filterChannel} />
       ) : (
       <div className="premium-card" style={{ overflow: 'hidden' }}>
         {filtered.length === 0 ? (
@@ -3240,7 +3278,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span className="font-display ink" style={{ fontWeight: 700, fontSize: 13 }}>{c.venue}</span>
-                      <StatusBadge status={c.status} />
+                      <StatusBadge status={c.status} channel={c.channel} />
                     </div>
                     <p style={{ fontSize: 11, color: '#5A7A99', fontStyle: 'italic', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {[c.firstName, c.lastName].filter(Boolean).join(' ')}
@@ -3301,19 +3339,14 @@ function FilterSelect({ label, value, onChange, options }) {
   );
 }
 
-function StatusBadge({ status }) {
-  const colors = {
-    New: { bg: '#5A7A99', text: '#FCF7F2' },
-    Contacted: { bg: '#DBB85E', text: '#002855' },
-    Qualified: { bg: '#BC8D26', text: '#FCF7F2' },
-    Prospect: { bg: '#002855', text: '#FCF7F2' },
-    Converted: { bg: '#2d8659', text: '#FCF7F2' },
-    Lost: { bg: '#CC233A', text: '#FCF7F2' },
-  };
-  const c = colors[status] || colors.New;
+function StatusBadge({ status, channel }) {
+  const bg = getStatusColor(status);
+  const pct = channel === 'B2B' ? getB2BPct(status) : null;
+  const textColor = (status === 'Contacted' || status === 'Pitched') ? '#002855' : '#FCF7F2';
   return (
-    <span className="inline-block px-2 py-0.5 text-[10px] font-display tracking-wider" style={{ background: c.bg, color: c.text, fontWeight: 600 }}>
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-display tracking-wider" style={{ background: bg, color: textColor, fontWeight: 600 }}>
       {(status || 'NEW').toUpperCase()}
+      {pct !== null && <span style={{ opacity: 0.8, fontWeight: 400 }}>{pct}%</span>}
     </span>
   );
 }
@@ -3349,7 +3382,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
   }, [visits, clients, search, filterChannel]);
 
   const totalRevenue = orders.reduce((s, o) => s + (o.saleAmount || 0), 0);
-  const statusColors = { New: '#5A7A99', Contacted: '#DBB85E', Converted: '#2d8659', Lost: '#CC233A' };
+  const statusColors = (s) => getStatusColor(s);
 
   return (
     <div className="fade-up space-y-5">
@@ -4827,7 +4860,14 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
 
           {/* Status quick-change — separate row */}
           <div className="pb-3 border-b">
-            <p className="font-display text-[10px] tracking-[0.3em] copper mb-2" style={{ fontWeight: 600 }}>STATUS</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>STATUS</p>
+              {client.channel === 'B2B' && (
+                <span style={{ fontSize: 10, fontStyle: 'italic', color: '#5A7A99' }}>
+                  B2B Pipeline · {getB2BPct(form.status || client.status) ?? 0}% probability
+                </span>
+              )}
+            </div>
             <select
               value={form.status || client.status}
               onChange={async (e) => {
@@ -4837,7 +4877,10 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               }}
               style={{ padding: '6px 10px', border: '1px solid rgba(0,40,85,0.2)', background: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, color: '#002855', cursor: 'pointer', outline: 'none' }}
             >
-              {STATUSES.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+              {getStatusesForChannel(client.channel).map(s => {
+                const pct = client.channel === 'B2B' ? getB2BPct(s) : null;
+                return <option key={s} value={s}>{s.toUpperCase()}{pct !== null ? ` (${pct}%)` : ''}</option>;
+              })}
             </select>
           </div>
 
@@ -4853,7 +4896,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               <SelectField label="Account Manager" value={form.accountManager} edit={edit} onChange={(v) => setForm({ ...form, accountManager: v })} options={[...SALES_REPS, 'Unassigned']} />
               <SelectField label="Lead Source" value={form.leadSource} edit={edit} onChange={(v) => setForm({ ...form, leadSource: v })} options={LEAD_SOURCES} />
               <SelectField label="Priority" value={form.priority} edit={edit} onChange={(v) => setForm({ ...form, priority: v })} options={PRIORITIES} />
-              <SelectField label="Status" value={form.status} edit={edit} onChange={(v) => setForm({ ...form, status: v })} options={STATUSES} />
+              <SelectField label="Status" value={form.status} edit={edit} onChange={(v) => setForm({ ...form, status: v })} options={getStatusesForChannel(form.channel || client.channel)} />
               <SelectField label="Channel" value={form.channel} edit={edit} onChange={(v) => setForm({ ...form, channel: v })} options={CHANNELS} />
               <SelectField label="Location" value={form.location} edit={edit} onChange={(v) => setForm({ ...form, location: v })} options={['', ...LOCATIONS]} />
               <SelectField label="Payment Terms" value={form.paymentTerms} edit={edit} onChange={(v) => setForm({ ...form, paymentTerms: v })} options={PAYMENT_TERMS} />
