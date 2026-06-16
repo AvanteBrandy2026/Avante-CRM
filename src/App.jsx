@@ -90,12 +90,12 @@ const STATUSES = ['New', 'Contacted', 'Converted', 'Lost'];
 
 // B2B-specific pipeline stages with probability percentages
 const B2B_STATUSES = [
-  { label: 'New',                 pct: 1   },
-  { label: 'Contacted',           pct: 10  },
-  { label: 'Discovery Completed', pct: 40  },
-  { label: 'Pitched',             pct: 60  },
-  { label: 'Converted / Signed',  pct: 80  },
-  { label: 'Invoiced / Paid',     pct: 100 },
+  { label: 'New',                  pct: 1   },
+  { label: 'Contacted',            pct: 10  },
+  { label: 'Discovery Completed',  pct: 40  },
+  { label: 'Pitched',              pct: 60  },
+  { label: 'Converted / Signed',   pct: 80  },
+  { label: 'Invoiced / Paid',      pct: 100 },
 ];
 const B2B_STATUS_LABELS = B2B_STATUSES.map(s => s.label);
 
@@ -224,6 +224,7 @@ function clientToDb(c) {
     total_sales: c.totalSales || 0,
     payment_terms: c.paymentTerms || '',
     client_tags: c.clientTags || [],
+    prospected_amount: c.prospectedAmount || 0,
   };
   if (c.id !== undefined) obj.id = c.id;
   return obj;
@@ -249,6 +250,7 @@ function clientFromDb(r) {
     totalSales: Number(r.total_sales) || 0,
     paymentTerms: r.payment_terms || '',
     clientTags: r.client_tags || [],
+    prospectedAmount: Number(r.prospected_amount) || 0,
   };
 }
 
@@ -567,6 +569,7 @@ export default function AvanteCRM() {
     if (patch.lastContacted !== undefined) dbPatch.last_contacted = patch.lastContacted;
     if (patch.paymentTerms !== undefined) dbPatch.payment_terms = patch.paymentTerms;
     if (patch.clientTags !== undefined) dbPatch.client_tags = patch.clientTags;
+    if (patch.prospectedAmount !== undefined) dbPatch.prospected_amount = patch.prospectedAmount;
     if (Object.keys(dbPatch).length > 0) {
       await supabase.from('clients').update(dbPatch).eq('id', id);
     }
@@ -1396,71 +1399,22 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
 }
 
 // =================== Prospect / Pipeline Forecast Widget ===================
-function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clients = [], skuOverrides = {}, onAdd, onUpdate, onDelete }) {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const [clientSearch, setClientSearch] = useState('');
-  const [form, setForm] = useState({
-    salesRep: 'Alex',
-    clientId: '',
-    expectedDate: '',
-    items: [],
-  });
+function ProspectWidget({ activeRep = 'All', targets = {}, clients = [] }) {
+  // B2B clients only, filtered by rep
+  const b2bClients = useMemo(() => {
+    return clients.filter(c => {
+      if (c.channel !== 'B2B') return false;
+      if (activeRep !== 'All' && c.accountManager !== activeRep) return false;
+      return true;
+    }).sort((a, b) => (b.prospectedAmount || 0) - (a.prospectedAmount || 0));
+  }, [clients, activeRep]);
 
-  // Keep salesRep in sync when rep toggle changes (only when modal is closed)
-  useEffect(() => {
-    if (!modalOpen) {
-      setForm(f => ({ ...f, salesRep: activeRep === 'All' ? 'Alex' : activeRep }));
-    }
-  }, [activeRep, modalOpen]);
-
-  const effectiveSkus = useMemo(
-    () => SKU_CATALOGUE.map(s => ({ ...s, price: skuOverrides?.[s.id] ?? s.price })),
-    [skuOverrides]
+  const totalPipeline = useMemo(
+    () => b2bClients.reduce((s, c) => s + (Number(c.prospectedAmount) || 0), 0),
+    [b2bClients]
   );
 
-  // Clients for the selected rep (sorted A-Z)
-  const repClients = useMemo(() => {
-    let list = clients.filter(c => c.accountManager === form.salesRep);
-    if (clientSearch.trim()) {
-      const q = clientSearch.toLowerCase();
-      list = list.filter(c => `${c.venue} ${c.location}`.toLowerCase().includes(q));
-    }
-    return list.sort((a, b) => (a.venue || '').localeCompare(b.venue || ''));
-  }, [clients, form.salesRep, clientSearch]);
-
-  const selectedClient = clients.find(c => c.id === Number(form.clientId));
-
-  // Computed order total from SKU items
-  const orderTotal = useMemo(
-    () => form.items.reduce((s, it) => s + (Number(it.unitPrice) || 0) * (Number(it.qty) || 0), 0),
-    [form.items]
-  );
-
-  // SKU helpers
-  const addSku = (sku) => {
-    setForm(f => {
-      if (f.items.find(it => it.skuId === sku.id)) {
-        return { ...f, items: f.items.map(it => it.skuId === sku.id ? { ...it, qty: it.qty + 1 } : it) };
-      }
-      return { ...f, items: [...f.items, { skuId: sku.id, name: sku.name, qty: 1, unitPrice: sku.price, listPrice: sku.price }] };
-    });
-  };
-  const updateItem = (skuId, field, value) =>
-    setForm(f => ({ ...f, items: f.items.map(it => it.skuId === skuId ? { ...it, [field]: value } : it) }));
-  const removeItem = (skuId) =>
-    setForm(f => ({ ...f, items: f.items.filter(it => it.skuId !== skuId) }));
-
-  // Filter by rep
-  const filtered = useMemo(() => {
-    const list = Array.isArray(prospects) ? prospects : [];
-    return activeRep === 'All' ? list : list.filter(p => p.salesRep === activeRep);
-  }, [prospects, activeRep]);
-
-  const openProspects = useMemo(() => filtered.filter(p => p.status === 'Open'), [filtered]);
-  const totalPipeline = useMemo(() => openProspects.reduce((s, p) => s + (Number(p.amount) || 0), 0), [openProspects]);
+  const withAmount = b2bClients.filter(c => Number(c.prospectedAmount) > 0);
 
   const monthTarget = useMemo(() => {
     if (!targets) return 0;
@@ -1470,324 +1424,72 @@ function ProspectWidget({ prospects = [], activeRep = 'All', targets = {}, clien
 
   const pipelinePct = monthTarget > 0 ? Math.min(100, Math.round((totalPipeline / monthTarget) * 100)) : 0;
 
-  const openForm = (prospect = null) => {
-    if (prospect) {
-      setForm({
-        salesRep: prospect.salesRep || 'Alex',
-        clientId: prospect.clientId ? String(prospect.clientId) : '',
-        expectedDate: prospect.expectedDate || '',
-        items: Array.isArray(prospect.items) && prospect.items.length > 0 ? prospect.items : [],
-      });
-      setEditingId(prospect.id);
-    } else {
-      setForm({
-        salesRep: activeRep === 'All' ? 'Alex' : activeRep,
-        clientId: '',
-        expectedDate: '',
-        items: [],
-      });
-      setEditingId(null);
-    }
-    setSaveError('');
-    setClientSearch('');
-    setModalOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!form.clientId || form.items.length === 0 || orderTotal === 0) return;
-    setSaving(true);
-    setSaveError('');
-    try {
-      const payload = {
-        salesRep: form.salesRep,
-        clientId: Number(form.clientId),
-        clientName: selectedClient?.venue || '',
-        skuNotes: form.items.map(it => `${it.qty}× ${it.name}`).join(', '),
-        amount: orderTotal,
-        expectedDate: form.expectedDate,
-        items: form.items.map(it => ({
-          skuId: it.skuId,
-          name: it.name,
-          qty: Number(it.qty) || 0,
-          unitPrice: Number(it.unitPrice) || 0,
-          listPrice: Number(it.listPrice) || 0,
-        })),
-      };
-      if (editingId) {
-        await onUpdate(editingId, payload);
-      } else {
-        await onAdd(payload);
-      }
-      setModalOpen(false);
-    } catch (err) {
-      console.error('[ProspectWidget] save error:', err);
-      setSaveError(err?.message || 'Save failed — check your connection and try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const statusColors = { Open: '#BC8D26', Won: '#2d8659', Lost: '#CC233A' };
-  const canSave = form.clientId && form.items.length > 0 && orderTotal > 0;
-
   return (
-    <>
-      <div className="premium-card p-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 diamond-clip" style={{ background: '#DBB85E' }}></div>
-            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
-              PIPELINE FORECAST {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
-            </h2>
-          </div>
-          <button onClick={() => openForm()}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#BC8D26', border: 'none', color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
-            <Plus style={{ width: 12, height: 12 }} /> ADD PROSPECT
-          </button>
+    <div className="premium-card p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 diamond-clip" style={{ background: '#DBB85E' }}></div>
+          <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
+            B2B PIPELINE FORECAST {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
+          </h2>
         </div>
+        <span className="font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>
+          {b2bClients.length} B2B client{b2bClients.length !== 1 ? 's' : ''}
+        </span>
+      </div>
 
-        {/* Total + progress bar */}
-        <div className="flex items-end justify-between gap-4 mb-3">
-          <div>
-            <p className="font-display text-[10px] tracking-[0.25em] copper" style={{ fontWeight: 600 }}>PROJECTED PIPELINE</p>
-            <p className="font-display text-2xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(totalPipeline)}</p>
-            <p className="italic ocean" style={{ fontSize: 10, marginTop: 2 }}>
-              {openProspects.length} open prospect{openProspects.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-          {monthTarget > 0 && (
-            <div style={{ flex: 1, maxWidth: 220 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginBottom: 4 }}>
-                <span className="italic ocean">vs monthly target {ZAR(monthTarget)}</span>
-                <span className="font-display copper" style={{ fontWeight: 700 }}>{pipelinePct}%</span>
-              </div>
-              <div style={{ height: 6, background: 'rgba(0,40,85,0.1)', borderRadius: 3 }}>
-                <div style={{ height: '100%', width: `${pipelinePct}%`, background: pipelinePct >= 100 ? '#2d8659' : '#DBB85E', borderRadius: 3, transition: 'width 0.6s' }}></div>
-              </div>
-            </div>
-          )}
+      {/* Total + progress bar */}
+      <div className="flex items-end justify-between gap-4 mb-3">
+        <div>
+          <p className="font-display text-[10px] tracking-[0.25em] copper" style={{ fontWeight: 600 }}>PROJECTED B2B PIPELINE</p>
+          <p className="font-display text-2xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(totalPipeline)}</p>
+          <p className="italic ocean" style={{ fontSize: 10, marginTop: 2 }}>
+            {withAmount.length} client{withAmount.length !== 1 ? 's' : ''} with prospected amounts
+          </p>
         </div>
-
-        {/* Prospect rows */}
-        {openProspects.length === 0 ? (
-          <div style={{ padding: '16px 0', textAlign: 'center', borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-            <p className="italic ocean" style={{ fontSize: 12 }}>No open prospects — add one to start forecasting.</p>
-          </div>
-        ) : (
-          <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-            {openProspects.map((p, i) => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderBottom: i < openProspects.length - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none' }}>
-                <div style={{ width: 4, alignSelf: 'stretch', background: '#DBB85E', flexShrink: 0, borderRadius: 2 }}></div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-display ink" style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.clientName}</p>
-                  <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {p.salesRep}{p.expectedDate ? ` · by ${p.expectedDate}` : ''}{p.skuNotes ? ` · ${p.skuNotes}` : ''}
-                  </p>
-                </div>
-                <p className="font-display copper" style={{ fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{ZAR(p.amount)}</p>
-                <select value={p.status} onChange={(e) => onUpdate(p.id, { status: e.target.value })}
-                  style={{ padding: '3px 6px', border: `1px solid ${getStatusColor(p.status)}`, background: 'transparent', fontFamily: "'Cinzel', serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700, color: getStatusColor(p.status), cursor: 'pointer', outline: 'none', flexShrink: 0 }}>
-                  <option value="Open">OPEN</option>
-                  <option value="Won">WON</option>
-                  <option value="Lost">LOST</option>
-                </select>
-                <button onClick={() => openForm(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,40,85,0.3)', flexShrink: 0 }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#BC8D26'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,40,85,0.3)'}>
-                  <Edit2 style={{ width: 13, height: 13 }} />
-                </button>
-                <button onClick={() => onDelete(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(0,40,85,0.3)', flexShrink: 0 }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#CC233A'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,40,85,0.3)'}>
-                  <Trash2 style={{ width: 13, height: 13 }} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Won / Lost summary */}
-        {filtered.filter(p => p.status !== 'Open').length > 0 && (
-          <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
-              <div style={{ width: 8, height: 8, background: '#2d8659', borderRadius: 2 }}></div>
-              <span className="ink">Won: <strong>{ZAR(filtered.filter(p => p.status === 'Won').reduce((s, p) => s + p.amount, 0))}</strong></span>
+        {monthTarget > 0 && (
+          <div style={{ flex: 1, maxWidth: 220 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginBottom: 4 }}>
+              <span className="italic ocean">vs monthly target {ZAR(monthTarget)}</span>
+              <span className="font-display copper" style={{ fontWeight: 700 }}>{pipelinePct}%</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
-              <div style={{ width: 8, height: 8, background: '#CC233A', borderRadius: 2 }}></div>
-              <span className="ink">Lost: <strong>{ZAR(filtered.filter(p => p.status === 'Lost').reduce((s, p) => s + p.amount, 0))}</strong></span>
+            <div style={{ height: 6, background: 'rgba(0,40,85,0.1)', borderRadius: 3 }}>
+              <div style={{ height: '100%', width: `${pipelinePct}%`, background: pipelinePct >= 100 ? '#2d8659' : '#DBB85E', borderRadius: 3, transition: 'width 0.6s' }}></div>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Add / Edit Modal — portalled to body so it sits above everything ── */}
-      {modalOpen && createPortal(
-        <div
-          onClick={() => setModalOpen(false)}
-          style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 16px', background:'rgba(0,40,85,0.82)', backdropFilter:'blur(3px)' }}>
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background:'#FCF7F2', width:'100%', maxWidth:460, border:'2px solid #BC8D26', maxHeight:'calc(100vh - 40px)', overflowY:'auto', overflowX:'hidden', position:'relative' }}>
-
-            {/* ── Header ── */}
-            <div style={{ background:'#002855', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
-              <div>
-                <p style={{ fontFamily:"'Cinzel',serif", fontSize:8, letterSpacing:'0.4em', color:'#DBB85E', fontWeight:600, margin:0 }}>PIPELINE FORECAST</p>
-                <h2 style={{ fontFamily:"'Cinzel',serif", color:'#FCF7F2', fontWeight:700, fontSize:17, letterSpacing:'0.06em', margin:'3px 0 0' }}>
-                  {editingId ? 'EDIT PROSPECT' : 'ADD PROSPECT'}
-                </h2>
+      {/* Client rows */}
+      {b2bClients.length === 0 ? (
+        <div style={{ padding: '16px 0', textAlign: 'center', borderTop: '1px solid rgba(0,40,85,0.1)' }}>
+          <p className="italic ocean" style={{ fontSize: 12 }}>No B2B clients yet — add a client under the B2B channel to start forecasting.</p>
+        </div>
+      ) : (
+        <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)' }}>
+          {b2bClients.slice(0, 8).map((c, i) => (
+            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderBottom: i < Math.min(b2bClients.length, 8) - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none' }}>
+              <div style={{ width: 4, alignSelf: 'stretch', background: Number(c.prospectedAmount) > 0 ? '#DBB85E' : 'rgba(0,40,85,0.1)', flexShrink: 0, borderRadius: 2 }}></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.venue}</p>
+                <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 1 }}>
+                  {c.accountManager}{c.status ? ` · ${c.status}` : ''}
+                </p>
               </div>
-              <button onClick={() => setModalOpen(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.65)', fontSize:22, fontWeight:200, lineHeight:1, padding:'4px 8px' }}>✕</button>
+              <p className="font-display copper" style={{ fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+                {Number(c.prospectedAmount) > 0 ? ZAR(c.prospectedAmount) : <span style={{ color: 'rgba(0,40,85,0.3)', fontStyle: 'italic', fontSize: 10 }}>No amount</span>}
+              </p>
             </div>
-
-            {/* ── Form body ── */}
-            <div style={{ padding:'18px', display:'flex', flexDirection:'column', gap:14 }}>
-
-              {/* Sales Rep */}
-              <div>
-                <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, marginBottom:8 }}>SALES REP</p>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6 }}>
-                  {SALES_REPS.map(r => (
-                    <button key={r} type="button"
-                      onClick={() => { setForm(f => ({ ...f, salesRep:r, clientId:'' })); setClientSearch(''); }}
-                      style={{ padding:'9px 4px', fontFamily:"'Cinzel',serif", fontSize:10, fontWeight:700, letterSpacing:'0.15em', border:'1px solid', borderColor: form.salesRep===r ? '#002855' : 'rgba(0,40,85,0.2)', background: form.salesRep===r ? '#002855' : '#FCF7F2', color: form.salesRep===r ? '#FCF7F2' : '#002855', cursor:'pointer' }}>
-                      {r.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Client dropdown */}
-              <div>
-                <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, marginBottom:8 }}>CLIENT / VENUE *</p>
-                <div style={{ display:'flex', alignItems:'center', gap:8, border:'1px solid rgba(0,40,85,0.2)', padding:'0 10px', marginBottom:6, background:'#FCF7F2' }}>
-                  <Search style={{ width:14, height:14, color:'#5A7A99', flexShrink:0 }} />
-                  <input
-                    type="text"
-                    placeholder="Filter venues..."
-                    value={clientSearch}
-                    onChange={e => setClientSearch(e.target.value)}
-                    style={{ flex:1, border:'none', background:'transparent', padding:'9px 0', fontFamily:"'Libre Baskerville',serif", fontSize:13, color:'#002855', outline:'none' }}
-                  />
-                  {clientSearch && (
-                    <button onClick={() => setClientSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:'#5A7A99', fontSize:16, lineHeight:1 }}>×</button>
-                  )}
-                </div>
-                <select
-                  value={form.clientId}
-                  onChange={e => setForm(f => ({ ...f, clientId:e.target.value }))}
-                  style={{ width:'100%', padding:'10px 12px', border:'1px solid rgba(0,40,85,0.25)', background:'#FCF7F2', fontFamily:"'Libre Baskerville',serif", fontSize:14, color: form.clientId ? '#002855' : 'rgba(0,40,85,0.4)', outline:'none', boxSizing:'border-box' }}>
-                  <option value="">— Select a venue —</option>
-                  {repClients.map(c => (
-                    <option key={c.id} value={c.id}>{c.venue}{c.location ? ` · ${c.location}` : ''}</option>
-                  ))}
-                </select>
-                {selectedClient && (
-                  <div style={{ marginTop:5, padding:'7px 10px', background:'rgba(90,122,153,0.06)', borderLeft:'2px solid #BC8D26', fontSize:11, color:'#5A7A99', fontStyle:'italic' }}>
-                    {selectedClient.channel || '—'} · {selectedClient.status} · {selectedClient.location || 'No location'}
-                  </div>
-                )}
-              </div>
-
-              {/* Expected close date */}
-              <div>
-                <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, marginBottom:8 }}>EXPECTED CLOSE DATE</p>
-                <input
-                  type="date"
-                  value={form.expectedDate}
-                  onChange={e => setForm(f => ({ ...f, expectedDate:e.target.value }))}
-                  style={{ width:'100%', padding:'10px 12px', border:'1px solid rgba(0,40,85,0.25)', background:'#FCF7F2', fontFamily:"'Libre Baskerville',serif", fontSize:14, color:'#002855', outline:'none', boxSizing:'border-box' }}
-                />
-              </div>
-
-              {/* SKU line items */}
-              <div>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-                  <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.3em', color:'#BC8D26', fontWeight:600, margin:0 }}>PROJECTED ORDER — SKUs</p>
-                  <select
-                    value=""
-                    onChange={e => { const sku = effectiveSkus.find(s => s.id === e.target.value); if (sku) addSku(sku); e.target.value = ''; }}
-                    style={{ padding:'6px 10px', border:'1px solid rgba(0,40,85,0.25)', background:'#FCF7F2', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.1em', color:'#002855', cursor:'pointer', fontWeight:700, outline:'none' }}>
-                    <option value="">+ ADD SKU</option>
-                    {effectiveSkus.map(s => <option key={s.id} value={s.id}>{s.name} — {ZAR(s.price)}</option>)}
-                  </select>
-                </div>
-
-                {form.items.length === 0 ? (
-                  <div style={{ border:'2px dashed rgba(0,40,85,0.15)', padding:'18px 12px', textAlign:'center' }}>
-                    <p style={{ fontSize:11, color:'#5A7A99', fontStyle:'italic', margin:0 }}>No SKUs added — use the dropdown above.</p>
-                  </div>
-                ) : (
-                  <div style={{ border:'1px solid rgba(0,40,85,0.15)', overflow:'hidden' }}>
-                    {/* Header row */}
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 52px 76px 24px', gap:4, padding:'7px 10px', background:'#002855' }}>
-                      {['SKU','QTY','UNIT R',''].map((h,i) => (
-                        <p key={i} style={{ fontFamily:"'Cinzel',serif", fontSize:8, letterSpacing:'0.15em', color:'#DBB85E', fontWeight:600, margin:0, textAlign: i>0?'right':'left' }}>{h}</p>
-                      ))}
-                    </div>
-                    {/* Item rows */}
-                    {form.items.map((it, idx) => {
-                      const lineTotal = (Number(it.unitPrice)||0) * (Number(it.qty)||0);
-                      return (
-                        <div key={it.skuId} style={{ display:'grid', gridTemplateColumns:'1fr 52px 76px 24px', gap:4, padding:'8px 10px', borderBottom: idx < form.items.length-1 ? '1px solid rgba(0,40,85,0.08)' : 'none', alignItems:'center', background: idx%2===0 ? '#FCF7F2' : 'rgba(0,40,85,0.02)' }}>
-                          <div>
-                            <p style={{ fontFamily:"'Cinzel',serif", fontWeight:700, fontSize:11, color:'#002855', margin:0 }}>{it.name}</p>
-                            <p style={{ fontSize:9, color:'#BC8D26', fontStyle:'italic', margin:'2px 0 0' }}>{ZAR(lineTotal)}</p>
-                          </div>
-                          <input type="number" min="1" step="1" value={it.qty}
-                            onChange={e => updateItem(it.skuId,'qty',e.target.value)}
-                            style={{ padding:'5px 4px', border:'1px solid rgba(0,40,85,0.2)', background:'#FCF7F2', fontFamily:"'Cinzel',serif", fontSize:12, fontWeight:700, color:'#002855', textAlign:'center', outline:'none', width:'100%', boxSizing:'border-box' }} />
-                          <input type="number" min="0" step="0.01" value={it.unitPrice}
-                            onChange={e => updateItem(it.skuId,'unitPrice',e.target.value)}
-                            style={{ padding:'5px 6px', border:'1px solid rgba(0,40,85,0.2)', background:'#FCF7F2', fontFamily:"'Cinzel',serif", fontSize:11, fontWeight:700, color:'#002855', textAlign:'right', outline:'none', width:'100%', boxSizing:'border-box' }} />
-                          <button onClick={() => removeItem(it.skuId)}
-                            style={{ background:'none', border:'none', cursor:'pointer', padding:'3px', color:'rgba(0,40,85,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}
-                            onMouseEnter={e => e.currentTarget.style.color='#CC233A'}
-                            onMouseLeave={e => e.currentTarget.style.color='rgba(0,40,85,0.3)'}>
-                            <Trash2 style={{ width:12, height:12 }} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {/* Total row */}
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 52px 76px 24px', gap:4, padding:'10px 10px', background:'#002855' }}>
-                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', color:'#DBB85E', fontWeight:600, margin:0, gridColumn:'1/4', textAlign:'right' }}>PROJECTED TOTAL EX VAT</p>
-                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:14, fontWeight:700, color:'#DBB85E', textAlign:'right', margin:0, gridColumn:'4/4' }}></p>
-                    </div>
-                    <div style={{ padding:'6px 10px 10px', background:'#002855', textAlign:'right' }}>
-                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:16, fontWeight:700, color:'#DBB85E', margin:0 }}>{ZAR(orderTotal)}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Error message */}
-              {saveError && (
-                <div style={{ padding:'10px 12px', borderLeft:'3px solid #CC233A', background:'rgba(204,35,58,0.07)', fontSize:11, color:'#CC233A' }}>
-                  <strong style={{ fontFamily:"'Cinzel',serif", letterSpacing:'0.15em' }}>ERROR:</strong> {saveError}
-                </div>
-              )}
-
-              {/* Actions */}
-              <div style={{ display:'flex', gap:10, paddingTop:6, borderTop:'1px solid rgba(0,40,85,0.12)' }}>
-                <button onClick={() => setModalOpen(false)}
-                  style={{ flex:1, padding:'11px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
-                  CANCEL
-                </button>
-                <button onClick={handleSave} disabled={saving || !canSave}
-                  style={{ flex:2, padding:'11px', background: canSave ? '#BC8D26' : 'rgba(188,141,38,0.35)', border:'none', fontFamily:"'Cinzel',serif", fontSize:10, letterSpacing:'0.2em', color:'#FCF7F2', cursor: canSave ? 'pointer' : 'not-allowed', fontWeight:700 }}>
-                  {saving ? 'SAVING...' : !form.clientId ? 'SELECT A CLIENT FIRST' : form.items.length === 0 ? 'ADD AT LEAST ONE SKU' : editingId ? 'UPDATE PROSPECT' : 'ADD TO PIPELINE'}
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>,
-        document.body
+          ))}
+          {b2bClients.length > 8 && (
+            <p style={{ textAlign: 'center', fontSize: 10, fontStyle: 'italic', color: '#5A7A99', padding: '8px 0' }}>
+              +{b2bClients.length - 8} more B2B clients
+            </p>
+          )}
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -2073,14 +1775,9 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
 
       {/* ── PIPELINE FORECAST ── */}
       <ProspectWidget
-        prospects={prospects || []}
         activeRep={activeRep}
         targets={targets}
         clients={clients}
-        skuOverrides={skuOverrides}
-        onAdd={onAddProspect}
-        onUpdate={onUpdateProspect}
-        onDelete={onDeleteProspect}
       />
 
       {/* ── OVERDUE CLIENTS ── */}
@@ -3098,10 +2795,7 @@ function KanbanView({ filtered, onSelect, onDelete, updateClient, activeChannel 
           <div key={status} style={{ background: `${color}12`, border: `1px solid ${color}33`, minWidth: 180 }}>
             {/* Column header */}
             <div style={{ padding: '10px 12px', borderBottom: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: color }}>
-              <div>
-                <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, color: '#FCF7F2' }}>{status.toUpperCase()}</span>
-                {pct !== null && <span style={{ display: 'block', fontSize: 8, color: 'rgba(255,255,255,0.7)', fontFamily: "'Cinzel',serif", marginTop: 1 }}>{pct}% probability</span>}
-              </div>
+              <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, color: '#FCF7F2' }}>{status.toUpperCase()}</span>
               <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '1px 8px' }}>{cols.length}</span>
             </div>
             {/* Cards */}
@@ -3341,12 +3035,10 @@ function FilterSelect({ label, value, onChange, options }) {
 
 function StatusBadge({ status, channel }) {
   const bg = getStatusColor(status);
-  const pct = channel === 'B2B' ? getB2BPct(status) : null;
   const textColor = (status === 'Contacted' || status === 'Pitched') ? '#002855' : '#FCF7F2';
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-display tracking-wider" style={{ background: bg, color: textColor, fontWeight: 600 }}>
       {(status || 'NEW').toUpperCase()}
-      {pct !== null && <span style={{ opacity: 0.8, fontWeight: 400 }}>{pct}%</span>}
     </span>
   );
 }
@@ -4496,6 +4188,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
     status: 'New',
     notes: '',
     paymentTerms: 'COD',
+    prospectedAmount: 0,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -4621,6 +4314,23 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
               </select>
             </div>
           </div>
+
+          {/* Prospected Amount — B2B only */}
+          {form.channel === 'B2B' && (
+            <div>
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>PROSPECTED AMOUNT (R)</label>
+              <p className="italic ocean mb-2" style={{ fontSize: 10 }}>Estimated value of this B2B opportunity in Rands</p>
+              <input
+                type="number"
+                min="0"
+                step="100"
+                value={form.prospectedAmount || ''}
+                onChange={(e) => setF('prospectedAmount', Number(e.target.value) || 0)}
+                placeholder="e.g. 50000"
+                className="w-full px-3 py-2.5 border border bg-cream font-body text-sm focus:outline-none focus:border-copper"
+              />
+            </div>
+          )}
 
           {/* Account manager — full width */}
           <div>
@@ -4860,14 +4570,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
 
           {/* Status quick-change — separate row */}
           <div className="pb-3 border-b">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <p className="font-display text-[10px] tracking-[0.3em] copper" style={{ fontWeight: 600 }}>STATUS</p>
-              {client.channel === 'B2B' && (
-                <span style={{ fontSize: 10, fontStyle: 'italic', color: '#5A7A99' }}>
-                  B2B Pipeline · {getB2BPct(form.status || client.status) ?? 0}% probability
-                </span>
-              )}
-            </div>
+            <p className="font-display text-[10px] tracking-[0.3em] copper mb-2" style={{ fontWeight: 600 }}>STATUS</p>
             <select
               value={form.status || client.status}
               onChange={async (e) => {
@@ -4877,10 +4580,9 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               }}
               style={{ padding: '6px 10px', border: '1px solid rgba(0,40,85,0.2)', background: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, color: '#002855', cursor: 'pointer', outline: 'none' }}
             >
-              {getStatusesForChannel(client.channel).map(s => {
-                const pct = client.channel === 'B2B' ? getB2BPct(s) : null;
-                return <option key={s} value={s}>{s.toUpperCase()}{pct !== null ? ` (${pct}%)` : ''}</option>;
-              })}
+              {getStatusesForChannel(client.channel).map(s => (
+                <option key={s} value={s}>{s.toUpperCase()}</option>
+              ))}
             </select>
           </div>
 
@@ -4900,6 +4602,27 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               <SelectField label="Channel" value={form.channel} edit={edit} onChange={(v) => setForm({ ...form, channel: v })} options={CHANNELS} />
               <SelectField label="Location" value={form.location} edit={edit} onChange={(v) => setForm({ ...form, location: v })} options={['', ...LOCATIONS]} />
               <SelectField label="Payment Terms" value={form.paymentTerms} edit={edit} onChange={(v) => setForm({ ...form, paymentTerms: v })} options={PAYMENT_TERMS} />
+              {/* Prospected Amount — B2B channel only */}
+              {(form.channel || client.channel) === 'B2B' && (
+                <div>
+                  <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>PROSPECTED AMOUNT (R)</label>
+                  {edit ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={form.prospectedAmount || ''}
+                      onChange={(e) => setForm({ ...form, prospectedAmount: Number(e.target.value) || 0 })}
+                      placeholder="e.g. 50000"
+                      className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper"
+                    />
+                  ) : (
+                    <div className="text-sm ink py-1">
+                      {Number(form.prospectedAmount) > 0 ? ZAR(form.prospectedAmount) : <span className="italic ocean">—</span>}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
