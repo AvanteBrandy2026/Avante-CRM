@@ -1399,7 +1399,7 @@ function OverdueClients({ clients, visits, activeRep, onNavigate }) {
 }
 
 // =================== Prospect / Pipeline Forecast Widget ===================
-function ProspectWidget({ activeRep = 'All', targets = {}, clients = [] }) {
+function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], onNavigate }) {
   // B2B clients only, filtered by rep
   const b2bClients = useMemo(() => {
     return clients.filter(c => {
@@ -1457,20 +1457,34 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [] }) {
         </div>
       ) : (
         <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-          {b2bClients.slice(0, 8).map((c, i) => (
-            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderBottom: i < Math.min(b2bClients.length, 8) - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none' }}>
-              <div style={{ width: 4, alignSelf: 'stretch', background: Number(c.prospectedAmount) > 0 ? '#DBB85E' : 'rgba(0,40,85,0.1)', flexShrink: 0, borderRadius: 2 }}></div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.venue}</p>
-                <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 1 }}>
-                  {c.accountManager}{c.status ? ` · ${c.status}` : ''}
-                </p>
+          {b2bClients.slice(0, 8).map((c, i) => {
+            const pct = getB2BPct(c.status);
+            return (
+              <div key={c.id}
+                onClick={() => onNavigate && onNavigate('leads', c.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderBottom: i < Math.min(b2bClients.length, 8) - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.03)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <div style={{ width: 4, alignSelf: 'stretch', background: Number(c.prospectedAmount) > 0 ? '#DBB85E' : 'rgba(0,40,85,0.1)', flexShrink: 0, borderRadius: 2 }}></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.venue}</p>
+                  <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 1 }}>
+                    {c.accountManager}{c.status ? ` · ${c.status}` : ''}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  {pct !== null && (
+                    <span style={{ fontFamily: "'Cinzel',serif", fontSize: 10, fontWeight: 700, color: pct >= 80 ? '#2d8659' : pct >= 40 ? '#BC8D26' : '#5A7A99' }}>
+                      {pct}%
+                    </span>
+                  )}
+                  <p className="font-display copper" style={{ fontWeight: 700, fontSize: 12 }}>
+                    {Number(c.prospectedAmount) > 0 ? ZAR(c.prospectedAmount) : <span style={{ color: 'rgba(0,40,85,0.3)', fontStyle: 'italic', fontSize: 10 }}>No amount</span>}
+                  </p>
+                </div>
               </div>
-              <p className="font-display copper" style={{ fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
-                {Number(c.prospectedAmount) > 0 ? ZAR(c.prospectedAmount) : <span style={{ color: 'rgba(0,40,85,0.3)', fontStyle: 'italic', fontSize: 10 }}>No amount</span>}
-              </p>
-            </div>
-          ))}
+            );
+          })}
           {b2bClients.length > 8 && (
             <p style={{ textAlign: 'center', fontSize: 10, fontStyle: 'italic', color: '#5A7A99', padding: '8px 0' }}>
               +{b2bClients.length - 8} more B2B clients
@@ -1767,6 +1781,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         activeRep={activeRep}
         targets={targets}
         clients={clients}
+        onNavigate={onNavigate}
       />
 
       {/* ── OVERDUE CLIENTS ── */}
