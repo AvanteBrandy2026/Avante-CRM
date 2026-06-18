@@ -1121,7 +1121,7 @@ export default function AvanteCRM() {
             });
           }}
           onPlaceOrder={(c) => {
-            setSelectedClient(null);
+            // Keep the client detail popup open — just open the order modal on top
             setPlaceOrderClient(c);
           }}
         />
@@ -1154,12 +1154,13 @@ export default function AvanteCRM() {
         </div>
       )}
 
-      {/* Place Order modal — pre-filled with the client from ClientDetailModal */}
+      {/* Place Order modal — sits on top of the client detail popup */}
       {placeOrderClient && (
         <LogVisitModal
           clients={clients}
           skuOverrides={skuPrices}
           preselectedClientId={placeOrderClient.id}
+          preselectedSalesRep={placeOrderClient.accountManager || ''}
           onClose={() => setPlaceOrderClient(null)}
           onSubmit={async (v) => {
             await addVisit(v);
@@ -3414,11 +3415,11 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
 }
 
 // =================== Log Visit Modal ===================
-function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existingVisit, skuOverrides = {}, preselectedClientId = null }) {
+function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existingVisit, skuOverrides = {}, preselectedClientId = null, preselectedSalesRep = '' }) {
   const effectiveSkus = SKU_CATALOGUE.map(s => ({ ...s, price: skuOverrides[s.id] ?? s.price }));
   const isEdit = !!existingVisit;
   const isEmailOnly = existingVisit?._emailOnly === true;
-  const [salesRep, setSalesRep] = useState(existingVisit?.salesRep || 'Alex');
+  const [salesRep, setSalesRep] = useState(existingVisit?.salesRep || preselectedSalesRep || 'Alex');
   const [clientId, setClientId] = useState(existingVisit?.clientId ? String(existingVisit.clientId) : preselectedClientId ? String(preselectedClientId) : '');
   const [date, setDate] = useState(existingVisit?.date || todayISO());
   const [outcome, setOutcome] = useState(existingVisit?.outcome || 'Met / Discussion');
