@@ -396,7 +396,7 @@ function LoginScreen({ onLogin }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#002855', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'Libre Baskerville', Georgia, serif" }}>
+    <div style={{ minHeight: '100vh', background: '#002855', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'Libre Baskerville', Georgia, serif", animation: 'fadeIn 0.3s ease-in' }}>
       {/* Logo area */}
       <div style={{ marginBottom: 40, textAlign: 'center' }}>
         <AvanteLogo height={72} />
@@ -452,15 +452,31 @@ function LoginScreen({ onLogin }) {
   );
 }
 
+// ── AUTH WRAPPER ─────────────────────────────────────────────────────────────
+// Keeps auth state separate from the app so login/logout doesn't remount
+// the entire component tree and cause a white flash.
 export default function AvanteCRM() {
-  // ── AUTH ──────────────────────────────────────────────────────────────────
   const [currentUser, setCurrentUser] = useState(() => getStoredUser());
 
-  const handleLogin = (user) => setCurrentUser(user);
-  const handleLogout = () => { clearUser(); setCurrentUser(null); };
+  const handleLogin = (user) => {
+    storeUser(user);
+    setCurrentUser(user);
+  };
 
-  // Show login screen if not authenticated
-  if (!currentUser) return <LoginScreen onLogin={handleLogin} />;
+  const handleLogout = () => {
+    clearUser();
+    setCurrentUser(null);
+  };
+
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  return <AvanteCRMApp currentUser={currentUser} onLogout={handleLogout} />;
+}
+
+// ── MAIN APP ──────────────────────────────────────────────────────────────────
+function AvanteCRMApp({ currentUser, onLogout }) {
 
   // Helper shortcuts
   const userRep = currentUser.rep;       // e.g. 'Alex'
@@ -781,6 +797,7 @@ export default function AvanteCRM() {
     <div className="min-h-screen overflow-x-hidden" style={{ background: '#FCF7F2', fontFamily: "'Libre Baskerville', Georgia, serif", color: '#002855' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@500;600;700;900&display=swap');
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         *, *::before, *::after { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; overflow-x: hidden; width: 100%; background: #FCF7F2; }
         .font-display { font-family: 'Cinzel', 'Copperplate', serif; letter-spacing: 0.08em; }
@@ -1061,7 +1078,7 @@ export default function AvanteCRM() {
         visits={visits.map(v => ({ ...v, clientName: clients.find(c => c.id === v.clientId)?.venue || '' }))}
         clients={clients}
         currentUser={currentUser}
-        onLogout={handleLogout}
+        onLogout={onLogout}
         onNavigate={(targetView, clientId) => {
           setView(targetView);
           if (clientId) {
