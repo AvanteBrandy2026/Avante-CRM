@@ -2399,7 +2399,7 @@ function AnnualRevenueTracker({ visits, targets }) {
 function MonthlyCloseTable({ visits, targets }) {
   const year = new Date().getFullYear();
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const REPS = ['Alex', 'Lehmarc', 'Loydz'];
+  const REPS = SALES_REPS;
 
   return (
     <div style={{ overflowX: 'auto' }}>
