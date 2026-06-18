@@ -1101,12 +1101,12 @@ function AvanteCRMApp({ currentUser, onLogout }) {
 
         {view === 'dashboard' && (
           <Dashboard
-            clients={visibleClients}
-            visits={monthVisits.filter(v => userIsManager || v.salesRep === userRep)}
-            allVisits={userIsManager ? visits : visits.filter(v => v.salesRep === userRep)}
+            clients={clients}
+            visits={monthVisits}
+            allVisits={visits}
             targets={targets}
             activeRep={activeRep}
-            setActiveRep={userIsManager ? setActiveRep : () => {}}
+            setActiveRep={setActiveRep}
             activeMonth={activeMonth}
             setActiveMonth={setActiveMonth}
             prospects={prospects}
@@ -1496,7 +1496,7 @@ function OverdueClients({ clients, visits, onNavigate, visibleReps }) {
         })
         .filter(c => c.daysAgo >= 30)
         .sort((a, b) => b.daysAgo - a.daysAgo)
-        .slice(0, 10);
+        .slice(0, 15);
     });
     return result;
   }, [clients, visits]);
@@ -1518,8 +1518,8 @@ function OverdueClients({ clients, visits, onNavigate, visibleReps }) {
         </span>
       </div>
 
-      {/* Kanban — one column per rep */}
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${SALES_REPS.length}, minmax(160px, 1fr))`, gap: 10, overflowX: 'auto' }}>
+      {/* Kanban — 3 reps per row, cards shown 3-across within each rep column */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
         {repsToShow.map(rep => {
           const cards = overdueByRep[rep] || [];
           return (
@@ -1533,31 +1533,26 @@ function OverdueClients({ clients, visits, onNavigate, visibleReps }) {
                 }
               </div>
 
-              {/* Cards */}
+              {/* Cards — 3 across × 5 rows */}
               {cards.length === 0 ? (
                 <div style={{ padding: '14px 8px', textAlign: 'center', background: 'rgba(45,134,89,0.06)', border: '1px solid rgba(45,134,89,0.15)', borderRadius: 2 }}>
                   <p style={{ fontSize: 10, color: '#2d8659', fontStyle: 'italic' }}>Up to date 🎉</p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5 }}>
                   {cards.map((c, i) => (
                     <div key={c.id}
                       onClick={() => onNavigate && onNavigate(c.id)}
-                      style={{ background: '#FCF7F2', border: '1px solid rgba(0,40,85,0.1)', borderLeft: `3px solid ${c.daysAgo >= 60 ? '#CC233A' : '#BC8D26'}`, padding: '8px 10px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                      style={{ background: '#FCF7F2', border: '1px solid rgba(0,40,85,0.1)', borderTop: `3px solid ${c.daysAgo >= 60 ? '#CC233A' : '#BC8D26'}`, padding: '7px 8px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,40,85,0.12)'}
                       onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
-                      {/* Rank + venue */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                        <span style={{ fontSize: 9, color: 'rgba(0,40,85,0.3)', fontFamily: 'monospace', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
-                        <p className="font-display ink" style={{ fontWeight: 700, fontSize: 11, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{c.venue}</p>
-                      </div>
-                      {/* Days overdue + status */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                        <span style={{ padding: '2px 6px', background: getStatusColor(c.status), color: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.08em', fontWeight: 700 }}>
-                          {c.status?.toUpperCase()}
+                      <p className="font-display ink" style={{ fontWeight: 700, fontSize: 10, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: 4 }}>{c.venue}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ padding: '1px 4px', background: getStatusColor(c.status), color: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.05em', fontWeight: 700 }}>
+                          {(c.status || 'NEW').substring(0, 4).toUpperCase()}
                         </span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: c.daysAgo >= 60 ? '#CC233A' : '#BC8D26', fontFamily: "'Cinzel',serif" }}>
-                          {c.daysAgo === 999 ? 'Never' : `${c.daysAgo}d`}
+                        <span style={{ fontSize: 10, fontWeight: 700, color: c.daysAgo >= 60 ? '#CC233A' : '#BC8D26', fontFamily: "'Cinzel',serif" }}>
+                          {c.daysAgo === 999 ? '∞' : `${c.daysAgo}d`}
                         </span>
                       </div>
                     </div>
