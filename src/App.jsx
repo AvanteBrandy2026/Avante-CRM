@@ -629,10 +629,12 @@ export default function AvanteCRM() {
     setProspects(prev => prev.filter(p => p.id !== id));
   };
 
-  const deleteClient = async (id) => {    const { error } = await supabase.from('clients').delete().eq('id', id);
+  const deleteClient = async (id) => {
+    // Delete related visits first to avoid FK constraint violations
+    await supabase.from('visits').delete().eq('client_id', id);
+    const { error } = await supabase.from('clients').delete().eq('id', id);
     if (error) { console.error('[deleteClient] error:', error); throw new Error(error.message); }
     setClients(prev => prev.filter(c => c.id !== id));
-    // Also remove associated visits from local state (they stay in DB for history)
     setVisits(prev => prev.filter(v => v.clientId !== id));
   };
 
@@ -988,9 +990,14 @@ export default function AvanteCRM() {
             onSelect={setSelectedClient}
             onAddNew={() => setNewClientCtx({ defaultRep: activeRep === 'All' ? '' : activeRep, onCreated: null })}
             onDelete={async (id) => {
-              const c = clients.find(cl => cl.id === id);
-              await deleteClient(id);
-              showToast(`Client removed: ${c?.venue || id}`);
+              try {
+                const c = clients.find(cl => cl.id === id);
+                await deleteClient(id);
+                showToast(`Client removed: ${c?.venue || id}`);
+              } catch (err) {
+                console.error('[LeadsPage] delete failed:', err);
+                showToast('Could not delete client — please try again.');
+              }
             }}
             onNavigate={(v, clientId) => {
               setView(v);
@@ -3045,8 +3052,8 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
                     </p>
                   </div>
                   {/* Channel badge */}
-                  <span style={{ fontSize: 9, fontFamily: "'Cinzel', serif", fontWeight: 600, letterSpacing: '0.15em', padding: '2px 6px', border: `1px solid ${c.channel === 'Private Sales' ? '#BC8D26' : '#5A7A99'}`, color: c.channel === 'Private Sales' ? '#BC8D26' : '#5A7A99', flexShrink: 0 }}>
-                    {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : '—'}
+                  <span style={{ fontSize: 9, fontFamily: "'Cinzel', serif", fontWeight: 600, letterSpacing: '0.15em', padding: '2px 6px', border: `1px solid ${c.channel === 'B2B' ? '#002855' : c.channel === 'Private Sales' ? '#BC8D26' : '#5A7A99'}`, color: c.channel === 'B2B' ? '#002855' : c.channel === 'Private Sales' ? '#BC8D26' : '#5A7A99', flexShrink: 0 }}>
+                    {c.channel === 'Private Sales' ? 'PRIVATE' : c.channel === 'Trade Retail' ? 'RETAIL' : c.channel === 'B2B' ? 'B2B' : c.channel === 'On-Con' ? 'ON-CON' : '—'}
                   </span>
                   {/* Rep */}
                   <span className="font-display" style={{ fontSize: 11, fontWeight: 700, color: '#002855', flexShrink: 0, minWidth: 48, textAlign: 'right' }}>
