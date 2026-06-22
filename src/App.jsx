@@ -104,7 +104,7 @@ const PAYMENT_TERMS = ['COD', '30 Days', '60 Days'];
 const CONTACT_METHODS = ['In Person', 'WhatsApp', 'Phone Call / Online Meet', 'Email'];
 const LOCATIONS = [
   'Western Cape', 'Eastern Cape', 'Northern Cape', 'Gauteng',
-  'KwaZulu-Natal', 'Free State', 'Limpopo', 'Mpumalanga', 'North West',
+  'KwaZulu-Natal', 'Free State', 'Limpopo', 'Mpumalanga', 'North West', 'Other',
 ];
 const STATUSES = ['New', 'Contacted', 'Converted', 'Lost'];
 
@@ -144,12 +144,12 @@ const LEAD_SOURCES = ['Cold Call', 'Referral', 'Walk into Store', 'Email', 'Even
 const PRIORITIES = ['Low', 'Medium', 'High'];
 
 const DEFAULT_TARGETS = {
-  Alex: { revenue: 150000, visits: 60, privateSales: 40, tradeRetail: 20 },
-  Lehmarc: { revenue: 150000, visits: 60, privateSales: 20, tradeRetail: 40 },
-  Loydz: { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15 },
-  Louis: { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15 },
-  Matthew: { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15 },
-  Anthony: { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15 },
+  Alex:    { revenue: 150000, visits: 60, privateSales: 40, tradeRetail: 20, onCon: 0, b2b: 0 },
+  Lehmarc: { revenue: 150000, visits: 60, privateSales: 20, tradeRetail: 40, onCon: 0, b2b: 0 },
+  Loydz:   { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15, onCon: 0, b2b: 0 },
+  Louis:   { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15, onCon: 0, b2b: 0 },
+  Matthew: { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15, onCon: 0, b2b: 0 },
+  Anthony: { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15, onCon: 0, b2b: 0 },
 };
 
 // Avante SKU catalogue (Trade Ex VAT prices, ZAR per unit)
@@ -2525,7 +2525,9 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
         revenue: repVisits.reduce((s, v) => s + (v.saleAmount || 0), 0),
         visits: repVisits.length,
         privateSales: repVisits.filter(v => v.channel === 'Private Sales').length,
-        tradeRetail: repVisits.filter(v => v.channel === 'Trade Retail').length,
+        tradeRetail:  repVisits.filter(v => v.channel === 'Trade Retail').length,
+        onCon:        repVisits.filter(v => v.channel === 'On-Con').length,
+        b2b:          repVisits.filter(v => v.channel === 'B2B').length,
       };
     });
     return out;
@@ -2533,11 +2535,13 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
 
   // Team totals (from draft)
   const teamTotals = useMemo(() => SALES_REPS.reduce((acc, r) => ({
-    revenue: acc.revenue + (draft[r]?.revenue || 0),
-    visits: acc.visits + (draft[r]?.visits || 0),
+    revenue:      acc.revenue      + (draft[r]?.revenue      || 0),
+    visits:       acc.visits       + (draft[r]?.visits       || 0),
     privateSales: acc.privateSales + (draft[r]?.privateSales || 0),
-    tradeRetail: acc.tradeRetail + (draft[r]?.tradeRetail || 0),
-  }), { revenue: 0, visits: 0, privateSales: 0, tradeRetail: 0 }), [draft]);
+    tradeRetail:  acc.tradeRetail  + (draft[r]?.tradeRetail  || 0),
+    onCon:        acc.onCon        + (draft[r]?.onCon        || 0),
+    b2b:          acc.b2b          + (draft[r]?.b2b          || 0),
+  }), { revenue: 0, visits: 0, privateSales: 0, tradeRetail: 0, onCon: 0, b2b: 0 }), [draft]);
 
   // Client distribution per rep per channel
   const repBook = useMemo(() => {
@@ -2790,11 +2794,13 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
           <div className="w-2 h-2 bg-copper diamond-clip"></div>
           <h2 className="font-display text-sm tracking-[0.3em] ink" style={{ fontWeight: 700 }}>TEAM AGGREGATE TARGETS</h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <AggregateCard label="Total Revenue Target" value={ZAR(teamTotals.revenue)} icon={DollarSign} color="#BC8D26" />
-          <AggregateCard label="Total Visits Target" value={teamTotals.visits} icon={Activity} color="#5A7A99" />
-          <AggregateCard label="Private Sales Visits" value={teamTotals.privateSales} icon={Wine} color="#DBB85E" />
-          <AggregateCard label="Trade Retail Visits" value={teamTotals.tradeRetail} icon={Briefcase} color="#002855" />
+          <AggregateCard label="Total Visits Target"  value={teamTotals.visits}        icon={Activity}   color="#5A7A99" />
+          <AggregateCard label="Private Sales Visits" value={teamTotals.privateSales}  icon={Wine}       color="#DBB85E" />
+          <AggregateCard label="Trade Retail Visits"  value={teamTotals.tradeRetail}   icon={Briefcase}  color="#002855" />
+          <AggregateCard label="On-Con Visits"        value={teamTotals.onCon}         icon={Activity}   color="#5A7A99" />
+          <AggregateCard label="B2B Visits"           value={teamTotals.b2b}           icon={TrendingUp} color="#BC8D26" />
         </div>
       </div>
 
@@ -2914,13 +2920,15 @@ function AggregateCard({ label, value, icon: Icon, color }) {
 }
 
 function RepTargetCard({ rep, draft, perf, book, onChange }) {
-  // Total Visits is always the sum of privateSales + tradeRetail — not editable
-  const computedVisits = (draft?.privateSales || 0) + (draft?.tradeRetail || 0);
+  // Total Visits is always the sum of privateSales + tradeRetail + onCon + b2b — not editable
+  const computedVisits = (draft?.privateSales || 0) + (draft?.tradeRetail || 0) + (draft?.onCon || 0) + (draft?.b2b || 0);
 
   const fields = [
-    { key: 'revenue', label: 'Revenue Target', icon: DollarSign, prefix: 'R', perfKey: 'revenue', isCurrency: true, hint: 'Monthly Rand target' },
-    { key: 'privateSales', label: 'Private Sales', icon: Wine, perfKey: 'privateSales', hint: 'On-con visits KPI' },
-    { key: 'tradeRetail', label: 'Trade Retail', icon: Briefcase, perfKey: 'tradeRetail', hint: 'Off-con visits KPI' },
+    { key: 'revenue',      label: 'Revenue Target', icon: DollarSign, prefix: 'R', perfKey: 'revenue',      isCurrency: true, hint: 'Monthly Rand target' },
+    { key: 'privateSales', label: 'Private Sales',  icon: Wine,       perfKey: 'privateSales', hint: 'Private Sales visits KPI' },
+    { key: 'tradeRetail',  label: 'Trade Retail',   icon: Briefcase,  perfKey: 'tradeRetail',  hint: 'Trade Retail visits KPI' },
+    { key: 'onCon',        label: 'On-Con',         icon: Activity,   perfKey: 'onCon',        hint: 'On-Con visits KPI' },
+    { key: 'b2b',          label: 'B2B',            icon: TrendingUp, perfKey: 'b2b',          hint: 'B2B visits KPI' },
   ];
 
   return (
@@ -2959,11 +2967,13 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
                   value={val}
                   onChange={(e) => {
                     onChange(f.key, e.target.value);
-                    // Auto-update visits total whenever private or trade changes
-                    if (f.key === 'privateSales' || f.key === 'tradeRetail') {
-                      const newPri = f.key === 'privateSales' ? Number(e.target.value) || 0 : (draft?.privateSales || 0);
-                      const newTrd = f.key === 'tradeRetail' ? Number(e.target.value) || 0 : (draft?.tradeRetail || 0);
-                      onChange('visits', newPri + newTrd);
+                    // Auto-update visits total whenever any channel changes
+                    if (['privateSales','tradeRetail','onCon','b2b'].includes(f.key)) {
+                      const newPri = f.key === 'privateSales' ? Number(e.target.value)||0 : (draft?.privateSales||0);
+                      const newTrd = f.key === 'tradeRetail'  ? Number(e.target.value)||0 : (draft?.tradeRetail||0);
+                      const newOnC = f.key === 'onCon'        ? Number(e.target.value)||0 : (draft?.onCon||0);
+                      const newB2b = f.key === 'b2b'          ? Number(e.target.value)||0 : (draft?.b2b||0);
+                      onChange('visits', newPri + newTrd + newOnC + newB2b);
                     }
                   }}
                   className="flex-1 px-2 py-1.5 border border bg-cream font-display text-sm focus:outline-none focus:border-copper ink"
@@ -2994,7 +3004,7 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-display ink text-sm flex-1" style={{ fontWeight: 700, fontSize: 18 }}>{computedVisits}</span>
-                <span style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>= Private + Trade</span>
+                <span style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>= Private + Trade + On-Con + B2B</span>
               </div>
               <div className="flex items-center justify-between mt-1.5 text-[10px]">
                 <span className="ocean italic">Total visits · actual: <span className="ink font-display" style={{ fontWeight: 700 }}>{actual}</span></span>
@@ -3014,6 +3024,7 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
 // =================== Leads Page ===================
 function KanbanView({ filtered, onSelect, onDelete, updateClient, activeChannel }) {
   // Determine which status columns to show — if filtering by B2B, show B2B stages; otherwise standard
+  const PRIORITY_ORDER = { 'High': 0, 'Medium': 1, 'Low': 2 };
   const statusCols = activeChannel === 'B2B' ? B2B_STATUS_LABELS : STATUSES;
 
   return (
@@ -3021,7 +3032,9 @@ function KanbanView({ filtered, onSelect, onDelete, updateClient, activeChannel 
       {statusCols.map(status => {
         const color = getStatusColor(status);
         const pct = activeChannel === 'B2B' ? getB2BPct(status) : null;
-        const cols = filtered.filter(c => c.status === status);
+        const cols = filtered
+          .filter(c => c.status === status)
+          .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1));
         return (
           <div key={status} style={{ background: `${color}12`, border: `1px solid ${color}33`, minWidth: 180 }}>
             {/* Column header */}
@@ -3029,7 +3042,7 @@ function KanbanView({ filtered, onSelect, onDelete, updateClient, activeChannel 
               <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, color: '#FCF7F2' }}>{status.toUpperCase()}</span>
               <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '1px 8px' }}>{cols.length}</span>
             </div>
-            {/* Cards */}
+            {/* Cards — sorted High → Medium → Low */}
             <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 560, overflowY: 'auto' }}>
               {cols.length === 0 && (
                 <p style={{ fontSize: 11, color: 'rgba(0,40,85,0.3)', fontStyle: 'italic', textAlign: 'center', padding: '16px 0' }}>No clients</p>
@@ -3037,7 +3050,7 @@ function KanbanView({ filtered, onSelect, onDelete, updateClient, activeChannel 
               {cols.map(c => (
                 <div key={c.id}
                   onClick={() => onSelect(c)}
-                  style={{ background: '#FCF7F2', border: '1px solid rgba(0,40,85,0.12)', padding: '10px 12px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                  style={{ background: '#FCF7F2', border: '1px solid rgba(0,40,85,0.12)', borderTop: `3px solid ${c.priority === 'High' ? '#CC233A' : c.priority === 'Medium' ? '#BC8D26' : '#5A7A99'}`, padding: '10px 12px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
                   onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,40,85,0.12)'}
                   onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
                   <p style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 11, color: '#002855', marginBottom: 4, lineHeight: 1.3 }}>{c.venue}</p>
@@ -3288,6 +3301,8 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
   const [search, setSearch] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [filterChannel, setFilterChannel] = useState('All');
+  const [filterRep, setFilterRep] = useState('All');
+  const [sortBy, setSortBy] = useState('date'); // 'date' | 'amount'
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   // Only visits that have actual orders (items with qty > 0)
@@ -3300,6 +3315,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
       })
       .filter(v => {
         if (filterChannel !== 'All' && v.clientChannel !== filterChannel) return false;
+        if (filterRep !== 'All' && v.salesRep !== filterRep) return false;
         if (search.trim()) {
           const q = search.trim().toLowerCase();
           return v.clientName.toLowerCase().includes(q) ||
@@ -3309,8 +3325,10 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
         }
         return true;
       })
-      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  }, [visits, clients, search, filterChannel]);
+      .sort((a, b) => sortBy === 'amount'
+        ? (b.saleAmount || 0) - (a.saleAmount || 0)
+        : (b.date || '').localeCompare(a.date || ''));
+  }, [visits, clients, search, filterChannel, filterRep, sortBy]);
 
   const totalRevenue = orders.reduce((s, o) => s + (o.saleAmount || 0), 0);
   const statusColors = (s) => getStatusColor(s);
@@ -3343,6 +3361,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
           />
           {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5A7A99', fontSize: 18, lineHeight: 1 }}>×</button>}
         </div>
+        {/* Channel filter */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {['All', ...CHANNELS].map(ch => (
             <button key={ch} onClick={() => setFilterChannel(ch)}
@@ -3350,6 +3369,25 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
               {ch === 'All' ? 'ALL' : ch === 'Private Sales' ? 'PRIVATE' : ch === 'Trade Retail' ? 'RETAIL' : ch.toUpperCase()}
             </button>
           ))}
+        </div>
+        {/* Rep + Sort row */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600 }}>AGENT:</span>
+          {['All', ...SALES_REPS].map(r => (
+            <button key={r} onClick={() => setFilterRep(r)}
+              style={{ padding: '5px 12px', border: `1px solid ${filterRep === r ? '#BC8D26' : 'rgba(0,40,85,0.2)'}`, background: filterRep === r ? '#BC8D26' : 'none', color: filterRep === r ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 600, cursor: 'pointer' }}>
+              {r === 'All' ? 'ALL' : r.toUpperCase()}
+            </button>
+          ))}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+            <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600, alignSelf: 'center' }}>SORT:</span>
+            {[{ key: 'date', label: 'DATE' }, { key: 'amount', label: 'AMOUNT' }].map(s => (
+              <button key={s.key} onClick={() => setSortBy(s.key)}
+                style={{ padding: '5px 12px', border: `1px solid ${sortBy === s.key ? '#002855' : 'rgba(0,40,85,0.2)'}`, background: sortBy === s.key ? '#002855' : 'none', color: sortBy === s.key ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 600, cursor: 'pointer' }}>
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
