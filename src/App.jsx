@@ -670,22 +670,25 @@ function AvanteCRMApp({ currentUser, onLogout }) {
 
   const deleteVisit = async (visitId) => {
     const v = visits.find(x => x.id === visitId);
-    if (!v) return;
+    if (!v) { console.warn('[deleteVisit] visit not found:', visitId); return; }
     const refund = Number(v.saleAmount) || 0;
     const clientId = v.clientId;
 
     const { error } = await supabase.from('visits').delete().eq('id', visitId);
-    if (error) { console.error('[deleteVisit]', error); return; }
+    if (error) { console.error('[deleteVisit]', error); throw new Error(error.message); }
 
+    // Update local visit state
     setVisits((prev) => prev.filter(x => x.id !== visitId));
-    setClients((prev) => prev.map(c => {
-      if (c.id === clientId) {
-        const updated = { ...c, totalSales: Math.max(0, (c.totalSales || 0) - refund) };
-        supabase.from('clients').update({ total_sales: updated.totalSales }).eq('id', c.id);
-        return updated;
-      }
-      return c;
-    }));
+
+    // Update client totalSales — do the Supabase call OUTSIDE setState
+    const client = clients.find(c => c.id === clientId);
+    if (client && refund > 0) {
+      const newTotal = Math.max(0, (client.totalSales || 0) - refund);
+      await supabase.from('clients').update({ total_sales: newTotal }).eq('id', clientId);
+      setClients((prev) => prev.map(c =>
+        c.id === clientId ? { ...c, totalSales: newTotal } : c
+      ));
+    }
   };
 
   const updateClient = async (id, patch) => {
@@ -1161,7 +1164,15 @@ function AvanteCRMApp({ currentUser, onLogout }) {
                 title: 'Delete this order?',
                 message: `${c?.venue || 'Unknown'} · ${v?.date || ''}${saleNote}\n\nThis cannot be undone.`,
                 confirmLabel: 'DELETE ORDER',
-                onConfirm: async () => { await deleteVisit(visitId); showToast('Order deleted'); },
+                onConfirm: async () => {
+                  try {
+                    await deleteVisit(visitId);
+                    showToast('Order deleted');
+                  } catch (err) {
+                    console.error('[deleteOrder]', err);
+                    showToast('Could not delete order — please try again.');
+                  }
+                },
               });
             }}
           />
@@ -1184,9 +1195,14 @@ function AvanteCRMApp({ currentUser, onLogout }) {
                 message: `${c?.venue || 'Unknown'} · ${v?.date || ''}\nOutcome: ${v?.outcome || ''}${saleNote ? '\n' + saleNote : ''}\n\nThis cannot be undone.`,
                 confirmLabel: 'DELETE VISIT',
                 danger: true,
-                onConfirm: () => {
-                  deleteVisit(visitId);
-                  showToast('Visit deleted · client totals updated', 'success');
+                onConfirm: async () => {
+                  try {
+                    await deleteVisit(visitId);
+                    showToast('Visit deleted · client totals updated', 'success');
+                  } catch (err) {
+                    console.error('[deleteVisit]', err);
+                    showToast('Could not delete visit — please try again.');
+                  }
                 },
               });
             }}
