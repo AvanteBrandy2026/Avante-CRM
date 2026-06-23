@@ -2881,6 +2881,12 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
               perf={repPerf[rep]}
               book={repBook[rep]}
               onChange={(field, val) => setField(rep, field, val)}
+              onSave={async () => {
+                // Build the full draft with latest changes and save
+                await saveTargets({ ...draft });
+                setSavedFlash(true);
+                setTimeout(() => setSavedFlash(false), 2000);
+              }}
             />
           ))}
         </div>
@@ -2919,7 +2925,14 @@ function AggregateCard({ label, value, icon: Icon, color }) {
   );
 }
 
-function RepTargetCard({ rep, draft, perf, book, onChange }) {
+function RepTargetCard({ rep, draft, perf, book, onChange, onSave }) {
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async () => {
+    await onSave();
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
   // Total Visits is always the sum of privateSales + tradeRetail + onCon + b2b — not editable
   const computedVisits = (draft?.privateSales || 0) + (draft?.tradeRetail || 0) + (draft?.onCon || 0) + (draft?.b2b || 0);
 
@@ -3016,6 +3029,14 @@ function RepTargetCard({ rep, draft, perf, book, onChange }) {
             </div>
           );
         })()}
+
+        {/* Per-rep save button */}
+        <button
+          onClick={handleSave}
+          style={{ width: '100%', marginTop: 12, padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: saved ? '#2d8659' : '#002855', border: 'none', fontFamily: '"Cinzel",serif', fontSize: 9, letterSpacing: '0.25em', fontWeight: 700, color: '#FCF7F2', cursor: 'pointer', transition: 'background 0.2s' }}>
+          <Save style={{ width: 12, height: 12 }} />
+          {saved ? 'SAVED ✓' : `SAVE ${rep.toUpperCase()}'S TARGETS`}
+        </button>
       </div>
     </div>
   );
@@ -3302,8 +3323,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [filterChannel, setFilterChannel] = useState('All');
   const [filterRep, setFilterRep] = useState('All');
-  const [sortBy, setSortBy] = useState('date'); // 'date' | 'amount'
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [sortBy, setSortBy] = useState('date');
 
   // Only visits that have actual orders (items with qty > 0)
   const orders = useMemo(() => {
@@ -3400,35 +3420,15 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
         <div className="premium-card" style={{ overflow: 'hidden' }}>
           {orders.map((order, i) => {
             const isOpen = expandedOrderId === order.id;
-            const isConfirming = confirmDeleteId === order.id;
             const skuCount = order.items.length;
             const totalQty = order.items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
             return (
               <div key={order.id} style={{ borderTop: i === 0 ? 'none' : '1px solid rgba(0,40,85,0.1)' }}>
 
-                {/* Delete confirm banner */}
-                {isConfirming && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#fdf0f0', borderLeft: '3px solid #CC233A' }}>
-                    <p style={{ fontSize: 12, color: '#CC233A', fontStyle: 'italic', margin: 0 }}>
-                      Delete order for <strong>{order.clientName}</strong> on {order.date}? Cannot be undone.
-                    </p>
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0, marginLeft: 12 }}>
-                      <button onClick={() => setConfirmDeleteId(null)}
-                        style={{ padding: '5px 12px', border: '1px solid rgba(0,40,85,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#002855', cursor: 'pointer', fontWeight: 600 }}>
-                        CANCEL
-                      </button>
-                      <button onClick={() => { setConfirmDeleteId(null); onDeleteVisit && onDeleteVisit(order.id); }}
-                        style={{ padding: '5px 12px', background: '#CC233A', border: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', color: '#FCF7F2', cursor: 'pointer', fontWeight: 700 }}>
-                        DELETE
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {/* Order summary row */}
                 <div style={{ display: 'flex', alignItems: 'center', background: isOpen ? 'rgba(0,40,85,0.04)' : '#FCF7F2', borderLeft: `3px solid ${order.clientChannel === 'Private Sales' ? '#BC8D26' : '#5A7A99'}`, transition: 'background 0.12s' }}>
                   <div
-                    onClick={() => { setExpandedOrderId(isOpen ? null : order.id); setConfirmDeleteId(null); }}
+                    onClick={() => setExpandedOrderId(isOpen ? null : order.id)}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 12px 13px 16px', cursor: 'pointer', flex: 1, minWidth: 0 }}
                   >
                     {/* Date */}
@@ -3456,10 +3456,10 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
                   {/* Delete button */}
                   <button
                     type="button"
-                    onClick={() => { setConfirmDeleteId(isConfirming ? null : order.id); setExpandedOrderId(null); }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '13px 14px', color: isConfirming ? '#CC233A' : 'rgba(0,40,85,0.2)', flexShrink: 0, transition: 'color 0.15s' }}
+                    onClick={() => { onDeleteVisit && onDeleteVisit(order.id); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '13px 14px', color: 'rgba(0,40,85,0.2)', flexShrink: 0, transition: 'color 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#CC233A'}
-                    onMouseLeave={e => e.currentTarget.style.color = isConfirming ? '#CC233A' : 'rgba(0,40,85,0.2)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(0,40,85,0.2)'}
                     title="Delete order"
                   >
                     <Trash2 style={{ width: 14, height: 14 }} />
@@ -3826,13 +3826,16 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     }
   };
 
-  const handleSave = () => {
-    console.log('[LogVisit] handleSave clicked', { clientId, salesRep, items, date, outcome });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSave = async () => {
+    if (submitting) return; // prevent double-tap
     setValidationError('');
     if (!clientId) {
       setValidationError('Please select a client before saving.');
       return;
     }
+    setSubmitting(true);
     const payload = {
       salesRep,
       clientId: Number(clientId),
@@ -3848,7 +3851,6 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
       })),
       notes, followUp, taggedReps,
     };
-    console.log('[LogVisit] calling onSubmit with payload', payload);
     try {
       notifyNewTags({
         prevTags: existingVisit?.taggedReps || [],
@@ -3860,11 +3862,13 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
         type: 'visit',
         date, outcome, notes, followUp,
       });
-      onSubmit(payload);
+      await onSubmit(payload);
     } catch (err) {
       console.error('[LogVisit] onSubmit threw:', err);
       setValidationError('Save failed: ' + (err?.message || String(err)));
+      setSubmitting(false); // re-enable on error so they can retry
     }
+    // Don't re-enable on success — modal closes
   };
 
   const requestAddClient = () => {
@@ -4183,8 +4187,10 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
             </button>
             <div className="flex items-center gap-2">
               <button type="button" onClick={onClose} className="flex-1 md:flex-none px-5 py-3 font-display text-xs tracking-[0.25em] ink border border" style={{ fontWeight: 700 }}>CANCEL</button>
-              <button type="button" onClick={handleSave} className="flex-1 md:flex-none bg-ink px-6 py-3 font-display text-xs tracking-[0.25em] flex items-center justify-center gap-2" style={{ color: '#FCF7F2', fontWeight: 700 }}>
-                {isEdit ? 'UPDATE' : 'SAVE'} <ArrowUpRight className="w-4 h-4" />
+              <button type="button" onClick={handleSave} disabled={submitting}
+                className="flex-1 md:flex-none bg-ink px-6 py-3 font-display text-xs tracking-[0.25em] flex items-center justify-center gap-2"
+                style={{ color: '#FCF7F2', fontWeight: 700, opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+                {submitting ? 'SAVING...' : (isEdit ? 'UPDATE' : 'SAVE')} {!submitting && <ArrowUpRight className="w-4 h-4" />}
               </button>
             </div>
           </div>
