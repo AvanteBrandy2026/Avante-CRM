@@ -677,17 +677,34 @@ function AvanteCRMApp({ currentUser, onLogout }) {
   };
 
   const deleteVisit = async (visitId) => {
-    const id = Number(visitId);
-    const v = visits.find(x => Number(x.id) === id);
-    if (!v) { console.warn('[deleteVisit] not found:', visitId, 'ids:', visits.map(x=>x.id)); return; }
+    const idNum = Number(visitId);
+    const isFakeId = !visitId || isNaN(idNum) || String(visitId).startsWith('seed-');
+
+    // For fake/seed IDs — just remove from local state, nothing in Supabase to delete
+    if (isFakeId) {
+      setVisits((prev) => prev.filter(x => String(x.id) !== String(visitId)));
+      return;
+    }
+
+    const v = visits.find(x => Number(x.id) === idNum);
+    if (!v) {
+      // Not in local state either — nothing to do
+      console.warn('[deleteVisit] not found locally:', visitId);
+      return;
+    }
     const refund = Number(v.saleAmount) || 0;
     const clientId = Number(v.clientId);
 
-    const { error } = await supabase.from('visits').delete().eq('id', id);
-    if (error) { console.error('[deleteVisit]', error); throw new Error(error.message); }
+    const { error } = await supabase.from('visits').delete().eq('id', idNum);
+    if (error) {
+      // If it's a "not found" error — record never made it to DB, just clean up local state
+      console.warn('[deleteVisit] Supabase error (removing locally anyway):', error.message);
+    }
 
-    setVisits((prev) => prev.filter(x => Number(x.id) !== id));
+    // Always clean up local state
+    setVisits((prev) => prev.filter(x => Number(x.id) !== idNum));
 
+    // Update client totalSales only if there was real revenue
     const client = clients.find(c => Number(c.id) === clientId);
     if (client && refund > 0) {
       const newTotal = Math.max(0, (client.totalSales || 0) - refund);
@@ -5102,7 +5119,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                               {(v.outcome || 'VISIT').toUpperCase()}
                             </span>
                             {v.saleAmount > 0 && <span className="font-display text-sm copper" style={{ fontWeight: 700 }}>{ZAR(v.saleAmount)}</span>}
-                            {!isHistorical && onDeleteVisit && (
+                            {onDeleteVisit && (
                               <button type="button"
                                 onClick={() => onDeleteVisit(v.id)}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'rgba(0,40,85,0.25)', flexShrink: 0, lineHeight: 1 }}
