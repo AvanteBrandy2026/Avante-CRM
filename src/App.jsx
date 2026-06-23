@@ -253,7 +253,7 @@ function clientToDb(c) {
 
 function clientFromDb(r) {
   return {
-    id: r.id,
+    id: Number(r.id),
     venue: r.venue || '',
     channel: r.channel || '',
     firstName: r.first_name || '',
@@ -277,7 +277,7 @@ function clientFromDb(r) {
 
 function visitToDb(v) {
   return {
-    client_id: v.clientId,
+    client_id: Number(v.clientId),
     sales_rep: v.salesRep || '',
     date: v.date || null,
     outcome: v.outcome || '',
@@ -286,13 +286,17 @@ function visitToDb(v) {
     notes: v.notes || '',
     follow_up_notes: v.followUpNotes || v.followUp || '',
     order_placed: v.orderPlaced || '',
+    contact_method: v.contactMethod || '',
+    follow_up_date: v.followUpDate || null,
+    tagged_reps: v.taggedReps || [],
+    channel: v.channel || '',
   };
 }
 
 function visitFromDb(r) {
   return {
-    id: r.id,
-    clientId: r.client_id,
+    id: Number(r.id),         // always a number for consistent equality checks
+    clientId: Number(r.client_id),
     salesRep: r.sales_rep || '',
     date: r.date || '',
     outcome: r.outcome || '',
@@ -301,6 +305,10 @@ function visitFromDb(r) {
     notes: r.notes || '',
     followUpNotes: r.follow_up_notes || '',
     orderPlaced: r.order_placed || '',
+    contactMethod: r.contact_method || '',
+    followUpDate: r.follow_up_date || '',
+    taggedReps: r.tagged_reps || [],
+    channel: r.channel || '',
   };
 }
 
@@ -669,24 +677,23 @@ function AvanteCRMApp({ currentUser, onLogout }) {
   };
 
   const deleteVisit = async (visitId) => {
-    const v = visits.find(x => x.id === visitId);
-    if (!v) { console.warn('[deleteVisit] visit not found:', visitId); return; }
+    const id = Number(visitId);
+    const v = visits.find(x => Number(x.id) === id);
+    if (!v) { console.warn('[deleteVisit] not found:', visitId, 'ids:', visits.map(x=>x.id)); return; }
     const refund = Number(v.saleAmount) || 0;
-    const clientId = v.clientId;
+    const clientId = Number(v.clientId);
 
-    const { error } = await supabase.from('visits').delete().eq('id', visitId);
+    const { error } = await supabase.from('visits').delete().eq('id', id);
     if (error) { console.error('[deleteVisit]', error); throw new Error(error.message); }
 
-    // Update local visit state
-    setVisits((prev) => prev.filter(x => x.id !== visitId));
+    setVisits((prev) => prev.filter(x => Number(x.id) !== id));
 
-    // Update client totalSales — do the Supabase call OUTSIDE setState
-    const client = clients.find(c => c.id === clientId);
+    const client = clients.find(c => Number(c.id) === clientId);
     if (client && refund > 0) {
       const newTotal = Math.max(0, (client.totalSales || 0) - refund);
       await supabase.from('clients').update({ total_sales: newTotal }).eq('id', clientId);
       setClients((prev) => prev.map(c =>
-        c.id === clientId ? { ...c, totalSales: newTotal } : c
+        Number(c.id) === clientId ? { ...c, totalSales: newTotal } : c
       ));
     }
   };
