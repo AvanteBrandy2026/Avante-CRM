@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, createPortal } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LayoutDashboard, Users, ClipboardList, Settings, TrendingUp, Phone, Mail, Search, Plus, X, ChevronRight, DollarSign, Award, Activity, Briefcase, Wine, ArrowUpRight, Save, RotateCcw, Target, BarChart3, Trash2, Download, FileSpreadsheet, UserPlus, Edit2, ShoppingCart, Package, ChevronDown, Bell, LogOut } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -1377,22 +1377,19 @@ function AvanteCRMApp({ currentUser, onLogout }) {
 
 // =================== Confirm Modal ===================
 function ConfirmModal({ title, message, confirmLabel, danger, onCancel, onConfirm }) {
-  return createPortal(
+  return (
     <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:20, background:"rgba(0,40,85,0.82)", backdropFilter:"blur(4px)" }} onClick={onCancel}>
       <div style={{ background:'#FCF7F2', maxWidth:360, width:'100%', border:'2px solid #BC8D26', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div style={{ padding:'12px 16px', background:'#002855', display:'flex', alignItems:'center', gap:10 }}>
-          <div className="w-2 h-2 diamond-clip" style={{ background: danger ? '#CC233A' : '#DBB85E', flexShrink:0 }}></div>
+          <div style={{ width:8, height:8, background: danger ? '#CC233A' : '#DBB85E', flexShrink:0, transform:'rotate(45deg)' }}></div>
           <div>
-            <p className="font-display" style={{ fontSize:8, letterSpacing:'0.4em', color:'#DBB85E', fontWeight:600 }}>{danger ? 'DESTRUCTIVE ACTION' : 'CONFIRM'}</p>
-            <h2 className="font-display" style={{ color:'#FCF7F2', fontWeight:700, fontSize:14, letterSpacing:'0.06em', marginTop:2 }}>{title}</h2>
+            <p style={{ fontFamily:"'Cinzel',serif", fontSize:8, letterSpacing:'0.4em', color:'#DBB85E', fontWeight:600 }}>{danger ? 'DESTRUCTIVE ACTION' : 'CONFIRM'}</p>
+            <h2 style={{ fontFamily:"'Cinzel',serif", color:'#FCF7F2', fontWeight:700, fontSize:14, letterSpacing:'0.06em', marginTop:2 }}>{title}</h2>
           </div>
         </div>
-        {/* Body */}
         <div style={{ padding:'14px 16px' }}>
           <p style={{ fontSize:12, color:'#002855', lineHeight:1.5, whiteSpace:'pre-line' }}>{message}</p>
         </div>
-        {/* Actions */}
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'0 16px 14px' }}>
           <button type="button" onClick={onCancel}
             style={{ padding:'7px 16px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
@@ -1404,8 +1401,7 @@ function ConfirmModal({ title, message, confirmLabel, danger, onCancel, onConfir
           </button>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
 
