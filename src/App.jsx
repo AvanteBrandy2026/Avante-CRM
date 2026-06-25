@@ -1364,10 +1364,10 @@ function AvanteCRMApp({ currentUser, onLogout }) {
           confirmLabel={confirmCtx.confirmLabel}
           danger={confirmCtx.danger}
           onCancel={() => setConfirmCtx(null)}
-          onConfirm={() => {
+          onConfirm={async () => {
             const fn = confirmCtx.onConfirm;
             setConfirmCtx(null);
-            if (fn) fn();
+            if (fn) await fn();
           }}
         />
       )}
