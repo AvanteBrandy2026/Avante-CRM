@@ -3367,12 +3367,54 @@ function StatusBadge({ status, channel }) {
 
 // =================== Visits Page ===================
 // =================== ORDER HISTORY PAGE ===================
+// ── MONTH FILTER COMPONENT ────────────────────────────────────────────────────
+function MonthFilter({ value, onChange }) {
+  // value = 'All' | 'YYYY-MM'
+  // Build list: All + last 18 months descending
+  const months = useMemo(() => {
+    const list = [{ label: 'ALL TIME', value: 'All' }];
+    const now = new Date();
+    for (let i = 0; i < 18; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase();
+      list.push({ label, value: iso });
+    }
+    return list;
+  }, []);
+
+  const current = months.find(m => m.value === value) || months[0];
+
+  const prev = () => {
+    const idx = months.findIndex(m => m.value === value);
+    if (idx < months.length - 1) onChange(months[idx + 1].value);
+  };
+  const next = () => {
+    const idx = months.findIndex(m => m.value === value);
+    if (idx > 0) onChange(months[idx - 1].value);
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: '1px solid rgba(0,40,85,0.2)', overflow: 'hidden' }}>
+      <button onClick={prev} style={{ padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cinzel',serif", fontSize: 12, color: '#002855', fontWeight: 700, borderRight: '1px solid rgba(0,40,85,0.15)' }}>‹</button>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{ padding: '7px 10px', background: '#FCF7F2', border: 'none', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 700, color: '#002855', cursor: 'pointer', outline: 'none', minWidth: 100 }}>
+        {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+      </select>
+      <button onClick={next} disabled={value === months[1]?.value} style={{ padding: '7px 12px', background: 'none', border: 'none', cursor: value === months[1]?.value ? 'default' : 'pointer', fontFamily: "'Cinzel',serif", fontSize: 12, color: value === months[1]?.value ? 'rgba(0,40,85,0.3)' : '#002855', fontWeight: 700, borderLeft: '1px solid rgba(0,40,85,0.15)' }}>›</button>
+    </div>
+  );
+}
+
 function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
   const [search, setSearch] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [filterChannel, setFilterChannel] = useState('All');
   const [filterRep, setFilterRep] = useState('All');
   const [sortBy, setSortBy] = useState('date');
+  const [filterMonth, setFilterMonth] = useState('All');
 
   // Only visits that have actual orders (items with qty > 0)
   const orders = useMemo(() => {
@@ -3385,6 +3427,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
       .filter(v => {
         if (filterChannel !== 'All' && v.clientChannel !== filterChannel) return false;
         if (filterRep !== 'All' && v.salesRep !== filterRep) return false;
+        if (filterMonth !== 'All' && !(v.date || '').startsWith(filterMonth)) return false;
         if (search.trim()) {
           const q = search.trim().toLowerCase();
           return v.clientName.toLowerCase().includes(q) ||
@@ -3397,7 +3440,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
       .sort((a, b) => sortBy === 'amount'
         ? (b.saleAmount || 0) - (a.saleAmount || 0)
         : (b.date || '').localeCompare(a.date || ''));
-  }, [visits, clients, search, filterChannel, filterRep, sortBy]);
+  }, [visits, clients, search, filterChannel, filterRep, filterMonth, sortBy]);
 
   const totalRevenue = orders.reduce((s, o) => s + (o.saleAmount || 0), 0);
   const statusColors = (s) => getStatusColor(s);
@@ -3439,9 +3482,11 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
             </button>
           ))}
         </div>
-        {/* Rep + Sort row */}
+        {/* Month + Rep + Sort row */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600 }}>AGENT:</span>
+          <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600 }}>MONTH:</span>
+          <MonthFilter value={filterMonth} onChange={setFilterMonth} />
+          <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600, marginLeft: 8 }}>AGENT:</span>
           {['All', ...SALES_REPS].map(r => (
             <button key={r} onClick={() => setFilterRep(r)}
               style={{ padding: '5px 12px', border: `1px solid ${filterRep === r ? '#BC8D26' : 'rgba(0,40,85,0.2)'}`, background: filterRep === r ? '#BC8D26' : 'none', color: filterRep === r ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 600, cursor: 'pointer' }}>
@@ -3586,7 +3631,11 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
 
 function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
   const [filterRep, setFilterRep] = useState('All');
-  const filtered = visits.filter(v => filterRep === 'All' || v.salesRep === filterRep).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const [filterMonth, setFilterMonth] = useState('All');
+  const filtered = visits
+    .filter(v => filterRep === 'All' || v.salesRep === filterRep)
+    .filter(v => filterMonth === 'All' || (v.date || '').startsWith(filterMonth))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   return (
     <div className="space-y-6 fade-up">
@@ -3596,6 +3645,7 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
         <div className="flex items-center justify-between gap-3 mt-1 flex-wrap">
           <h1 className="font-display text-2xl md:text-3xl ink" style={{ fontWeight: 700 }}>VISIT LOG</h1>
           <div className="flex items-center gap-3 flex-wrap">
+            <MonthFilter value={filterMonth} onChange={setFilterMonth} />
             <RepToggle active={filterRep} onChange={setFilterRep} />
             <button onClick={onLog}
               className="flex items-center gap-2 px-4 py-2.5 font-display text-[10px] tracking-[0.2em]"
