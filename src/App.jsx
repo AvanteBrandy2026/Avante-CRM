@@ -275,8 +275,12 @@ function clientFromDb(r) {
   };
 }
 
-function visitToDb(v) {
-  return {
+// Columns confirmed to exist in the visits table (base schema)
+// Run fix_visits_columns.sql to add: channel, contact_method, follow_up_date, tagged_reps
+const VISITS_EXTENDED_COLS = { channel: true, contact_method: true, follow_up_date: true, tagged_reps: true };
+
+function visitToDb(v, includeExtended = true) {
+  const row = {
     client_id: Number(v.clientId),
     sales_rep: v.salesRep || '',
     date: v.date || null,
@@ -286,11 +290,14 @@ function visitToDb(v) {
     notes: v.notes || '',
     follow_up_notes: v.followUpNotes || v.followUp || '',
     order_placed: v.orderPlaced || '',
-    contact_method: v.contactMethod || '',
-    follow_up_date: v.followUpDate || null,
-    tagged_reps: v.taggedReps || [],
-    channel: v.channel || '',
   };
+  if (includeExtended) {
+    row.contact_method = v.contactMethod || '';
+    row.follow_up_date = v.followUpDate || null;
+    row.tagged_reps = v.taggedReps || [];
+    row.channel = v.channel || '';
+  }
+  return row;
 }
 
 function visitFromDb(r) {
@@ -610,16 +617,22 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       : (Number(visit.saleAmount) || 0);
     const enriched = { ...visit, saleAmount: computedTotal };
 
-    // Insert visit into Supabase
-    const { data: inserted, error } = await supabase
-      .from('visits').insert(visitToDb(enriched)).select().single();
-    if (error) { console.error('[addVisit]', error); return; }
+    // Try with all columns first; fall back to base columns if schema is missing extended ones
+    let inserted, error;
+    ({ data: inserted, error } = await supabase.from('visits').insert(visitToDb(enriched, true)).select().single());
+    if (error && error.message && error.message.includes('column')) {
+      console.warn('[addVisit] extended columns missing, retrying with base columns only');
+      ({ data: inserted, error } = await supabase.from('visits').insert(visitToDb(enriched, false)).select().single());
+    }
+    if (error) { console.error('[addVisit]', error); throw new Error(error.message); }
 
     const newVisit = visitFromDb(inserted);
-    setVisits((prev) => [...prev, newVisit]);
+    // Merge in the fields that weren't saved to DB yet so UI shows them correctly
+    const fullVisit = { ...newVisit, channel: visit.channel || '', contactMethod: visit.contactMethod || '', followUpDate: visit.followUpDate || '', taggedReps: visit.taggedReps || [] };
+    setVisits((prev) => [...prev, fullVisit]);
 
     // Update client total_sales in DB and local state
-    const client = clients.find(c => c.id === visit.clientId);
+    const client = clients.find(c => Number(c.id) === Number(visit.clientId));
     if (client) {
       const newSales = (client.totalSales || 0) + computedTotal;
       const newStatus = visit.outcome === 'Sold In' ? 'Converted'
@@ -629,12 +642,12 @@ function AvanteCRMApp({ currentUser, onLogout }) {
         total_sales: newSales,
         last_contacted: visit.date,
         status: newStatus,
-      }).eq('id', visit.clientId);
-      setClients((prev) => prev.map(c => c.id === visit.clientId
+      }).eq('id', Number(visit.clientId));
+      setClients((prev) => prev.map(c => Number(c.id) === Number(visit.clientId)
         ? { ...c, totalSales: newSales, lastContacted: visit.date, status: newStatus }
         : c));
     }
-    return newVisit;
+    return fullVisit;
   };
 
   const updateVisit = async (visitId, patch) => {
