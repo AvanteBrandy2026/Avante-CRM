@@ -5134,7 +5134,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
           <div className="pb-3 border-b">
             <p className="font-display text-[10px] tracking-[0.3em] copper mb-2" style={{ fontWeight: 600 }}>STATUS</p>
             <select
-              value={form.status || client.status}
+              value={form.status || client.status || ''}
               onChange={async (e) => {
                 const newStatus = e.target.value;
                 setForm(f => ({ ...f, status: newStatus }));
@@ -5142,9 +5142,17 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               }}
               style={{ padding: '6px 10px', border: '1px solid rgba(0,40,85,0.2)', background: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.1em', fontWeight: 700, color: '#002855', cursor: 'pointer', outline: 'none' }}
             >
-              {getStatusesForChannel(client.channel).map(s => (
-                <option key={s} value={s}>{s.toUpperCase()}</option>
-              ))}
+              {(() => {
+                const baseOptions = getStatusesForChannel(form.channel || client.channel);
+                const currentStatus = form.status || client.status;
+                // Always include the current status even if not in the list
+                const allOptions = currentStatus && !baseOptions.includes(currentStatus)
+                  ? [currentStatus, ...baseOptions]
+                  : baseOptions;
+                return allOptions.map(s => (
+                  <option key={s} value={s}>{s.toUpperCase()}</option>
+                ));
+              })()}
             </select>
           </div>
 
@@ -5452,12 +5460,14 @@ function Field({ label, value, edit, onChange, icon: Icon }) {
 
 function SelectField({ label, value, edit, onChange, options }) {
   if (!edit && !value) return null;
+  // Always include the current value as an option even if not in the list
+  const allOptions = value && !options.includes(value) ? [value, ...options] : options;
   return (
     <div>
       <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>{label.toUpperCase()}</label>
       {edit ? (
         <select value={value || ''} onChange={(e) => onChange(e.target.value)} className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
-          {options.map(o => <option key={o} value={o}>{o}</option>)}
+          {allOptions.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : (
         <div className="text-sm ink py-1">{value}</div>
