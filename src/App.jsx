@@ -129,6 +129,16 @@ const getB2BPct = (statusLabel) => {
   return found ? found.pct : null;
 };
 
+// A visit counts as a "sale" for conversion-rate purposes if either:
+// 1. The outcome was explicitly logged as 'Sold In', or
+// 2. SKU items with quantity were placed (a real order), or
+// 3. It has a recorded saleAmount > 0
+// This keeps conversion rate consistent with the auto-convert-to-Converted logic in addVisit.
+const isSoldVisit = (v) =>
+  v.outcome === 'Sold In' ||
+  (Number(v.saleAmount) > 0) ||
+  (Array.isArray(v.items) && v.items.some(it => Number(it.qty) > 0));
+
 // Unified status colour lookup (standard + B2B)
 const getStatusColor = (status) => ({
   'New':                 '#5A7A99',
@@ -144,12 +154,12 @@ const LEAD_SOURCES = ['Cold Call', 'Referral', 'Walk into Store', 'Email', 'Even
 const PRIORITIES = ['Low', 'Medium', 'High'];
 
 const DEFAULT_TARGETS = {
-  Alex:    { revenue: 150000, visits: 60, privateSales: 40, tradeRetail: 20, onCon: 0, b2b: 0 },
-  Lehmarc: { revenue: 150000, visits: 60, privateSales: 20, tradeRetail: 40, onCon: 0, b2b: 0 },
-  Loydz:   { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15, onCon: 0, b2b: 0 },
-  Louis:   { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15, onCon: 0, b2b: 0 },
-  Matthew: { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15, onCon: 0, b2b: 0 },
-  Anthony: { revenue: 100000, visits: 45, privateSales: 30, tradeRetail: 15, onCon: 0, b2b: 0 },
+  Alex:    { revenue: 150000, visits: 60, tradeRetail: 20, onCon: 0, b2b: 40 },
+  Lehmarc: { revenue: 150000, visits: 60, tradeRetail: 40, onCon: 0, b2b: 20 },
+  Loydz:   { revenue: 100000, visits: 45, tradeRetail: 15, onCon: 0, b2b: 30 },
+  Louis:   { revenue: 100000, visits: 45, tradeRetail: 15, onCon: 0, b2b: 30 },
+  Matthew: { revenue: 100000, visits: 45, tradeRetail: 15, onCon: 0, b2b: 30 },
+  Anthony: { revenue: 100000, visits: 45, tradeRetail: 15, onCon: 0, b2b: 30 },
 };
 
 // Avante SKU catalogue (Trade Ex VAT prices, ZAR per unit)
@@ -352,8 +362,9 @@ function targetToDb(rep, t) {
     rep,
     revenue: t.revenue || 0,
     visits: t.visits || 0,
-    private_sales: t.privateSales || 0,
     trade_retail: t.tradeRetail || 0,
+    on_con: t.onCon || 0,
+    b2b: t.b2b || 0,
   };
 }
 
@@ -361,8 +372,9 @@ function targetFromDb(r) {
   return {
     revenue: Number(r.revenue) || 0,
     visits: Number(r.visits) || 0,
-    privateSales: Number(r.private_sales) || 0,
     tradeRetail: Number(r.trade_retail) || 0,
+    onCon: Number(r.on_con) || 0,
+    b2b: Number(r.b2b) || 0,
   };
 }
 
@@ -2012,7 +2024,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
 
   const monthSales = filteredVisits.reduce((s, v) => s + (v.saleAmount || 0), 0);
   const visitCount = filteredVisits.length;
-  const sold = filteredVisits.filter(v => v.outcome === 'Sold In').length;
+  const sold = filteredVisits.filter(isSoldVisit).length;
   const conversionRate = visitCount > 0 ? Math.round((sold / visitCount) * 100) : 0;
 
   // Daily data for line graphs — selected month
@@ -2032,20 +2044,21 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
     const day = String(i + 1).padStart(2, '0');
     const dateStr = `${activeMonth}-${day}`;
     const dayVisits = filteredVisits.filter(v => v.date === dateStr);
-    const daySold = dayVisits.filter(v => v.outcome === 'Sold In').length;
+    const daySold = dayVisits.filter(isSoldVisit).length;
     return dayVisits.length > 0 ? Math.round((daySold / dayVisits.length) * 100) : 0;
   });
 
   const activeTargets = useMemo(() => {
     if (activeRep === 'All') {
       return SALES_REPS.reduce((acc, r) => ({
-        revenue: acc.revenue + (targets[r]?.revenue || 0),
-        visits: acc.visits + (targets[r]?.visits || 0),
-        privateSales: acc.privateSales + (targets[r]?.privateSales || 0),
+        revenue:     acc.revenue     + (targets[r]?.revenue     || 0),
+        visits:      acc.visits      + (targets[r]?.visits      || 0),
         tradeRetail: acc.tradeRetail + (targets[r]?.tradeRetail || 0),
-      }), { revenue: 0, visits: 0, privateSales: 0, tradeRetail: 0 });
+        onCon:       acc.onCon       + (targets[r]?.onCon       || 0),
+        b2b:         acc.b2b         + (targets[r]?.b2b         || 0),
+      }), { revenue: 0, visits: 0, tradeRetail: 0, onCon: 0, b2b: 0 });
     }
-    return targets[activeRep] || { revenue: 0, visits: 0, privateSales: 0, tradeRetail: 0 };
+    return targets[activeRep] || { revenue: 0, visits: 0, tradeRetail: 0, onCon: 0, b2b: 0 };
   }, [activeRep, targets]);
 
   const pct = (a, b) => b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0;
@@ -2310,7 +2323,7 @@ function Leaderboard({ clients, visits, targets }) {
     const visitCount = repVisits.length;
     const visitTarget = targets[rep]?.visits || 0;
     const visitPct = visitTarget > 0 ? Math.min(100, Math.round((visitCount / visitTarget) * 100)) : 0;
-    const sold = repVisits.filter(v => v.outcome === 'Sold In').length;
+    const sold = repVisits.filter(isSoldVisit).length;
     return { rep, monthSales, target, pct, visitCount, visitTarget, visitPct, sold };
   }).sort((a, b) => b.monthSales - a.monthSales);
 
@@ -2620,29 +2633,33 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
   const m = monthISO();
   const repPerf = useMemo(() => {
     const out = {};
+    // Build client channel lookup map for backfilling empty visit channels
+    const clientChannelMap = {};
+    clients.forEach(c => { clientChannelMap[Number(c.id)] = c.channel; });
+
     SALES_REPS.forEach(rep => {
       const repVisits = visits.filter(v => v.salesRep === rep && v.date && v.date.startsWith(m));
+      // Get effective channel — use visit channel if set, otherwise look up from client
+      const getChannel = (v) => v.channel || clientChannelMap[Number(v.clientId)] || '';
       out[rep] = {
-        revenue: repVisits.reduce((s, v) => s + (v.saleAmount || 0), 0),
-        visits: repVisits.length,
-        privateSales: repVisits.filter(v => v.channel === 'B2B').length,
-        tradeRetail:  repVisits.filter(v => v.channel === 'Trade').length,
-        onCon:        repVisits.filter(v => v.channel === 'On-Con').length,
-        b2b:          repVisits.filter(v => v.channel === 'B2B').length,
+        revenue:     repVisits.reduce((s, v) => s + (v.saleAmount || 0), 0),
+        visits:      repVisits.length,
+        tradeRetail: repVisits.filter(v => getChannel(v) === 'Trade').length,
+        onCon:       repVisits.filter(v => getChannel(v) === 'On-Con').length,
+        b2b:         repVisits.filter(v => getChannel(v) === 'B2B').length,
       };
     });
     return out;
-  }, [visits, m]);
+  }, [visits, clients, m]);
 
   // Team totals (from draft)
   const teamTotals = useMemo(() => SALES_REPS.reduce((acc, r) => ({
-    revenue:      acc.revenue      + (draft[r]?.revenue      || 0),
-    visits:       acc.visits       + (draft[r]?.visits       || 0),
-    privateSales: acc.privateSales + (draft[r]?.privateSales || 0),
-    tradeRetail:  acc.tradeRetail  + (draft[r]?.tradeRetail  || 0),
-    onCon:        acc.onCon        + (draft[r]?.onCon        || 0),
-    b2b:          acc.b2b          + (draft[r]?.b2b          || 0),
-  }), { revenue: 0, visits: 0, privateSales: 0, tradeRetail: 0, onCon: 0, b2b: 0 }), [draft]);
+    revenue:     acc.revenue     + (draft[r]?.revenue     || 0),
+    visits:      acc.visits      + (draft[r]?.visits      || 0),
+    tradeRetail: acc.tradeRetail + (draft[r]?.tradeRetail || 0),
+    onCon:       acc.onCon       + (draft[r]?.onCon       || 0),
+    b2b:         acc.b2b         + (draft[r]?.b2b         || 0),
+  }), { revenue: 0, visits: 0, tradeRetail: 0, onCon: 0, b2b: 0 }), [draft]);
 
   // Client distribution per rep per channel
   const repBook = useMemo(() => {
@@ -2651,7 +2668,7 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
       const own = clients.filter(c => c.accountManager === rep);
       out[rep] = {
         total: own.length,
-        privateSales: own.filter(c => c.channel === 'B2B').length,
+        b2b: own.filter(c => c.channel === 'B2B').length,
         tradeRetail: own.filter(c => c.channel === 'Trade').length,
       };
     });
@@ -2781,30 +2798,38 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
       'Sales Rep': rep,
       'Revenue Target (R)': Number(targets[rep]?.revenue || 0).toFixed(2),
       'Visits Target': targets[rep]?.visits || 0,
-      'Private Sales Visits Target': targets[rep]?.privateSales || 0,
-      'Trade Retail Visits Target': targets[rep]?.tradeRetail || 0,
+      'Trade Visits Target': targets[rep]?.tradeRetail || 0,
+      'On-Con Visits Target': targets[rep]?.onCon || 0,
+      'B2B Visits Target': targets[rep]?.b2b || 0,
     }));
     targetRows.push({
       'Sales Rep': 'TEAM TOTAL',
       'Revenue Target (R)': SALES_REPS.reduce((s, r) => s + (targets[r]?.revenue || 0), 0).toFixed(2),
       'Visits Target': SALES_REPS.reduce((s, r) => s + (targets[r]?.visits || 0), 0),
-      'Private Sales Visits Target': SALES_REPS.reduce((s, r) => s + (targets[r]?.privateSales || 0), 0),
-      'Trade Retail Visits Target': SALES_REPS.reduce((s, r) => s + (targets[r]?.tradeRetail || 0), 0),
+      'Trade Visits Target': SALES_REPS.reduce((s, r) => s + (targets[r]?.tradeRetail || 0), 0),
+      'On-Con Visits Target': SALES_REPS.reduce((s, r) => s + (targets[r]?.onCon || 0), 0),
+      'B2B Visits Target': SALES_REPS.reduce((s, r) => s + (targets[r]?.b2b || 0), 0),
     });
     const wsTargets = XLSX.utils.json_to_sheet(targetRows);
-    wsTargets['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 16 }, { wch: 28 }, { wch: 28 }];
+    wsTargets['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsTargets, 'Targets');
 
     // Sheet 5: Performance vs Target (current month)
     const monthLabel = new Date().toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
     const m = monthISO();
+    // Client channel lookup so visits with an empty channel still classify correctly
+    const exportClientChannelMap = {};
+    clients.forEach(c => { exportClientChannelMap[Number(c.id)] = c.channel; });
+    const getChannel = (v) => v.channel || exportClientChannelMap[Number(v.clientId)] || '';
+
     const perfRows = SALES_REPS.map(rep => {
       const repVisits = visits.filter(v => v.salesRep === rep && v.date && v.date.startsWith(m));
       const revenue = repVisits.reduce((s, v) => s + (v.saleAmount || 0), 0);
       const visitCount = repVisits.length;
-      const privateCount = repVisits.filter(v => v.channel === 'B2B').length;
-      const retailCount = repVisits.filter(v => v.channel === 'Trade').length;
-      const sold = repVisits.filter(v => v.outcome === 'Sold In').length;
+      const tradeCount = repVisits.filter(v => getChannel(v) === 'Trade').length;
+      const onConCount = repVisits.filter(v => getChannel(v) === 'On-Con').length;
+      const b2bCount = repVisits.filter(v => getChannel(v) === 'B2B').length;
+      const sold = repVisits.filter(isSoldVisit).length;
       const t = targets[rep] || {};
       const pctOf = (a, b) => b > 0 ? ((a / b) * 100).toFixed(1) + '%' : '—';
       return {
@@ -2816,10 +2841,12 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
         'Visits': visitCount,
         'Visits Target': t.visits || 0,
         'Visits %': pctOf(visitCount, t.visits),
-        'Private Sales Visits': privateCount,
-        'Private Sales Target': t.privateSales || 0,
-        'Trade Retail Visits': retailCount,
-        'Trade Retail Target': t.tradeRetail || 0,
+        'Trade Visits': tradeCount,
+        'Trade Target': t.tradeRetail || 0,
+        'On-Con Visits': onConCount,
+        'On-Con Target': t.onCon || 0,
+        'B2B Visits': b2bCount,
+        'B2B Target': t.b2b || 0,
         'Sold In (count)': sold,
         'Conversion %': visitCount > 0 ? ((sold / visitCount) * 100).toFixed(1) + '%' : '—',
       };
@@ -2898,10 +2925,9 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <AggregateCard label="Total Revenue Target" value={ZAR(teamTotals.revenue)} icon={DollarSign} color="#BC8D26" />
           <AggregateCard label="Total Visits Target"  value={teamTotals.visits}        icon={Activity}   color="#5A7A99" />
-          <AggregateCard label="B2B Sales Visits" value={teamTotals.privateSales}  icon={Wine}       color="#DBB85E" />
-          <AggregateCard label="Trade Retail Visits"  value={teamTotals.tradeRetail}   icon={Briefcase}  color="#002855" />
-          <AggregateCard label="On-Con Visits"        value={teamTotals.onCon}         icon={Activity}   color="#5A7A99" />
-          <AggregateCard label="B2B Visits"           value={teamTotals.b2b}           icon={TrendingUp} color="#BC8D26" />
+          <AggregateCard label="Trade Visits"   value={teamTotals.tradeRetail}   icon={Briefcase}  color="#002855" />
+          <AggregateCard label="On-Con Visits"     value={teamTotals.onCon}         icon={Activity}   color="#5A7A99" />
+          <AggregateCard label="B2B Visits"        value={teamTotals.b2b}           icon={TrendingUp} color="#BC8D26" />
         </div>
       </div>
 
@@ -3034,15 +3060,14 @@ function RepTargetCard({ rep, draft, perf, book, onChange, onSave }) {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
-  // Total Visits is always the sum of privateSales + tradeRetail + onCon + b2b — not editable
-  const computedVisits = (draft?.privateSales || 0) + (draft?.tradeRetail || 0) + (draft?.onCon || 0) + (draft?.b2b || 0);
+  // Total Visits is always the sum of Trade + On-Con + B2B — not editable
+  const computedVisits = (draft?.tradeRetail || 0) + (draft?.onCon || 0) + (draft?.b2b || 0);
 
   const fields = [
-    { key: 'revenue',      label: 'Revenue Target', icon: DollarSign, prefix: 'R', perfKey: 'revenue',      isCurrency: true, hint: 'Monthly Rand target' },
-    { key: 'privateSales', label: 'B2B',  icon: Wine,       perfKey: 'b2bSales', hint: 'B2B visits KPI' },
-    { key: 'tradeRetail',  label: 'Trade',   icon: Briefcase,  perfKey: 'tradeRetail',  hint: 'Trade Retail visits KPI' },
-    { key: 'onCon',        label: 'On-Con',         icon: Activity,   perfKey: 'onCon',        hint: 'On-Con visits KPI' },
-    { key: 'b2b',          label: 'B2B',            icon: TrendingUp, perfKey: 'b2b',          hint: 'B2B visits KPI' },
+    { key: 'revenue',     label: 'Revenue Target', icon: DollarSign, prefix: 'R', perfKey: 'revenue',     isCurrency: true, hint: 'Monthly Rand target' },
+    { key: 'tradeRetail', label: 'Trade',          icon: Briefcase,  perfKey: 'tradeRetail', hint: 'Trade visits KPI' },
+    { key: 'onCon',       label: 'On-Con',         icon: Activity,   perfKey: 'onCon',       hint: 'On-Con visits KPI' },
+    { key: 'b2b',         label: 'B2B',            icon: TrendingUp, perfKey: 'b2b',         hint: 'B2B visits KPI' },
   ];
 
   return (
@@ -3082,12 +3107,11 @@ function RepTargetCard({ rep, draft, perf, book, onChange, onSave }) {
                   onChange={(e) => {
                     onChange(f.key, e.target.value);
                     // Auto-update visits total whenever any channel changes
-                    if (['privateSales','tradeRetail','onCon','b2b'].includes(f.key)) {
-                      const newPri = f.key === 'privateSales' ? Number(e.target.value)||0 : (draft?.privateSales||0);
-                      const newTrd = f.key === 'tradeRetail'  ? Number(e.target.value)||0 : (draft?.tradeRetail||0);
+                    if (['tradeRetail','onCon','b2b'].includes(f.key)) {
+                      const newTrd = f.key === 'tradeRetail' ? Number(e.target.value)||0 : (draft?.tradeRetail||0);
                       const newOnC = f.key === 'onCon'        ? Number(e.target.value)||0 : (draft?.onCon||0);
                       const newB2b = f.key === 'b2b'          ? Number(e.target.value)||0 : (draft?.b2b||0);
-                      onChange('visits', newPri + newTrd + newOnC + newB2b);
+                      onChange('visits', newTrd + newOnC + newB2b);
                     }
                   }}
                   className="flex-1 px-2 py-1.5 border border bg-cream font-display text-sm focus:outline-none focus:border-copper ink"
@@ -3118,7 +3142,7 @@ function RepTargetCard({ rep, draft, perf, book, onChange, onSave }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-display ink text-sm flex-1" style={{ fontWeight: 700, fontSize: 18 }}>{computedVisits}</span>
-                <span style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>= Private + Trade + On-Con + B2B</span>
+                <span style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>= Trade + On-Con + B2B</span>
               </div>
               <div className="flex items-center justify-between mt-1.5 text-[10px]">
                 <span className="ocean italic">Total visits · actual: <span className="ink font-display" style={{ fontWeight: 700 }}>{actual}</span></span>
@@ -3355,7 +3379,7 @@ function LeadsPage({ clients, visits, updateClient, onSelect, onAddNew, onDelete
                   </div>
                   {/* Channel badge */}
                   <span style={{ fontSize: 9, fontFamily: "'Cinzel', serif", fontWeight: 600, letterSpacing: '0.15em', padding: '2px 6px', border: `1px solid ${c.channel === 'B2B' ? '#002855' : '#5A7A99'}`, color: c.channel === 'B2B' ? '#002855' : '#5A7A99', flexShrink: 0 }}>
-                    {c.channel === 'B2B' ? 'PRIVATE' : c.channel === 'Trade' ? 'RETAIL' : c.channel === 'B2B' ? 'B2B' : c.channel === 'On-Con' ? 'ON-CON' : '—'}
+                    {c.channel === 'Trade' ? 'TRADE' : c.channel === 'On-Con' ? 'ON-CON' : c.channel === 'B2B' ? 'B2B' : '—'}
                   </span>
                   {/* Rep */}
                   <span className="font-display" style={{ fontSize: 11, fontWeight: 700, color: '#002855', flexShrink: 0, minWidth: 48, textAlign: 'right' }}>
@@ -3749,7 +3773,6 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
             );
           })}
         </div>
-      )}
       )}
     </div>
   );
@@ -4451,7 +4474,7 @@ function EmailRecipientModal({ salesRep, senderEmail, client, orderTotal, itemCo
   // Build initial recipient list: defaults + client's email if on file (deduped, in order)
   const initialRecipients = useMemo(() => {
     // Route by channel: Private Sales & B2B → matthew, Trade Retail (& others) → orders@redbev
-    const isMatthewChannel = client?.channel === 'B2B' || client?.channel === 'B2B';
+    const isMatthewChannel = client?.channel === 'B2B';
     const list = isMatthewChannel
       ? ['matthew@breakfreebeverages.com']
       : ['orders@redbev.co.za'];
@@ -4738,7 +4761,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
   const handleCreate = async () => {
     // Validate required fields
     if (!form.venue.trim()) { setError('Venue name is required.'); return; }
-    if (!form.channel) { setError('Channel is required (Private Sales or Trade Retail).'); return; }
+    if (!form.channel) { setError('Channel is required.'); return; }
     if (!form.accountManager) { setError('Please assign an account manager.'); return; }
 
     setSaving(true);
