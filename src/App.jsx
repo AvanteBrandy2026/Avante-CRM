@@ -175,8 +175,11 @@ const SKU_CATALOGUE = [
   { id: 'vs_200',           name: 'VS 200ml',             price: 113.00 },
   { id: 'gift_4x50',        name: '4 x 50ml Gift Box',    price: 520.00 },
   { id: 'gift_3x200',       name: '3 x 200ml Gift Box',   price: 1050.00 },
+  // Custom (B2B only) — selling price matches the equivalent regular SKU
   { id: 'custom_vs',        name: 'Custom VS',            price: 694.78 },
   { id: 'custom_xv',        name: 'Custom XV',            price: 694.78 },
+  { id: 'custom_vsop',      name: 'Custom VSOP',          price: 579.00 },  // = VSOP 750ml (New)
+  { id: 'custom_xo',        name: 'Custom XO',            price: 1043.00 }, // = XO 750ml
   // 50ml singles & mixed box
   { id: 'mixed_50ml_box',   name: 'Mixed 50ml Box',       price: 961.50 },
   { id: 'vs_50ml',          name: 'VS 50ml',              price: 654.00 },
@@ -184,6 +187,67 @@ const SKU_CATALOGUE = [
   { id: 'xo_50ml',          name: 'XO 50ml',              price: 1080.00 },
   { id: 'xv_50ml',          name: 'XV 50ml',              price: 1344.00 },
 ];
+
+// Custom SKUs are only available for the B2B channel
+const CUSTOM_SKU_IDS = ['custom_vs', 'custom_xv', 'custom_vsop', 'custom_xo'];
+
+// ── GP COST TABLE ────────────────────────────────────────────────────────────
+// Source: GP_COST_CALC_FOR_CLAUDE.xlsx (B2B costs / Trade + On con Costs sheets)
+// null = this SKU is not sold via that channel (e.g. Customs are B2B-only)
+// Costs are overridable from the Manager tab; overrides are stored in Supabase
+// in the same shape as this object and merged on load.
+const DEFAULT_GP_COSTS = {
+  vsop_750_current: { Trade: 276.64,  'On-Con': 276.64,  B2B: 224.81 },
+  vsop_750_new:     { Trade: 357.06,  'On-Con': 357.06,  B2B: 292.32 },
+  vsop_200:         { Trade: 111.91,  'On-Con': 111.91,  B2B: 95.00  },
+  xv_750:           { Trade: 1176.15, 'On-Con': 1176.15, B2B: 982.21 },
+  vs_500:           { Trade: 177.68,  'On-Con': 177.68,  B2B: 143.10 },
+  vs_750:           { Trade: 242.26,  'On-Con': 242.26,  B2B: 195.92 },
+  xv_200:           { Trade: 483.74,  'On-Con': 483.74,  B2B: 416.76 },
+  xo_750:           { Trade: 570.71,  'On-Con': 570.71,  B2B: 465.42 },
+  vs_200:           { Trade: 78.76,   'On-Con': 78.76,   B2B: 65.00  },
+  gift_4x50:        { Trade: 421.76,  'On-Con': 421.76,  B2B: 360.93 },
+  gift_3x200:       { Trade: 840.14,  'On-Con': 840.14,  B2B: 734.76 },
+  vs_50ml:          { Trade: 37.59,   'On-Con': 37.59,   B2B: 28.80  },
+  vsop_50ml:        { Trade: 40.80,   'On-Con': 40.80,   B2B: 31.20  },
+  xo_50ml:          { Trade: 56.27,   'On-Con': 56.27,   B2B: 44.46  },
+  xv_50ml:          { Trade: 72.14,   'On-Con': 72.14,   B2B: 58.46  },
+  // Customs — B2B only, no Trade/On-Con cost (not sold via those channels)
+  custom_vs:        { Trade: null,    'On-Con': null,    B2B: 195.92 },
+  custom_xv:        { Trade: null,    'On-Con': null,    B2B: 982.21 },
+  custom_vsop:      { Trade: null,    'On-Con': null,    B2B: 292.32 },
+  custom_xo:        { Trade: null,    'On-Con': null,    B2B: 465.42 },
+  // No cost data supplied yet for this SKU — leave off GP calc until provided
+  mixed_50ml_box:   { Trade: null,    'On-Con': null,    B2B: null   },
+};
+
+// Returns the cost for a SKU in a given channel, applying overrides if present.
+// Returns null if no cost is available (GP for that line should be excluded).
+const getSkuCost = (skuId, channel, overrides = {}) => {
+  const override = overrides?.[skuId]?.[channel];
+  if (override !== undefined && override !== null) return Number(override);
+  const base = DEFAULT_GP_COSTS[skuId]?.[channel];
+  return (base === undefined || base === null) ? null : base;
+};
+
+// Calculates total GP (in Rand) for an array of visits.
+// Each visit needs: channel, items: [{ skuId, qty, unitPrice }]
+const calcVisitsGP = (visits, gpCostOverrides = {}) => {
+  let totalGP = 0;
+  visits.forEach(v => {
+    const channel = v.channel;
+    if (!channel || !(v.items || []).length) return;
+    v.items.forEach(it => {
+      const qty = Number(it.qty) || 0;
+      if (qty <= 0) return;
+      const sellPrice = Number(it.unitPrice) || 0;
+      const cost = getSkuCost(it.skuId, channel, gpCostOverrides);
+      if (cost === null) return; // no cost data for this SKU/channel combo — skip
+      totalGP += (sellPrice - cost) * qty;
+    });
+  });
+  return totalGP;
+};
 
 // Get effective SKU catalogue with any price overrides applied
 const getEffectiveSkus = (overrides = {}) =>
@@ -545,6 +609,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
   const [skuPrices, setSkuPrices] = useState({});
   const [prospects, setProspects] = useState([]);  // overrides for SKU prices set in Manager Portal
   const [b2bCustoms, setB2bCustoms] = useState([]); // B2B Customs production tracker rows
+  const [gpCostOverrides, setGpCostOverrides] = useState({}); // { skuId: { Trade, On-Con, B2B } } cost overrides for GP calc
   const [managerAuthed, setManagerAuthed] = useState(false); // persists across tab changes
   const [placeOrderClient, setPlaceOrderClient] = useState(null); // client to place order for
   // Reps default to their own data; manager defaults to 'All'
@@ -638,6 +703,15 @@ function AvanteCRMApp({ currentUser, onLogout }) {
           setB2bCustoms(customsRows.map(b2bCustomFromDb));
         } else if (customsErr) {
           console.warn('[b2b_customs] table missing or not yet created:', customsErr.message);
+        }
+
+        // Load GP cost overrides (single settings row keyed 'gp_costs')
+        const { data: gpRow, error: gpErr } = await supabase
+          .from('app_settings').select('value').eq('key', 'gp_costs').maybeSingle();
+        if (!gpErr && gpRow?.value) {
+          setGpCostOverrides(gpRow.value);
+        } else if (gpErr) {
+          console.warn('[app_settings] table missing or not yet created:', gpErr.message);
         }
       } catch (err) {
         console.error('[avante] init error', err);
@@ -893,6 +967,15 @@ function AvanteCRMApp({ currentUser, onLogout }) {
     setB2bCustoms(prev => prev.filter(r => r.id !== id));
     const { error } = await supabase.from('b2b_customs').delete().eq('id', id);
     if (error) console.error('[deleteB2bCustom]', error);
+  };
+
+  // ------- GP cost overrides (Manager tab) -------
+  const saveGpCostOverrides = async (overrides) => {
+    setGpCostOverrides(overrides); // optimistic
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key: 'gp_costs', value: overrides }, { onConflict: 'key' });
+    if (error) { console.error('[saveGpCostOverrides]', error); throw new Error(error.message); }
   };
 
   const deleteClient = async (id) => {
@@ -1276,6 +1359,9 @@ function AvanteCRMApp({ currentUser, onLogout }) {
           <OrderHistoryPage
             clients={clients}
             visits={visits}
+            currentUser={currentUser}
+            userIsManager={userIsManager}
+            gpCostOverrides={gpCostOverrides}
             onDeleteVisit={(visitId) => {
               const v = visits.find(x => x.id === visitId);
               const c = v ? clients.find(cl => cl.id === v.clientId) : null;
@@ -1346,6 +1432,15 @@ function AvanteCRMApp({ currentUser, onLogout }) {
             askConfirm={askConfirm}
             skuPrices={skuPrices}
             saveSkuPrices={(prices) => { setSkuPrices(prices); showToast('SKU prices updated'); }}
+            gpCostOverrides={gpCostOverrides}
+            saveGpCostOverrides={async (overrides) => {
+              try {
+                await saveGpCostOverrides(overrides);
+                showToast('GP costs updated');
+              } catch (err) {
+                showToast('Could not save GP costs — please try again.');
+              }
+            }}
           />
         )}
       </main>
@@ -2652,13 +2747,15 @@ function MonthlyCloseTable({ visits, targets }) {
 }
 
 // =================== MANAGER PORTAL ===================
-function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuPrices, saveSkuPrices, showToast }) {
+function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuPrices, saveSkuPrices, showToast, gpCostOverrides, saveGpCostOverrides }) {
   const [draft, setDraft] = useState(targets);
   const [skuDraftPrices, setSkuDraftPrices] = useState({});
+  const [gpDraftCosts, setGpDraftCosts] = useState({});
   const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => { setDraft(targets); }, [targets]);
   useEffect(() => { if (skuPrices) setSkuDraftPrices(skuPrices); }, [skuPrices]);
+  useEffect(() => { if (gpCostOverrides) setGpDraftCosts(gpCostOverrides); }, [gpCostOverrides]);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(targets);
 
@@ -3019,9 +3116,87 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
             style={{ padding: '8px 16px', border: '1px solid rgba(0,40,85,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', color: '#002855', cursor: 'pointer', fontWeight: 600 }}>
             RESET TO DEFAULT
           </button>
-          <button onClick={() => { saveSkuPrices(skuDraftPrices); showToastMsg('SKU prices saved!'); }}
+          <button onClick={() => { saveSkuPrices(skuDraftPrices); showToast && showToast('SKU prices saved!'); }}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', background: '#BC8D26', border: 'none', color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
             <Save style={{ width: 14, height: 14 }} /> SAVE PRICES
+          </button>
+        </div>
+      </div>
+
+      {/* ── GP COST MANAGEMENT ── */}
+      <div className="premium-card p-4 md:p-6">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-copper diamond-clip"></div>
+            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>GP COST MANAGEMENT</h2>
+          </div>
+          <p className="italic ocean" style={{ fontSize: 10 }}>Cost price per SKU, per channel — drives the GP shown on Client Order History</p>
+        </div>
+        <p style={{ fontSize: 11, color: '#5A7A99', fontStyle: 'italic', marginBottom: 16 }}>
+          GP = (Selling price the rep charged − Cost below) × quantity, for every SKU sold that month.
+          Custom SKUs are B2B-only, so Trade and On-Con costs are not applicable for them.
+        </p>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+            <thead>
+              <tr style={{ background: '#002855' }}>
+                <th style={{ textAlign: 'left', padding: '10px 12px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', color: '#DBB85E', fontWeight: 700 }}>SKU</th>
+                {CHANNELS.map(ch => (
+                  <th key={ch} style={{ textAlign: 'center', padding: '10px 12px', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.15em', color: '#FCF7F2', fontWeight: 700 }}>{ch.toUpperCase()} COST</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {SKU_CATALOGUE.map((sku, i) => {
+                const isCustom = CUSTOM_SKU_IDS.includes(sku.id);
+                return (
+                  <tr key={sku.id} style={{ background: i % 2 === 0 ? '#FCF7F2' : 'rgba(0,40,85,0.02)', borderBottom: '1px solid rgba(0,40,85,0.06)' }}>
+                    <td style={{ padding: '8px 12px', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 12, fontWeight: 700, color: '#002855' }}>{sku.name}</td>
+                    {CHANNELS.map(ch => {
+                      const notSold = isCustom && ch !== 'B2B';
+                      const draftVal = gpDraftCosts[sku.id]?.[ch];
+                      const fallback = DEFAULT_GP_COSTS[sku.id]?.[ch];
+                      const displayVal = draftVal !== undefined ? draftVal : fallback;
+                      return (
+                        <td key={ch} style={{ padding: '6px 8px', textAlign: 'center' }}>
+                          {notSold ? (
+                            <span style={{ fontSize: 10, color: 'rgba(0,40,85,0.25)', fontStyle: 'italic' }}>N/A</span>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                              <span style={{ fontSize: 11, color: '#5A7A99', flexShrink: 0 }}>R</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={displayVal ?? ''}
+                                onChange={e => {
+                                  const val = e.target.value === '' ? null : parseFloat(e.target.value) || 0;
+                                  setGpDraftCosts(prev => ({
+                                    ...prev,
+                                    [sku.id]: { ...(prev[sku.id] || {}), [ch]: val },
+                                  }));
+                                }}
+                                style={{ width: 90, padding: '5px 6px', border: '1px solid rgba(0,40,85,0.2)', background: '#fff', fontFamily: "'Cinzel',serif", fontSize: 12, fontWeight: 700, color: '#002855', outline: 'none', textAlign: 'center' }}
+                              />
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8 }}>
+          <button onClick={() => setGpDraftCosts({})}
+            style={{ padding: '8px 16px', border: '1px solid rgba(0,40,85,0.2)', background: 'none', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.2em', color: '#002855', cursor: 'pointer', fontWeight: 600 }}>
+            RESET TO DEFAULT
+          </button>
+          <button onClick={async () => { await saveGpCostOverrides(gpDraftCosts); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', background: '#BC8D26', border: 'none', color: '#FCF7F2', fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, cursor: 'pointer' }}>
+            <Save style={{ width: 14, height: 14 }} /> SAVE GP COSTS
           </button>
         </div>
       </div>
@@ -3767,13 +3942,15 @@ function MonthFilter({ value, onChange }) {
   );
 }
 
-function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
+function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsManager, gpCostOverrides }) {
   const [search, setSearch] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [filterChannel, setFilterChannel] = useState('All');
-  const [filterRep, setFilterRep] = useState('All');
+  // Reps only ever see their own GP; managers can toggle through reps or ALL for the team total
+  const [filterRep, setFilterRep] = useState(userIsManager ? 'All' : (currentUser?.rep || 'All'));
   const [sortBy, setSortBy] = useState('date');
-  const [filterMonth, setFilterMonth] = useState('All');
+  // Defaults to the current month so GP reads correctly the moment this tab opens
+  const [filterMonth, setFilterMonth] = useState(monthISO());
 
   // Only visits that have actual orders (items with qty > 0)
   const orders = useMemo(() => {
@@ -3804,6 +3981,35 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
   const totalRevenue = orders.reduce((s, o) => s + (o.saleAmount || 0), 0);
   const statusColors = (s) => getStatusColor(s);
 
+  // ── GP (Gross Profit) — scoped by month + rep only, not by the channel/search
+  // filters, so the figure always reads as "this rep's / the team's GP for the
+  // selected month" regardless of what someone is currently searching for.
+  const gpScopedVisits = useMemo(() => {
+    return visits
+      .filter(v => v.items && v.items.length > 0 && v.items.some(it => Number(it.qty) > 0))
+      .filter(v => filterRep === 'All' || v.salesRep === filterRep)
+      .filter(v => filterMonth === 'All' || (v.date || '').startsWith(filterMonth))
+      .map(v => {
+        const client = clients.find(c => c.id === v.clientId);
+        // Fall back to the client's channel for older visits saved before
+        // the visit-level channel column existed.
+        return { ...v, channel: v.channel || client?.channel || '' };
+      });
+  }, [visits, clients, filterRep, filterMonth]);
+
+  const totalGP = useMemo(
+    () => calcVisitsGP(gpScopedVisits, gpCostOverrides),
+    [gpScopedVisits, gpCostOverrides]
+  );
+
+  // Friendly label for whichever month is currently selected (e.g. "JUN 2026")
+  const gpMonthLabel = useMemo(() => {
+    if (filterMonth === 'All') return 'ALL TIME';
+    const [y, m] = filterMonth.split('-').map(Number);
+    const d = new Date(y, m - 1, 1);
+    return d.toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase();
+  }, [filterMonth]);
+
   return (
     <div className="fade-up space-y-5">
       {/* Header */}
@@ -3815,6 +4021,15 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
             <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>
               {orders.length} orders · {ZAR(totalRevenue)} total revenue
             </p>
+          </div>
+          {/* GP card */}
+          <div style={{ padding: '10px 18px', background: '#002855', border: '1px solid rgba(188,141,38,0.4)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div>
+              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.25em', color: '#DBB85E', fontWeight: 700, margin: 0 }}>
+                {filterRep === 'All' ? 'TEAM GP' : `${filterRep.toUpperCase()}'S GP`} · {gpMonthLabel}
+              </p>
+              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 18, fontWeight: 700, color: '#FCF7F2', margin: '2px 0 0' }}>{ZAR(totalGP)}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -3845,13 +4060,18 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600 }}>MONTH:</span>
           <MonthFilter value={filterMonth} onChange={setFilterMonth} />
-          <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600, marginLeft: 8 }}>AGENT:</span>
-          {['All', ...SALES_REPS].map(r => (
-            <button key={r} onClick={() => setFilterRep(r)}
-              style={{ padding: '5px 12px', border: `1px solid ${filterRep === r ? '#BC8D26' : 'rgba(0,40,85,0.2)'}`, background: filterRep === r ? '#BC8D26' : 'none', color: filterRep === r ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 600, cursor: 'pointer' }}>
-              {r === 'All' ? 'ALL' : r.toUpperCase()}
-            </button>
-          ))}
+          {/* Agent toggle — manager only. Reps always see their own data/GP only. */}
+          {userIsManager && (
+            <>
+              <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600, marginLeft: 8 }}>AGENT:</span>
+              {['All', ...SALES_REPS].map(r => (
+                <button key={r} onClick={() => setFilterRep(r)}
+                  style={{ padding: '5px 12px', border: `1px solid ${filterRep === r ? '#BC8D26' : 'rgba(0,40,85,0.2)'}`, background: filterRep === r ? '#BC8D26' : 'none', color: filterRep === r ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 600, cursor: 'pointer' }}>
+                  {r === 'All' ? 'ALL' : r.toUpperCase()}
+                </button>
+              ))}
+            </>
+          )}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
             <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600, alignSelf: 'center' }}>SORT:</span>
             {[{ key: 'date', label: 'DATE' }, { key: 'amount', label: 'AMOUNT' }].map(s => (
@@ -4075,7 +4295,6 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
 
 // =================== Log Visit Modal ===================
 function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existingVisit, skuOverrides = {}, preselectedClientId = null, preselectedSalesRep = '' }) {
-  const effectiveSkus = SKU_CATALOGUE.map(s => ({ ...s, price: skuOverrides[s.id] ?? s.price }));
   const isEdit = !!existingVisit;
   const isEmailOnly = existingVisit?._emailOnly === true;
   const [salesRep, setSalesRep] = useState(existingVisit?.salesRep || preselectedSalesRep || 'Alex');
@@ -4120,6 +4339,14 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
   }, [clients, salesRep, search, isEdit, existingVisit]);
 
   const selectedClient = clients.find(c => c.id === Number(clientId));
+
+  // Custom SKUs only appear once a B2B client is selected — they're not
+  // sold via Trade or On-Con, so hide them from the picker otherwise.
+  const effectiveSkus = useMemo(() => {
+    const all = SKU_CATALOGUE.map(s => ({ ...s, price: skuOverrides[s.id] ?? s.price }));
+    if (selectedClient?.channel === 'B2B') return all;
+    return all.filter(s => !CUSTOM_SKU_IDS.includes(s.id));
+  }, [skuOverrides, selectedClient?.channel]);
 
   // Compute totals
   const orderTotal = useMemo(
