@@ -364,7 +364,7 @@ function b2bCustomToDb(row) {
     deposit_paid:     row.depositPaid || 'No',
     briefed:          row.briefed || 'No',
     liquid_lined_up:  row.liquidLinedUp || 'No',
-    production_stage: row.productionStage || 'All goods in warehouse',
+    production_stage: row.productionStage || 'Not yet',
     balance_paid:     row.balancePaid || 'No',
     ready_dispatch:   row.readyDispatch || 'No',
   };
@@ -377,7 +377,7 @@ function b2bCustomFromDb(r) {
     depositPaid:     r.deposit_paid || 'No',
     briefed:         r.briefed || 'No',
     liquidLinedUp:   r.liquid_lined_up || 'No',
-    productionStage: r.production_stage || 'All goods in warehouse',
+    productionStage: r.production_stage || 'Not yet',
     balancePaid:     r.balance_paid || 'No',
     readyDispatch:   r.ready_dispatch || 'No',
     createdAt:       r.created_at || '',
@@ -3504,7 +3504,7 @@ function StatusBadge({ status, channel }) {
 // ── B2B CUSTOMS — Production Tracker ────────────────────────────────────────
 // Standalone Kanban-style grid for tracking custom B2B production jobs.
 // NOT linked to the clients table — purely a manual progress tracker.
-const B2B_CUSTOMS_PRODUCTION_STAGES = ['All goods in warehouse', 'Bottling', 'Complete'];
+const B2B_CUSTOMS_PRODUCTION_STAGES = ['Not yet', 'All goods in warehouse', 'Bottling', 'Complete'];
 
 function YesNoSelect({ value, onChange }) {
   const isYes = value === 'Yes';
@@ -3527,10 +3527,11 @@ function YesNoSelect({ value, onChange }) {
 
 function ProductionStageSelect({ value, onChange }) {
   const stageColor = {
+    'Not yet': 'rgba(0,40,85,0.45)',
     'All goods in warehouse': '#5A7A99',
     'Bottling': '#BC8D26',
     'Complete': '#2d8659',
-  }[value] || '#5A7A99';
+  }[value] || 'rgba(0,40,85,0.45)';
   return (
     <select
       value={value || B2B_CUSTOMS_PRODUCTION_STAGES[0]}
