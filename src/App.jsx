@@ -3837,7 +3837,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
           {['All', ...CHANNELS].map(ch => (
             <button key={ch} onClick={() => setFilterChannel(ch)}
               style={{ padding: '6px 14px', border: `1px solid ${filterChannel === ch ? '#002855' : 'rgba(0,40,85,0.2)'}`, background: filterChannel === ch ? '#002855' : 'none', color: filterChannel === ch ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 600, cursor: 'pointer' }}>
-              {ch === 'All' ? 'ALL' : ch === 'B2B' ? 'PRIVATE' : ch === 'Trade' ? 'RETAIL' : ch.toUpperCase()}
+              {ch === 'All' ? 'ALL' : ch.toUpperCase()}
             </button>
           ))}
         </div>
@@ -3893,7 +3893,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p className="font-display ink" style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.clientName}</p>
                       <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>
-                        {order.clientLocation || ''}{order.clientLocation && order.clientChannel ? ' · ' : ''}{order.clientChannel === 'B2B' ? 'Private' : order.clientChannel === 'Trade' ? 'Retail' : ''}
+                        {order.clientLocation || ''}{order.clientLocation && order.clientChannel ? ' · ' : ''}{order.clientChannel || ''}
                       </p>
                     </div>
                     {/* SKU summary */}
