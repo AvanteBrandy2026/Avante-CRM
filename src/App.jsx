@@ -3550,16 +3550,37 @@ function B2BCustomsPage({ rows, onAdd, onUpdate, onDelete, askConfirm }) {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [savingId, setSavingId] = useState(null);
+  const [addError, setAddError] = useState('');
+  const [justAddedId, setJustAddedId] = useState(null);
   const nameTimers = useRef({});
+  const nameInputRefs = useRef({});
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
     setAdding(true);
+    setAddError('');
     try {
-      await onAdd({ customerName: newName.trim() });
+      const created = await onAdd({ customerName: newName.trim() });
       setNewName('');
+      // Once the project is created, jump focus straight to its customer
+      // name field and highlight the row so the rest of the columns
+      // (Deposit Paid, Briefed, Liquid & BSOA, Production, Balance Paid,
+      // Ready for Dispatch) are immediately visible and ready to use.
+      if (created?.id) {
+        setJustAddedId(created.id);
+        setTimeout(() => {
+          const el = nameInputRefs.current[created.id];
+          if (el) {
+            el.focus();
+            el.select();
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 60);
+        setTimeout(() => setJustAddedId(curr => curr === created.id ? null : curr), 2200);
+      }
     } catch (err) {
       console.error('[B2BCustomsPage] add failed', err);
+      setAddError(err?.message || 'Could not add project — please try again.');
     }
     setAdding(false);
   };
@@ -3624,15 +3645,22 @@ function B2BCustomsPage({ rows, onAdd, onUpdate, onDelete, askConfirm }) {
             </div>
           ) : (
             rows.map((row, i) => (
-              <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '220px repeat(6, 1fr) 40px', borderTop: '1px solid rgba(0,40,85,0.08)', background: i % 2 === 0 ? '#FCF7F2' : 'rgba(0,40,85,0.02)', alignItems: 'center' }}>
+              <div key={row.id} style={{
+                display: 'grid', gridTemplateColumns: '220px repeat(6, 1fr) 40px',
+                borderTop: '1px solid rgba(0,40,85,0.08)',
+                background: justAddedId === row.id ? 'rgba(188,141,38,0.14)' : (i % 2 === 0 ? '#FCF7F2' : 'rgba(0,40,85,0.02)'),
+                alignItems: 'center',
+                transition: 'background 0.8s ease',
+              }}>
                 {/* Customer name — freely editable */}
                 <div style={{ padding: '8px 14px', position: 'relative' }}>
                   <input
                     type="text"
+                    ref={el => { if (el) nameInputRefs.current[row.id] = el; }}
                     value={row.customerName}
                     onChange={e => handleNameChange(row, e.target.value)}
                     placeholder="Customer name..."
-                    style={{ width: '100%', padding: '6px 8px', border: '1px solid rgba(0,40,85,0.15)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 13, color: '#002855', fontWeight: 700, outline: 'none' }}
+                    style={{ width: '100%', padding: '6px 8px', border: justAddedId === row.id ? '1px solid #BC8D26' : '1px solid rgba(0,40,85,0.15)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 13, color: '#002855', fontWeight: 700, outline: 'none' }}
                   />
                   {savingId === row.id && (
                     <span style={{ position: 'absolute', right: 18, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#BC8D26', fontStyle: 'italic' }}>saving…</span>
@@ -3672,15 +3700,15 @@ function B2BCustomsPage({ rows, onAdd, onUpdate, onDelete, askConfirm }) {
           )}
 
           {/* Add new row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderTop: '2px solid rgba(188,141,38,0.3)', background: 'rgba(188,141,38,0.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderTop: '2px solid rgba(188,141,38,0.3)', background: 'rgba(188,141,38,0.04)', flexWrap: 'wrap' }}>
             <UserPlus style={{ width: 14, height: 14, color: '#BC8D26', flexShrink: 0 }} />
             <input
               type="text"
               value={newName}
-              onChange={e => setNewName(e.target.value)}
+              onChange={e => { setNewName(e.target.value); if (addError) setAddError(''); }}
               onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
               placeholder="Add new customer / project..."
-              style={{ flex: 1, maxWidth: 300, padding: '8px 10px', border: '1px solid rgba(0,40,85,0.2)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 13, color: '#002855', outline: 'none' }}
+              style={{ flex: 1, maxWidth: 300, padding: '8px 10px', border: addError ? '1px solid #CC233A' : '1px solid rgba(0,40,85,0.2)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 13, color: '#002855', outline: 'none' }}
             />
             <button
               onClick={handleAdd}
@@ -3688,6 +3716,9 @@ function B2BCustomsPage({ rows, onAdd, onUpdate, onDelete, askConfirm }) {
               style={{ padding: '8px 16px', background: adding || !newName.trim() ? 'rgba(0,40,85,0.2)' : '#002855', color: '#FCF7F2', border: 'none', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, cursor: adding || !newName.trim() ? 'default' : 'pointer' }}>
               {adding ? 'ADDING...' : 'ADD PROJECT'}
             </button>
+            {addError && (
+              <span style={{ fontSize: 11, color: '#CC233A', fontStyle: 'italic', width: '100%' }}>{addError}</span>
+            )}
           </div>
         </div>
       </div>
