@@ -918,9 +918,9 @@ function AvanteCRMApp({ currentUser, onLogout }) {
           text-decoration: none;
         }
         .crm-brand-text { display: none; }
-        /* Top-row nav hidden on mobile; second row used instead */
-        .crm-header-inner > .crm-nav { display: none; }
-        /* Mobile: nav tabs live on their own row below the top bar */
+        /* Nav always lives on its own full-width row below the top bar —
+           guarantees every tab stays visible and never gets squeezed by the
+           logo / user pill / log-visit button competing for the same row. */
         .crm-nav-row {
           width: 100%;
           max-width: 1400px;
@@ -974,21 +974,16 @@ function AvanteCRMApp({ currentUser, onLogout }) {
           white-space: nowrap;
         }
         .crm-log-btn:hover { background: #DBB85E; color: #002855; }
-        /* Wider screens: nav moves back into the top row, second row hidden */
         @media (min-width: 900px) {
           .crm-header-inner { padding: 0 24px; height: 60px; }
           .crm-brand-text { display: block; }
-          .crm-nav-row { display: none; }
-          .crm-header-inner > .crm-nav {
-            display: flex;
-            flex: 1;
-            padding: 0;
-          }
-          .crm-nav-btn { font-size: 10px; padding: 8px 12px; }
+          .crm-nav { padding: 0 16px; gap: 4px; justify-content: center; }
+          .crm-nav-btn { font-size: 10px; padding: 9px 16px; }
           .crm-log-btn { font-size: 10px; padding: 9px 18px; }
         }
         @media (min-width: 1024px) {
           .crm-header-inner { padding: 0 40px; }
+          .crm-nav-row { padding: 0 24px; }
         }
         /* ── MAIN CONTENT ── */
         .crm-main {
@@ -1490,19 +1485,6 @@ function Header({ view, setView, onLog, visits, clients, currentUser, onLogout, 
             <p className="font-display" style={{ fontSize: 7, letterSpacing: '0.2em', color: '#FCF7F2', opacity: 0.5, margin: '2px 0 0' }}>FORWARD TOGETHER</p>
           </div>
         </div>
-        {/* Navigation — desktop only (hidden on mobile via CSS) */}
-        <nav className="crm-nav">
-          {tabs.map(t => {
-            const Icon = t.icon;
-            return (
-              <button key={t.id} onClick={() => setView(t.id)}
-                className={'crm-nav-btn' + (view === t.id ? ' active' : '')}>
-                <Icon style={{ width: 13, height: 13, flexShrink: 0 }} />
-                <span>{t.label.toUpperCase()}</span>
-              </button>
-            );
-          })}
-        </nav>
         {/* Right side — Notifications + user + Log Visit */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 'auto' }}>
           <button
@@ -1535,13 +1517,13 @@ function Header({ view, setView, onLog, visits, clients, currentUser, onLogout, 
         </div>
       </div>
 
-      {/* Second row — mobile only (hidden on desktop via CSS): scrollable nav tabs */}
+      {/* Nav row — full width, own row, always visible at every screen size so tabs never get squeezed */}
       <div className="crm-nav-row">
         <nav className="crm-nav">
           {tabs.map(t => {
             const Icon = t.icon;
             return (
-              <button key={`m-${t.id}`} onClick={() => setView(t.id)}
+              <button key={t.id} onClick={() => setView(t.id)}
                 className={'crm-nav-btn' + (view === t.id ? ' active' : '')}>
                 <Icon style={{ width: 13, height: 13, flexShrink: 0 }} />
                 <span>{t.label.toUpperCase()}</span>
