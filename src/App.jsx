@@ -357,6 +357,33 @@ function prospectFromDb(r) {
   };
 }
 
+// ── B2B CUSTOMS — production tracker (standalone, not linked to clients table) ──
+function b2bCustomToDb(row) {
+  return {
+    customer_name:    row.customerName || '',
+    deposit_paid:     row.depositPaid || 'No',
+    briefed:          row.briefed || 'No',
+    liquid_lined_up:  row.liquidLinedUp || 'No',
+    production_stage: row.productionStage || 'All goods in warehouse',
+    balance_paid:     row.balancePaid || 'No',
+    ready_dispatch:   row.readyDispatch || 'No',
+  };
+}
+
+function b2bCustomFromDb(r) {
+  return {
+    id: Number(r.id),
+    customerName:    r.customer_name || '',
+    depositPaid:     r.deposit_paid || 'No',
+    briefed:         r.briefed || 'No',
+    liquidLinedUp:   r.liquid_lined_up || 'No',
+    productionStage: r.production_stage || 'All goods in warehouse',
+    balancePaid:     r.balance_paid || 'No',
+    readyDispatch:   r.ready_dispatch || 'No',
+    createdAt:       r.created_at || '',
+  };
+}
+
 function targetToDb(rep, t) {
   return {
     rep,
@@ -517,6 +544,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
   const [skuPrices, setSkuPrices] = useState({});
   const [prospects, setProspects] = useState([]);  // overrides for SKU prices set in Manager Portal
+  const [b2bCustoms, setB2bCustoms] = useState([]); // B2B Customs production tracker rows
   const [managerAuthed, setManagerAuthed] = useState(false); // persists across tab changes
   const [placeOrderClient, setPlaceOrderClient] = useState(null); // client to place order for
   // Reps default to their own data; manager defaults to 'All'
@@ -601,6 +629,15 @@ function AvanteCRMApp({ currentUser, onLogout }) {
           .from('prospects').select('*').order('created_at');
         if (!prospectErr && prospectRows) {
           setProspects(prospectRows.map(prospectFromDb));
+        }
+
+        // Load B2B Customs production tracker rows
+        const { data: customsRows, error: customsErr } = await supabase
+          .from('b2b_customs').select('*').order('created_at');
+        if (!customsErr && customsRows) {
+          setB2bCustoms(customsRows.map(b2bCustomFromDb));
+        } else if (customsErr) {
+          console.warn('[b2b_customs] table missing or not yet created:', customsErr.message);
         }
       } catch (err) {
         console.error('[avante] init error', err);
@@ -825,6 +862,37 @@ function AvanteCRMApp({ currentUser, onLogout }) {
   const deleteProspect = async (id) => {
     await supabase.from('prospects').delete().eq('id', id);
     setProspects(prev => prev.filter(p => p.id !== id));
+  };
+
+  // ------- B2B Customs (production tracker) operations -------
+  const addB2bCustom = async (row) => {
+    const { data: inserted, error } = await supabase
+      .from('b2b_customs').insert(b2bCustomToDb(row)).select().single();
+    if (error) { console.error('[addB2bCustom]', error); throw new Error(error.message); }
+    const newRow = b2bCustomFromDb(inserted);
+    setB2bCustoms(prev => [...prev, newRow]);
+    return newRow;
+  };
+
+  const updateB2bCustom = async (id, patch) => {
+    const dbPatch = {};
+    if (patch.customerName !== undefined)    dbPatch.customer_name    = patch.customerName;
+    if (patch.depositPaid !== undefined)     dbPatch.deposit_paid     = patch.depositPaid;
+    if (patch.briefed !== undefined)         dbPatch.briefed          = patch.briefed;
+    if (patch.liquidLinedUp !== undefined)   dbPatch.liquid_lined_up  = patch.liquidLinedUp;
+    if (patch.productionStage !== undefined) dbPatch.production_stage = patch.productionStage;
+    if (patch.balancePaid !== undefined)     dbPatch.balance_paid     = patch.balancePaid;
+    if (patch.readyDispatch !== undefined)   dbPatch.ready_dispatch   = patch.readyDispatch;
+    // Optimistic local update first for snappy typing, then persist
+    setB2bCustoms(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+    const { error } = await supabase.from('b2b_customs').update(dbPatch).eq('id', id);
+    if (error) console.error('[updateB2bCustom]', error);
+  };
+
+  const deleteB2bCustom = async (id) => {
+    setB2bCustoms(prev => prev.filter(r => r.id !== id));
+    const { error } = await supabase.from('b2b_customs').delete().eq('id', id);
+    if (error) console.error('[deleteB2bCustom]', error);
   };
 
   const deleteClient = async (id) => {
@@ -1261,7 +1329,13 @@ function AvanteCRMApp({ currentUser, onLogout }) {
           />
         )}
         {view === 'b2bcustoms' && (
-          <B2BCustomsPage clients={clients} currentUser={currentUser} />
+          <B2BCustomsPage
+            rows={b2bCustoms}
+            onAdd={addB2bCustom}
+            onUpdate={updateB2bCustom}
+            onDelete={deleteB2bCustom}
+            askConfirm={askConfirm}
+          />
         )}
         {view === 'manager' && userIsManager && (
           <ManagerPortal
@@ -3427,74 +3501,195 @@ function StatusBadge({ status, channel }) {
 // =================== ORDER HISTORY PAGE ===================
 // ── MONTH FILTER COMPONENT ────────────────────────────────────────────────────
 // ── B2B CUSTOMS PAGE ─────────────────────────────────────────────────────────
-function B2BCustomsPage({ clients, currentUser }) {
-  const b2bClients = clients.filter(c => c.channel === 'B2B');
-  const userIsManager = isManager(currentUser);
-  const myClients = userIsManager ? b2bClients : b2bClients.filter(c => c.accountManager === currentUser?.rep);
+// ── B2B CUSTOMS — Production Tracker ────────────────────────────────────────
+// Standalone Kanban-style grid for tracking custom B2B production jobs.
+// NOT linked to the clients table — purely a manual progress tracker.
+const B2B_CUSTOMS_PRODUCTION_STAGES = ['All goods in warehouse', 'Bottling', 'Complete'];
+
+function YesNoSelect({ value, onChange }) {
+  const isYes = value === 'Yes';
+  return (
+    <select
+      value={value || 'No'}
+      onChange={e => onChange(e.target.value)}
+      style={{
+        width: '100%', padding: '7px 8px', border: '1px solid rgba(0,40,85,0.2)',
+        background: isYes ? 'rgba(45,134,89,0.12)' : 'rgba(204,35,58,0.07)',
+        color: isYes ? '#2d8659' : '#CC233A',
+        fontFamily: "'Cinzel',serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+        cursor: 'pointer', outline: 'none', textAlign: 'center',
+      }}>
+      <option value="Yes">YES</option>
+      <option value="No">NO</option>
+    </select>
+  );
+}
+
+function ProductionStageSelect({ value, onChange }) {
+  const stageColor = {
+    'All goods in warehouse': '#5A7A99',
+    'Bottling': '#BC8D26',
+    'Complete': '#2d8659',
+  }[value] || '#5A7A99';
+  return (
+    <select
+      value={value || B2B_CUSTOMS_PRODUCTION_STAGES[0]}
+      onChange={e => onChange(e.target.value)}
+      style={{
+        width: '100%', padding: '7px 8px', border: '1px solid rgba(0,40,85,0.2)',
+        background: `${stageColor}1A`, color: stageColor,
+        fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
+        cursor: 'pointer', outline: 'none', textAlign: 'center',
+      }}>
+      {B2B_CUSTOMS_PRODUCTION_STAGES.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+    </select>
+  );
+}
+
+function B2BCustomsPage({ rows, onAdd, onUpdate, onDelete, askConfirm }) {
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [savingId, setSavingId] = useState(null);
+  const nameTimers = useRef({});
+
+  const handleAdd = async () => {
+    if (!newName.trim()) return;
+    setAdding(true);
+    try {
+      await onAdd({ customerName: newName.trim() });
+      setNewName('');
+    } catch (err) {
+      console.error('[B2BCustomsPage] add failed', err);
+    }
+    setAdding(false);
+  };
+
+  // Debounced name typing — update local state instantly, persist after a short pause
+  const handleNameChange = (row, value) => {
+    onUpdate(row.id, { customerName: value }); // optimistic local update happens inside onUpdate
+    if (nameTimers.current[row.id]) clearTimeout(nameTimers.current[row.id]);
+    setSavingId(row.id);
+    nameTimers.current[row.id] = setTimeout(() => {
+      setSavingId(curr => curr === row.id ? null : curr);
+    }, 600);
+  };
+
+  const columns = [
+    { key: 'depositPaid',     label: 'Deposit Paid',          type: 'yesno' },
+    { key: 'briefed',         label: 'Amp & Mike & Crazy Briefed', type: 'yesno' },
+    { key: 'liquidLinedUp',   label: 'Liquid & BSOA Lined Up', type: 'yesno' },
+    { key: 'productionStage', label: 'Production',            type: 'stage' },
+    { key: 'balancePaid',     label: 'Balance Paid',          type: 'yesno' },
+    { key: 'readyDispatch',   label: 'Ready for Dispatch',    type: 'yesno' },
+  ];
 
   return (
-    <div className="fade-up space-y-6">
+    <div className="fade-up space-y-5">
       {/* Header */}
       <div className="pb-3 border-b">
         <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>B2B CHANNEL</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
           <div>
             <h1 className="font-display ink" style={{ fontWeight: 700, fontSize: 28 }}>B2B CUSTOMS</h1>
-            <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>Custom B2B project timelines &amp; deal tracking</p>
+            <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>
+              Production tracker — manual progress board, not linked to the client database
+            </p>
           </div>
           <span className="font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>
-            {myClients.length} B2B CLIENT{myClients.length !== 1 ? 'S' : ''}
+            {rows.length} PROJECT{rows.length !== 1 ? 'S' : ''}
           </span>
         </div>
       </div>
 
-      {/* Coming Soon Notice */}
-      <div className="premium-card p-8" style={{ textAlign: 'center' }}>
-        <div style={{ width: 48, height: 48, background: 'rgba(188,141,38,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-          <Briefcase style={{ width: 24, height: 24, color: '#BC8D26' }} />
-        </div>
-        <h2 className="font-display ink mb-2" style={{ fontWeight: 700, fontSize: 18, letterSpacing: '0.05em' }}>B2B PROJECT TIMELINES</h2>
-        <p className="italic ocean mb-6" style={{ fontSize: 13 }}>
-          Custom B2B deal timelines, milestone tracking, and project management coming soon.
-        </p>
-
-        {/* B2B Client Pipeline Preview */}
-        {myClients.length > 0 ? (
-          <div style={{ textAlign: 'left', borderTop: '1px solid rgba(0,40,85,0.1)', paddingTop: 20, marginTop: 8 }}>
-            <p className="font-display text-[10px] tracking-[0.3em] copper mb-3" style={{ fontWeight: 600 }}>YOUR B2B PIPELINE</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {myClients.map(c => {
-                const pct = getB2BPct(c.status);
-                const color = getStatusColor(c.status);
-                return (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#FCF7F2', border: '1px solid rgba(0,40,85,0.1)', borderLeft: `4px solid ${color}` }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p className="font-display ink" style={{ fontWeight: 700, fontSize: 13 }}>{c.venue}</p>
-                      <p style={{ fontSize: 11, color: '#5A7A99', fontStyle: 'italic', marginTop: 2 }}>
-                        {c.accountManager} · {c.location || 'No location'}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                      <span style={{ padding: '3px 8px', background: color, color: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', fontWeight: 700 }}>
-                        {(c.status || 'NEW').toUpperCase()}
-                      </span>
-                      {pct !== null && (
-                        <span className="font-display" style={{ fontSize: 11, fontWeight: 700, color: pct >= 80 ? '#2d8659' : pct >= 40 ? '#BC8D26' : '#5A7A99' }}>{pct}%</span>
-                      )}
-                      {Number(c.prospectedAmount) > 0 && (
-                        <span className="font-display copper" style={{ fontWeight: 700, fontSize: 12 }}>{ZAR(c.prospectedAmount)}</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+      {/* Grid */}
+      <div className="premium-card" style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: 980 }}>
+          {/* Header row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '220px repeat(6, 1fr) 40px', background: '#002855' }}>
+            <div style={{ padding: '12px 14px' }}>
+              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#DBB85E', fontWeight: 700 }}>CUSTOMER NAME</p>
             </div>
+            {columns.map(col => (
+              <div key={col.key} style={{ padding: '12px 8px', textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
+                <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', color: '#FCF7F2', fontWeight: 700, lineHeight: 1.3 }}>{col.label.toUpperCase()}</p>
+              </div>
+            ))}
+            <div></div>
           </div>
-        ) : (
-          <p style={{ fontSize: 12, color: 'rgba(0,40,85,0.4)', fontStyle: 'italic' }}>
-            No B2B clients yet. Add clients under the B2B channel to get started.
-          </p>
-        )}
+
+          {/* Data rows */}
+          {rows.length === 0 ? (
+            <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+              <p className="italic ocean" style={{ fontSize: 13 }}>No production projects yet — add the first customer below.</p>
+            </div>
+          ) : (
+            rows.map((row, i) => (
+              <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '220px repeat(6, 1fr) 40px', borderTop: '1px solid rgba(0,40,85,0.08)', background: i % 2 === 0 ? '#FCF7F2' : 'rgba(0,40,85,0.02)', alignItems: 'center' }}>
+                {/* Customer name — freely editable */}
+                <div style={{ padding: '8px 14px', position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={row.customerName}
+                    onChange={e => handleNameChange(row, e.target.value)}
+                    placeholder="Customer name..."
+                    style={{ width: '100%', padding: '6px 8px', border: '1px solid rgba(0,40,85,0.15)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 13, color: '#002855', fontWeight: 700, outline: 'none' }}
+                  />
+                  {savingId === row.id && (
+                    <span style={{ position: 'absolute', right: 18, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#BC8D26', fontStyle: 'italic' }}>saving…</span>
+                  )}
+                </div>
+
+                {/* Status columns */}
+                {columns.map(col => (
+                  <div key={col.key} style={{ padding: '8px' }}>
+                    {col.type === 'yesno' ? (
+                      <YesNoSelect value={row[col.key]} onChange={(val) => onUpdate(row.id, { [col.key]: val })} />
+                    ) : (
+                      <ProductionStageSelect value={row[col.key]} onChange={(val) => onUpdate(row.id, { [col.key]: val })} />
+                    )}
+                  </div>
+                ))}
+
+                {/* Delete */}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    onClick={() => askConfirm({
+                      title: 'Remove this project?',
+                      message: `${row.customerName || 'Unnamed project'}\n\nThis cannot be undone.`,
+                      confirmLabel: 'DELETE',
+                      danger: true,
+                      onConfirm: () => onDelete(row.id),
+                    })}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(204,35,58,0.5)', padding: 6, display: 'flex' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#CC233A'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(204,35,58,0.5)'}
+                    title="Remove project">
+                    <Trash2 style={{ width: 14, height: 14 }} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Add new row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderTop: '2px solid rgba(188,141,38,0.3)', background: 'rgba(188,141,38,0.04)' }}>
+            <UserPlus style={{ width: 14, height: 14, color: '#BC8D26', flexShrink: 0 }} />
+            <input
+              type="text"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
+              placeholder="Add new customer / project..."
+              style={{ flex: 1, maxWidth: 300, padding: '8px 10px', border: '1px solid rgba(0,40,85,0.2)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 13, color: '#002855', outline: 'none' }}
+            />
+            <button
+              onClick={handleAdd}
+              disabled={adding || !newName.trim()}
+              style={{ padding: '8px 16px', background: adding || !newName.trim() ? 'rgba(0,40,85,0.2)' : '#002855', color: '#FCF7F2', border: 'none', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, cursor: adding || !newName.trim() ? 'default' : 'pointer' }}>
+              {adding ? 'ADDING...' : 'ADD PROJECT'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
