@@ -5449,14 +5449,15 @@ function ClientEmailModal({ client, onClose }) {
     if (!to.trim()) { setError('Please enter a recipient email address.'); return; }
     if (!isValidEmail(to.trim())) { setError('Please enter a valid email address.'); return; }
     const enc = (s) => encodeURIComponent(s);
-    const mailto = `mailto:${to.trim()}${subject ? `?subject=${enc(subject)}` : '?'}${body ? `&body=${enc(body)}` : ''}`;
-    // Try window.open first (most reliable across browsers), then location.href as fallback
-    try {
-      const win = window.open(mailto, '_blank');
-      if (!win) window.location.href = mailto;
-    } catch (e) {
-      window.location.href = mailto;
-    }
+    const mailto = `mailto:${to.trim()}?subject=${enc(subject)}&body=${enc(body)}`;
+    // Create an invisible anchor and click it — the only reliable way to
+    // trigger mailto: in modern browsers without opening a new tab/window.
+    const a = document.createElement('a');
+    a.href = mailto;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     onClose();
   };
 
@@ -5764,7 +5765,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                         href={`mailto:${form.email}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={e => { e.stopPropagation(); window.open(`mailto:${form.email}`, '_blank'); }}
+                      onClick={e => { e.preventDefault(); e.stopPropagation(); const a = document.createElement('a'); a.href = `mailto:${form.email}`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }}
                         style={{ color: '#BC8D26', fontWeight: 600, fontSize: 14, textDecoration: 'underline', cursor: 'pointer' }}>
                         {form.email}
                       </a>
