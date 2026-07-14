@@ -5434,9 +5434,106 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
 }
 
 // =================== Client Detail Modal ===================
+// ── CLIENT EMAIL MODAL ───────────────────────────────────────────────────────
+// Simple email composer pre-filled with the client's email address.
+// Uses the same proven mailto: + window.open pattern as the order email flow.
+function ClientEmailModal({ client, onClose }) {
+  const [to, setTo] = useState(client.email || '');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [error, setError] = useState('');
+
+  const isValidEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+
+  const handleSend = () => {
+    if (!to.trim()) { setError('Please enter a recipient email address.'); return; }
+    if (!isValidEmail(to.trim())) { setError('Please enter a valid email address.'); return; }
+    const enc = (s) => encodeURIComponent(s);
+    const mailto = `mailto:${to.trim()}${subject ? `?subject=${enc(subject)}` : '?'}${body ? `&body=${enc(body)}` : ''}`;
+    // Try window.open first (most reliable across browsers), then location.href as fallback
+    try {
+      const win = window.open(mailto, '_blank');
+      if (!win) window.location.href = mailto;
+    } catch (e) {
+      window.location.href = mailto;
+    }
+    onClose();
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,40,85,0.88)', backdropFilter:'blur(4px)', padding:20 }}
+      onClick={onClose}>
+      <div style={{ background:'#FCF7F2', width:'100%', maxWidth:480, border:'2px solid #BC8D26' }}
+        onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ background:'#002855', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <Mail style={{ width:16, height:16, color:'#DBB85E' }} />
+            <div>
+              <p style={{ fontFamily:"'Cinzel',serif", fontSize:8, letterSpacing:'0.3em', color:'#DBB85E', fontWeight:600, margin:0 }}>CLIENT</p>
+              <p style={{ fontFamily:"'Cinzel',serif", fontSize:14, fontWeight:700, color:'#FCF7F2', letterSpacing:'0.05em', margin:'2px 0 0' }}>EMAIL {client.venue?.toUpperCase()}</p>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.6)', fontSize:22, cursor:'pointer', lineHeight:1, padding:'0 4px' }}>✕</button>
+        </div>
+
+        {/* Form */}
+        <div style={{ padding:'20px 18px', display:'flex', flexDirection:'column', gap:14 }}>
+          {/* To */}
+          <div>
+            <label style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.25em', color:'#BC8D26', fontWeight:700, display:'block', marginBottom:6 }}>TO</label>
+            <input
+              type="email"
+              value={to}
+              onChange={e => { setTo(e.target.value); setError(''); }}
+              placeholder="recipient@email.com"
+              style={{ width:'100%', padding:'10px 12px', border:'1px solid rgba(0,40,85,0.2)', background:'#fff', fontFamily:"'Libre Baskerville',Georgia,serif", fontSize:13, color:'#002855', outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+          {/* Subject */}
+          <div>
+            <label style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.25em', color:'#BC8D26', fontWeight:700, display:'block', marginBottom:6 }}>SUBJECT</label>
+            <input
+              type="text"
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              placeholder="Subject..."
+              style={{ width:'100%', padding:'10px 12px', border:'1px solid rgba(0,40,85,0.2)', background:'#fff', fontFamily:"'Libre Baskerville',Georgia,serif", fontSize:13, color:'#002855', outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+          {/* Body */}
+          <div>
+            <label style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.25em', color:'#BC8D26', fontWeight:700, display:'block', marginBottom:6 }}>MESSAGE</label>
+            <textarea
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              placeholder="Type your message..."
+              rows={5}
+              style={{ width:'100%', padding:'10px 12px', border:'1px solid rgba(0,40,85,0.2)', background:'#fff', fontFamily:"'Libre Baskerville',Georgia,serif", fontSize:13, color:'#002855', outline:'none', resize:'vertical', boxSizing:'border-box' }}
+            />
+          </div>
+          {error && <p style={{ fontSize:11, color:'#CC233A', fontStyle:'italic', margin:0 }}>{error}</p>}
+          {/* Actions */}
+          <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+            <button onClick={onClose}
+              style={{ padding:'10px 18px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
+              CANCEL
+            </button>
+            <button onClick={handleSend}
+              style={{ padding:'10px 20px', background:'#002855', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FCF7F2', cursor:'pointer', fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
+              <Mail style={{ width:12, height:12 }} /> OPEN IN GMAIL
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, onDelete, onDeleteVisit }) {
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState(client);
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [showUnsaved, setShowUnsaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [tagsSaved, setTagsSaved] = useState(false);
@@ -5554,6 +5651,14 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
           </div>
         )}
 
+        {/* Client email modal — simple mailto launcher pre-filled with client email */}
+        {showEmailModal && (
+          <ClientEmailModal
+            client={client}
+            onClose={() => setShowEmailModal(false)}
+          />
+        )}
+
         <div className="p-4 md:p-6 relative overflow-hidden" style={{ background: '#002855' }}>
           <RaysBackdrop opacity={0.06} />
           <div className="flex items-start justify-between gap-4 relative">
@@ -5566,6 +5671,12 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               </div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+              {client.email && (
+                <button type="button" onClick={() => setShowEmailModal(true)}
+                  style={{ padding:'7px 14px', background:'none', border:'1px solid rgba(255,255,255,0.3)', color:'#FCF7F2', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                  <Mail style={{ width:13, height:13 }} /> EMAIL
+                </button>
+              )}
               {onPlaceOrder && (
                 <button type="button" onClick={() => onPlaceOrder(client)}
                   style={{ padding:'7px 14px', background:'#BC8D26', border:'none', color:'#FCF7F2', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
