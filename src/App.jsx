@@ -12,6 +12,7 @@ const USERS = {
   'louis@breakfreebeverages.com':    { password: 'louis123',    rep: 'Louis',   role: 'rep',     name: 'Louis' },
   'anthony@breakfreebeverages.com':  { password: 'anthony123',  rep: 'Anthony', role: 'rep',     name: 'Anthony' },
   'matthew@breakfreebeverages.com':  { password: 'matthew123',  rep: 'Matthew', role: 'manager', name: 'Matthew' },
+  'rob@breakfreebeverages.com':      { password: 'rob123',      rep: 'Rob',     role: 'manager', name: 'Rob' },
 };
 const AUTH_KEY = 'avante_crm_user';
 const getStoredUser = () => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; } };
