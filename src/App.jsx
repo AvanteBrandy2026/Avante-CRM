@@ -5640,8 +5640,43 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="First Name" value={form.firstName} edit={edit} onChange={(v) => setForm({ ...form, firstName: v })} />
               <Field label="Last Name" value={form.lastName} edit={edit} onChange={(v) => setForm({ ...form, lastName: v })} />
-              <Field label="Email" value={form.email} edit={edit} onChange={(v) => setForm({ ...form, email: v })} icon={Mail} />
-              <Field label="Phone" value={form.phone} edit={edit} onChange={(v) => setForm({ ...form, phone: v })} icon={Phone} />
+              {/* Email — shows as clickable mailto link in view mode, input in edit mode */}
+              {(edit || form.email) && (
+                <div>
+                  <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>EMAIL</label>
+                  {edit ? (
+                    <input type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+                  ) : (
+                    <div className="flex items-center gap-2 py-1">
+                      <Mail className="w-3.5 h-3.5 ocean" />
+                      <a
+                        href={`mailto:${form.email}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => { e.stopPropagation(); window.open(`mailto:${form.email}`, '_blank'); }}
+                        style={{ color: '#BC8D26', fontWeight: 600, fontSize: 14, textDecoration: 'underline', cursor: 'pointer' }}>
+                        {form.email}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Phone — clickable tel: link in view mode */}
+              {(edit || form.phone) && (
+                <div>
+                  <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>PHONE</label>
+                  {edit ? (
+                    <input type="tel" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+                  ) : (
+                    <div className="flex items-center gap-2 py-1">
+                      <Phone className="w-3.5 h-3.5 ocean" />
+                      <a href={`tel:${form.phone}`} style={{ color: '#002855', fontWeight: 600, fontSize: 14, textDecoration: 'underline', cursor: 'pointer' }}>
+                        {form.phone}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
               <Field label="Distributor" value={form.distributor} edit={edit} onChange={(v) => setForm({ ...form, distributor: v })} />
               <SelectField label="Account Manager" value={form.accountManager} edit={edit} onChange={(v) => setForm({ ...form, accountManager: v })} options={[...SALES_REPS, 'Unassigned']} />
               <SelectField label="Lead Source" value={form.leadSource} edit={edit} onChange={(v) => setForm({ ...form, leadSource: v })} options={LEAD_SOURCES} />
