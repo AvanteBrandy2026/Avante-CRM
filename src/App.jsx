@@ -5445,20 +5445,15 @@ function ClientEmailModal({ client, onClose }) {
 
   const isValidEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 
+  const buildMailto = () => {
+    const enc = (s) => encodeURIComponent(s);
+    return `mailto:${to.trim()}?subject=${enc(subject)}&body=${enc(body)}`;
+  };
+
   const handleSend = () => {
     if (!to.trim()) { setError('Please enter a recipient email address.'); return; }
     if (!isValidEmail(to.trim())) { setError('Please enter a valid email address.'); return; }
-    const enc = (s) => encodeURIComponent(s);
-    const mailto = `mailto:${to.trim()}?subject=${enc(subject)}&body=${enc(body)}`;
-    // Create an invisible anchor and click it — the only reliable way to
-    // trigger mailto: in modern browsers without opening a new tab/window.
-    const a = document.createElement('a');
-    a.href = mailto;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    onClose();
+    setError('');
   };
 
   return (
@@ -5515,15 +5510,26 @@ function ClientEmailModal({ client, onClose }) {
           </div>
           {error && <p style={{ fontSize:11, color:'#CC233A', fontStyle:'italic', margin:0 }}>{error}</p>}
           {/* Actions */}
-          <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+          <div style={{ display:'flex', gap:8, justifyContent:'flex-end', alignItems:'center' }}>
             <button onClick={onClose}
               style={{ padding:'10px 18px', border:'1px solid rgba(0,40,85,0.2)', background:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#002855', cursor:'pointer', fontWeight:600 }}>
               CANCEL
             </button>
-            <button onClick={handleSend}
-              style={{ padding:'10px 20px', background:'#002855', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FCF7F2', cursor:'pointer', fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
+            {/* Native <a href="mailto:..."> — the only 100% reliable cross-browser way
+                to launch a mail client. No JavaScript, no popup blockers, no tab issues. */}
+            <a
+              href={buildMailto()}
+              onClick={(e) => {
+                if (!to.trim() || !isValidEmail(to.trim())) {
+                  e.preventDefault();
+                  handleSend(); // just triggers validation error display
+                } else {
+                  setTimeout(onClose, 300);
+                }
+              }}
+              style={{ padding:'10px 20px', background:'#002855', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#FCF7F2', cursor:'pointer', fontWeight:700, display:'flex', alignItems:'center', gap:6, textDecoration:'none' }}>
               <Mail style={{ width:12, height:12 }} /> OPEN IN GMAIL
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -5763,9 +5769,6 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                       <Mail className="w-3.5 h-3.5 ocean" />
                       <a
                         href={`mailto:${form.email}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      onClick={e => { e.preventDefault(); e.stopPropagation(); const a = document.createElement('a'); a.href = `mailto:${form.email}`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }}
                         style={{ color: '#BC8D26', fontWeight: 600, fontSize: 14, textDecoration: 'underline', cursor: 'pointer' }}>
                         {form.email}
                       </a>
