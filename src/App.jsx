@@ -1629,11 +1629,20 @@ function Header({ view, setView, onLog, visits, clients, currentUser, onLogout, 
       if (v.taggedReps && v.taggedReps.length > 0) {
         if (userIsManager || v.taggedReps.includes(currentUser?.rep)) count++;
       }
-      // Follow-up due today or overdue — notify the client's account manager
+      // Follow-up due today or overdue — notify the client's account manager.
+      // Suppressed if a newer visit has been logged for the same client after
+      // the follow-up date (i.e. the rep already actioned it).
       if (v.followUpDate && v.followUpDate <= today) {
-        const client = (clients || []).find(c => Number(c.id) === Number(v.clientId));
-        if (client) {
-          if (userIsManager || client.accountManager === currentUser?.rep) count++;
+        const hasNewerVisit = (visits || []).some(
+          other => Number(other.clientId) === Number(v.clientId) &&
+                   other.id !== v.id &&
+                   (other.date || '') > v.followUpDate
+        );
+        if (!hasNewerVisit) {
+          const client = (clients || []).find(c => Number(c.id) === Number(v.clientId));
+          if (client) {
+            if (userIsManager || client.accountManager === currentUser?.rep) count++;
+          }
         }
       }
     });
@@ -1987,8 +1996,16 @@ function NotificationsPage({ visits, clients, onSelectClient }) {
         });
       }
 
-      // Follow-up due notifications — tagged to the client's account manager
+      // Follow-up due notifications — tagged to the client's account manager.
+      // Suppressed once a newer visit has been logged for the same client after
+      // the follow-up date (actioned = cleared).
       if (v.followUpDate && v.followUpDate <= today) {
+        const hasNewerVisit = (visits || []).some(
+          other => Number(other.clientId) === Number(v.clientId) &&
+                   other.id !== v.id &&
+                   (other.date || '') > v.followUpDate
+        );
+        if (!hasNewerVisit) {
         const client = (clients || []).find(c => Number(c.id) === Number(v.clientId));
         if (client) {
           const daysOverdue = Math.floor((new Date(today) - new Date(v.followUpDate)) / (1000*60*60*24));
@@ -2007,6 +2024,7 @@ function NotificationsPage({ visits, clients, onSelectClient }) {
             daysOverdue,
           });
         }
+        } // end hasNewerVisit check
       }
     });
 
@@ -5903,15 +5921,33 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
 
 function Field({ label, value, edit, onChange, icon: Icon }) {
   if (!edit && !value) return null;
+  const isEmail = label.toLowerCase() === 'email';
+  const isPhone = label.toLowerCase() === 'phone';
   return (
     <div>
       <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>{label.toUpperCase()}</label>
       {edit ? (
         <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper" />
       ) : (
-        <div className="flex items-center gap-2 text-sm ink py-1">
+        <div className="flex items-center gap-2 text-sm py-1">
           {Icon && <Icon className="w-3.5 h-3.5 ocean" />}
-          {value}
+          {isEmail && value ? (
+            <a href={`mailto:${value}`}
+              style={{ color: '#BC8D26', fontWeight: 600, textDecoration: 'none', borderBottom: '1px solid rgba(188,141,38,0.4)', lineHeight: 1.4 }}
+              onMouseEnter={e => e.currentTarget.style.borderBottomColor = '#BC8D26'}
+              onMouseLeave={e => e.currentTarget.style.borderBottomColor = 'rgba(188,141,38,0.4)'}>
+              {value}
+            </a>
+          ) : isPhone && value ? (
+            <a href={`tel:${value}`}
+              style={{ color: '#002855', fontWeight: 600, textDecoration: 'none', borderBottom: '1px solid rgba(0,40,85,0.2)', lineHeight: 1.4 }}
+              onMouseEnter={e => e.currentTarget.style.borderBottomColor = '#002855'}
+              onMouseLeave={e => e.currentTarget.style.borderBottomColor = 'rgba(0,40,85,0.2)'}>
+              {value}
+            </a>
+          ) : (
+            <span className="ink">{value}</span>
+          )}
         </div>
       )}
     </div>
