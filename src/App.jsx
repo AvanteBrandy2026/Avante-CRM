@@ -2941,11 +2941,16 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
       .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
       .forEach(v => {
         const c = clients.find(cl => cl.id === v.clientId) || {};
+        const channel = v.channel || c.channel || '';
         const skuSummary = v.items.map(it => `${it.qty}x ${it.name}${Number(it.unitPrice) < Number(it.listPrice) ? ` (disc. ${ZAR(it.unitPrice)})` : ''}`).join(' | ');
+        // Calculate GP for this order using the same calcVisitsGP logic
+        const orderGP = calcVisitsGP([{ ...v, channel }], gpCostOverrides || {});
+        const orderTotal = Number(v.saleAmount || 0);
+        const gpPct = orderTotal > 0 ? ((orderGP / orderTotal) * 100).toFixed(1) + '%' : '—';
         orderHistoryRows.push({
           'Date': v.date,
           'Venue': c.venue || 'Unknown',
-          'Channel': c.channel || '',
+          'Channel': channel,
           'Location': c.location || '',
           'Account Manager': c.accountManager || '',
           'Sales Rep': v.salesRep || '',
@@ -2953,15 +2958,18 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
           'SKUs Ordered': skuSummary,
           'Total SKU Lines': v.items.length,
           'Total Units': v.items.reduce((s, it) => s + (Number(it.qty) || 0), 0),
-          'Order Total Ex VAT (R)': Number(v.saleAmount || 0).toFixed(2),
+          'Order Total Ex VAT (R)': orderTotal.toFixed(2),
+          'GP (R)': orderGP.toFixed(2),
+          'GP %': gpPct,
           'Visit Notes': v.notes || '',
           'Follow-up Notes': v.followUp || '',
         });
       });
     const wsOrders = XLSX.utils.json_to_sheet(orderHistoryRows.length > 0 ? orderHistoryRows : [{ 'Note': 'No orders placed yet.' }]);
     wsOrders['!cols'] = [
-      { wch: 12 }, { wch: 28 }, { wch: 14 }, { wch: 18 }, { wch: 14 },
-      { wch: 12 }, { wch: 16 }, { wch: 60 }, { wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 40 }, { wch: 40 },
+      { wch: 12 }, { wch: 28 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
+      { wch: 12 }, { wch: 16 }, { wch: 55 }, { wch: 14 }, { wch: 12 },
+      { wch: 20 }, { wch: 14 }, { wch: 10 }, { wch: 38 }, { wch: 38 },
     ];
     XLSX.utils.book_append_sheet(wb, wsOrders, 'Client Order History');
 
