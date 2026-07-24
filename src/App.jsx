@@ -100,7 +100,7 @@ function notifyNewTags({ prevTags = [], newTags = [], ...rest }) {
   return added;
 }
 
-const CHANNELS = ['Trade', 'On-Con', 'B2B'];
+const CHANNELS = ['Trade', 'On-Con', 'B2B', 'Schools'];
 const PAYMENT_TERMS = ['COD', '30 Days', '60 Days'];
 const CONTACT_METHODS = ['In Person', 'WhatsApp', 'Phone Call / Online Meet', 'Email'];
 const LOCATIONS = [
@@ -198,28 +198,28 @@ const CUSTOM_SKU_IDS = ['custom_vs', 'custom_xv', 'custom_vsop', 'custom_xo'];
 // Costs are overridable from the Manager tab; overrides are stored in Supabase
 // in the same shape as this object and merged on load.
 const DEFAULT_GP_COSTS = {
-  vsop_750_current: { Trade: 276.64,  'On-Con': 276.64,  B2B: 224.81 },
-  vsop_750_new:     { Trade: 357.06,  'On-Con': 357.06,  B2B: 292.32 },
-  vsop_200:         { Trade: 111.91,  'On-Con': 111.91,  B2B: 95.00  },
-  xv_750:           { Trade: 1176.15, 'On-Con': 1176.15, B2B: 982.21 },
-  vs_500:           { Trade: 177.68,  'On-Con': 177.68,  B2B: 143.10 },
-  vs_750:           { Trade: 242.26,  'On-Con': 242.26,  B2B: 195.92 },
-  xv_200:           { Trade: 483.74,  'On-Con': 483.74,  B2B: 416.76 },
-  xo_750:           { Trade: 570.71,  'On-Con': 570.71,  B2B: 465.42 },
-  vs_200:           { Trade: 78.76,   'On-Con': 78.76,   B2B: 65.00  },
-  gift_4x50:        { Trade: 421.76,  'On-Con': 421.76,  B2B: 360.93 },
-  gift_3x200:       { Trade: 840.14,  'On-Con': 840.14,  B2B: 734.76 },
-  vs_50ml:          { Trade: 37.59,   'On-Con': 37.59,   B2B: 28.80  },
-  vsop_50ml:        { Trade: 40.80,   'On-Con': 40.80,   B2B: 31.20  },
-  xo_50ml:          { Trade: 56.27,   'On-Con': 56.27,   B2B: 44.46  },
-  xv_50ml:          { Trade: 72.14,   'On-Con': 72.14,   B2B: 58.46  },
+  vsop_750_current: { Trade: 276.64,  'On-Con': 276.64,  B2B: 224.81, Schools: 276.64 },
+  vsop_750_new:     { Trade: 357.06,  'On-Con': 357.06,  B2B: 292.32, Schools: 357.06 },
+  vsop_200:         { Trade: 111.91,  'On-Con': 111.91,  B2B: 95.00, Schools: 111.91 },
+  xv_750:           { Trade: 1176.15, 'On-Con': 1176.15, B2B: 982.21, Schools: 1176.15 },
+  vs_500:           { Trade: 177.68,  'On-Con': 177.68,  B2B: 143.10, Schools: 177.68 },
+  vs_750:           { Trade: 242.26,  'On-Con': 242.26,  B2B: 195.92, Schools: 242.26 },
+  xv_200:           { Trade: 483.74,  'On-Con': 483.74,  B2B: 416.76, Schools: 483.74 },
+  xo_750:           { Trade: 570.71,  'On-Con': 570.71,  B2B: 465.42, Schools: 570.71 },
+  vs_200:           { Trade: 78.76,   'On-Con': 78.76,   B2B: 65.00, Schools: 78.76 },
+  gift_4x50:        { Trade: 421.76,  'On-Con': 421.76,  B2B: 360.93, Schools: 421.76 },
+  gift_3x200:       { Trade: 840.14,  'On-Con': 840.14,  B2B: 734.76, Schools: 840.14 },
+  vs_50ml:          { Trade: 37.59,   'On-Con': 37.59,   B2B: 28.80, Schools: 37.59 },
+  vsop_50ml:        { Trade: 40.80,   'On-Con': 40.80,   B2B: 31.20, Schools: 40.8 },
+  xo_50ml:          { Trade: 56.27,   'On-Con': 56.27,   B2B: 44.46, Schools: 56.27 },
+  xv_50ml:          { Trade: 72.14,   'On-Con': 72.14,   B2B: 58.46, Schools: 72.14 },
   // Customs — B2B only, no Trade/On-Con cost (not sold via those channels)
-  custom_vs:        { Trade: null,    'On-Con': null,    B2B: 195.92 },
-  custom_xv:        { Trade: null,    'On-Con': null,    B2B: 982.21 },
-  custom_vsop:      { Trade: null,    'On-Con': null,    B2B: 292.32 },
-  custom_xo:        { Trade: null,    'On-Con': null,    B2B: 465.42 },
+  custom_vs:        { Trade: null,    'On-Con': null,    B2B: 195.92, Schools: null },
+  custom_xv:        { Trade: null,    'On-Con': null,    B2B: 982.21, Schools: null },
+  custom_vsop:      { Trade: null,    'On-Con': null,    B2B: 292.32, Schools: null },
+  custom_xo:        { Trade: null,    'On-Con': null,    B2B: 465.42, Schools: null },
   // No cost data supplied yet for this SKU — leave off GP calc until provided
-  mixed_50ml_box:   { Trade: null,    'On-Con': null,    B2B: null   },
+  mixed_50ml_box:   { Trade: null,    'On-Con': null,    B2B: null, Schools: null },
 };
 
 // Returns the cost for a SKU in a given channel, applying overrides if present.
@@ -423,31 +423,8 @@ function prospectFromDb(r) {
 }
 
 // ── B2B CUSTOMS — production tracker (standalone, not linked to clients table) ──
-function b2bCustomToDb(row) {
-  return {
-    customer_name:    row.customerName || '',
-    deposit_paid:     row.depositPaid || 'No',
-    briefed:          row.briefed || 'No',
-    liquid_lined_up:  row.liquidLinedUp || 'No',
-    production_stage: row.productionStage || 'Not yet',
-    balance_paid:     row.balancePaid || 'No',
-    ready_dispatch:   row.readyDispatch || 'No',
-  };
-}
-
-function b2bCustomFromDb(r) {
-  return {
-    id: Number(r.id),
-    customerName:    r.customer_name || '',
-    depositPaid:     r.deposit_paid || 'No',
-    briefed:         r.briefed || 'No',
-    liquidLinedUp:   r.liquid_lined_up || 'No',
-    productionStage: r.production_stage || 'Not yet',
-    balancePaid:     r.balance_paid || 'No',
-    readyDispatch:   r.ready_dispatch || 'No',
-    createdAt:       r.created_at || '',
-  };
-}
+function b2bCustomToDb(row) { return plannerToDb(row); }
+function b2bCustomFromDb(r) { return plannerFromDb(r); }
 
 function targetToDb(rep, t) {
   return {
@@ -950,15 +927,16 @@ function AvanteCRMApp({ currentUser, onLogout }) {
   };
 
   const updateB2bCustom = async (id, patch) => {
+    const fieldMap = {
+      customerName: 'customer_name', channel: 'channel',
+      pitched: 'pitched', design: 'design', bottleDev: 'bottle_dev',
+      salesAgreement: 'sales_agreement', ecom: 'ecom', marketing: 'marketing',
+      autoResponse: 'auto_response', depositPaid: 'deposit_paid',
+      dryGoods: 'dry_goods', briefed: 'briefed', liquidLinedUp: 'liquid_lined_up',
+      balancePaid: 'balance_paid', readyDispatch: 'ready_dispatch',
+    };
     const dbPatch = {};
-    if (patch.customerName !== undefined)    dbPatch.customer_name    = patch.customerName;
-    if (patch.depositPaid !== undefined)     dbPatch.deposit_paid     = patch.depositPaid;
-    if (patch.briefed !== undefined)         dbPatch.briefed          = patch.briefed;
-    if (patch.liquidLinedUp !== undefined)   dbPatch.liquid_lined_up  = patch.liquidLinedUp;
-    if (patch.productionStage !== undefined) dbPatch.production_stage = patch.productionStage;
-    if (patch.balancePaid !== undefined)     dbPatch.balance_paid     = patch.balancePaid;
-    if (patch.readyDispatch !== undefined)   dbPatch.ready_dispatch   = patch.readyDispatch;
-    // Optimistic local update first for snappy typing, then persist
+    Object.entries(patch).forEach(([k, v]) => { if (fieldMap[k]) dbPatch[fieldMap[k]] = v; });
     setB2bCustoms(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
     const { error } = await supabase.from('b2b_customs').update(dbPatch).eq('id', id);
     if (error) console.error('[updateB2bCustom]', error);
@@ -1422,6 +1400,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
             onUpdate={updateB2bCustom}
             onDelete={deleteB2bCustom}
             askConfirm={askConfirm}
+            currentUser={currentUser}
           />
         )}
         {view === 'manager' && userIsManager && (
@@ -3706,203 +3685,366 @@ function StatusBadge({ status, channel }) {
 // ── B2B CUSTOMS — Production Tracker ────────────────────────────────────────
 // Standalone Kanban-style grid for tracking custom B2B production jobs.
 // NOT linked to the clients table — purely a manual progress tracker.
-const B2B_CUSTOMS_PRODUCTION_STAGES = ['Not yet', 'All goods in warehouse', 'Bottling', 'Complete'];
+// ── B2B / SCHOOLS PROJECT PLANNER ───────────────────────────────────────────
+// Two-phase tracker: Sales/Setup → Production
+// Schools has extra steps (E-com, Marketing, Auto Response) that B2B doesn't.
 
-function YesNoSelect({ value, onChange }) {
+const PLANNER_CHANNELS = ['Schools', 'B2B'];
+
+// Sales/Setup phase fields — per channel
+const SALES_FIELDS = {
+  Schools: [
+    { key: 'pitched',       label: 'Pitched / Price Agreed' },
+    { key: 'design',        label: 'Design / Naomi' },
+    { key: 'bottleDev',     label: 'Bottle Development Doc Signed Off' },
+    { key: 'salesAgreement',label: 'Sales Agreement Sign Off' },
+    { key: 'ecom',          label: 'E-com Page Set Up & Live' },
+    { key: 'marketing',     label: 'Marketing to Old Boys — Agreed Channels' },
+    { key: 'autoResponse',  label: 'Order Auto Response — Custom Response' },
+  ],
+  B2B: [
+    { key: 'pitched',       label: 'Pitched / Price Agreed' },
+    { key: 'design',        label: 'Design / Naomi' },
+    { key: 'bottleDev',     label: 'Bottle Development Doc Signed Off' },
+    { key: 'salesAgreement',label: 'Sales Agreement Sign Off' },
+  ],
+};
+
+// Production phase fields — same for both channels
+const PRODUCTION_FIELDS = [
+  { key: 'depositPaid',    label: 'Deposit Paid' },
+  { key: 'dryGoods',       label: 'Dry Goods Check' },
+  { key: 'briefed',        label: 'Amp & Mike Briefed & Bottles Dropped' },
+  { key: 'liquidLinedUp',  label: 'Liquid Lined Up at BSOA' },
+  { key: 'balancePaid',    label: 'Balance Paid' },
+  { key: 'readyDispatch',  label: 'Ready for Dispatch' },
+];
+
+function plannerToDb(row) {
+  return {
+    customer_name:   row.customerName || '',
+    channel:         row.channel || 'B2B',
+    // Sales phase
+    pitched:         row.pitched || 'No',
+    design:          row.design || 'No',
+    bottle_dev:      row.bottleDev || 'No',
+    sales_agreement: row.salesAgreement || 'No',
+    ecom:            row.ecom || 'No',
+    marketing:       row.marketing || 'No',
+    auto_response:   row.autoResponse || 'No',
+    // Production phase
+    deposit_paid:    row.depositPaid || 'No',
+    dry_goods:       row.dryGoods || 'No',
+    briefed:         row.briefed || 'No',
+    liquid_lined_up: row.liquidLinedUp || 'No',
+    balance_paid:    row.balancePaid || 'No',
+    ready_dispatch:  row.readyDispatch || 'No',
+  };
+}
+
+function plannerFromDb(r) {
+  return {
+    id:             Number(r.id),
+    customerName:   r.customer_name || '',
+    channel:        r.channel || 'B2B',
+    pitched:        r.pitched || 'No',
+    design:         r.design || 'No',
+    bottleDev:      r.bottle_dev || 'No',
+    salesAgreement: r.sales_agreement || 'No',
+    ecom:           r.ecom || 'No',
+    marketing:      r.marketing || 'No',
+    autoResponse:   r.auto_response || 'No',
+    depositPaid:    r.deposit_paid || 'No',
+    dryGoods:       r.dry_goods || 'No',
+    briefed:        r.briefed || 'No',
+    liquidLinedUp:  r.liquid_lined_up || 'No',
+    balancePaid:    r.balance_paid || 'No',
+    readyDispatch:  r.ready_dispatch || 'No',
+    createdAt:      r.created_at || '',
+  };
+}
+
+// Progress % = count of 'Yes' answers / total applicable fields
+function calcSalesProgress(row, channel) {
+  const fields = SALES_FIELDS[channel] || SALES_FIELDS.B2B;
+  const yesCount = fields.filter(f => row[f.key] === 'Yes').length;
+  return Math.round((yesCount / fields.length) * 100);
+}
+
+function calcProductionProgress(row) {
+  const yesCount = PRODUCTION_FIELDS.filter(f => row[f.key] === 'Yes').length;
+  return Math.round((yesCount / PRODUCTION_FIELDS.length) * 100);
+}
+
+// Small progress bar component
+function ProgressBar({ pct, color }) {
+  const done = pct >= 100;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ flex: 1, height: 6, background: 'rgba(0,40,85,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: done ? '#2d8659' : color, borderRadius: 3, transition: 'width 0.4s' }} />
+      </div>
+      {done
+        ? <span style={{ fontSize: 11, color: '#2d8659', fontWeight: 700, flexShrink: 0 }}>✓</span>
+        : <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, color, flexShrink: 0 }}>{pct}%</span>
+      }
+    </div>
+  );
+}
+
+// Compact yes/no pill
+function YNPill({ value, onChange }) {
   const isYes = value === 'Yes';
   return (
-    <select
-      value={value || 'No'}
-      onChange={e => onChange(e.target.value)}
+    <button
+      onClick={() => onChange(isYes ? 'No' : 'Yes')}
       style={{
-        width: '100%', padding: '7px 8px', border: '1px solid rgba(0,40,85,0.2)',
-        background: isYes ? 'rgba(45,134,89,0.12)' : 'rgba(204,35,58,0.07)',
+        width: '100%', padding: '5px 0', border: 'none', cursor: 'pointer',
+        background: isYes ? 'rgba(45,134,89,0.15)' : 'rgba(204,35,58,0.08)',
         color: isYes ? '#2d8659' : '#CC233A',
-        fontFamily: "'Cinzel',serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-        cursor: 'pointer', outline: 'none', textAlign: 'center',
+        fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
+        transition: 'all 0.15s',
       }}>
-      <option value="Yes">YES</option>
-      <option value="No">NO</option>
-    </select>
+      {isYes ? '✓ YES' : '✗ NO'}
+    </button>
   );
 }
 
-function ProductionStageSelect({ value, onChange }) {
-  const stageColor = {
-    'Not yet': 'rgba(0,40,85,0.45)',
-    'All goods in warehouse': '#5A7A99',
-    'Bottling': '#BC8D26',
-    'Complete': '#2d8659',
-  }[value] || 'rgba(0,40,85,0.45)';
-  return (
-    <select
-      value={value || B2B_CUSTOMS_PRODUCTION_STAGES[0]}
-      onChange={e => onChange(e.target.value)}
-      style={{
-        width: '100%', padding: '7px 8px', border: '1px solid rgba(0,40,85,0.2)',
-        background: `${stageColor}1A`, color: stageColor,
-        fontFamily: "'Cinzel',serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
-        cursor: 'pointer', outline: 'none', textAlign: 'center',
-      }}>
-      {B2B_CUSTOMS_PRODUCTION_STAGES.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
-    </select>
-  );
-}
-
-function B2BCustomsPage({ rows, onAdd, onUpdate, onDelete, askConfirm }) {
+function B2BCustomsPage({ rows, onAdd, onUpdate, onDelete, askConfirm, currentUser }) {
+  const [activeChannel, setActiveChannel] = useState('Schools');
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
-  const [savingId, setSavingId] = useState(null);
   const [addError, setAddError] = useState('');
   const [justAddedId, setJustAddedId] = useState(null);
+  const [savingId, setSavingId] = useState(null);
   const nameTimers = useRef({});
   const nameInputRefs = useRef({});
 
+  const channelRows = rows.filter(r => r.channel === activeChannel);
+  const salesFields = SALES_FIELDS[activeChannel];
+
+  // Summary counts for the top banner
+  const summaryByChannel = useMemo(() => {
+    const out = {};
+    PLANNER_CHANNELS.forEach(ch => {
+      const chRows = rows.filter(r => r.channel === ch);
+      out[ch] = {
+        total: chRows.length,
+        salesDone: chRows.filter(r => calcSalesProgress(r, ch) >= 100).length,
+        prodDone: chRows.filter(r => calcProductionProgress(r) >= 100).length,
+      };
+    });
+    return out;
+  }, [rows]);
+
   const handleAdd = async () => {
     if (!newName.trim()) return;
-    setAdding(true);
-    setAddError('');
+    setAdding(true); setAddError('');
     try {
-      const created = await onAdd({ customerName: newName.trim() });
+      const created = await onAdd({ customerName: newName.trim(), channel: activeChannel });
       setNewName('');
-      // Once the project is created, jump focus straight to its customer
-      // name field and highlight the row so the rest of the columns
-      // (Deposit Paid, Briefed, Liquid & BSOA, Production, Balance Paid,
-      // Ready for Dispatch) are immediately visible and ready to use.
       if (created?.id) {
         setJustAddedId(created.id);
         setTimeout(() => {
           const el = nameInputRefs.current[created.id];
-          if (el) {
-            el.focus();
-            el.select();
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
+          if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
         }, 60);
-        setTimeout(() => setJustAddedId(curr => curr === created.id ? null : curr), 2200);
+        setTimeout(() => setJustAddedId(null), 2200);
       }
     } catch (err) {
-      console.error('[B2BCustomsPage] add failed', err);
       setAddError(err?.message || 'Could not add project — please try again.');
     }
     setAdding(false);
   };
 
-  // Debounced name typing — update local state instantly, persist after a short pause
   const handleNameChange = (row, value) => {
-    onUpdate(row.id, { customerName: value }); // optimistic local update happens inside onUpdate
+    onUpdate(row.id, { customerName: value });
     if (nameTimers.current[row.id]) clearTimeout(nameTimers.current[row.id]);
     setSavingId(row.id);
-    nameTimers.current[row.id] = setTimeout(() => {
-      setSavingId(curr => curr === row.id ? null : curr);
-    }, 600);
+    nameTimers.current[row.id] = setTimeout(() => setSavingId(curr => curr === row.id ? null : curr), 700);
   };
 
-  const columns = [
-    { key: 'depositPaid',     label: 'Deposit Paid',          type: 'yesno' },
-    { key: 'briefed',         label: 'Amp & Mike & Crazy Briefed', type: 'yesno' },
-    { key: 'liquidLinedUp',   label: 'Liquid & BSOA Lined Up', type: 'yesno' },
-    { key: 'productionStage', label: 'Production',            type: 'stage' },
-    { key: 'balancePaid',     label: 'Balance Paid',          type: 'yesno' },
-    { key: 'readyDispatch',   label: 'Ready for Dispatch',    type: 'yesno' },
-  ];
+  const handleYN = (row, key, val) => onUpdate(row.id, { [key]: val });
 
   return (
     <div className="fade-up space-y-5">
-      {/* Header */}
+      {/* Page header */}
       <div className="pb-3 border-b">
-        <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>B2B CHANNEL</p>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
-          <div>
-            <h1 className="font-display ink" style={{ fontWeight: 700, fontSize: 28 }}>B2B CUSTOMS</h1>
-            <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>
-              Production tracker — manual progress board, not linked to the client database
-            </p>
-          </div>
-          <span className="font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>
-            {rows.length} PROJECT{rows.length !== 1 ? 'S' : ''}
-          </span>
-        </div>
+        <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>PROJECT TRACKER</p>
+        <h1 className="font-display ink mt-1" style={{ fontWeight: 700, fontSize: 28 }}>B2B & SCHOOLS PLANNER</h1>
+        <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>Track every project from pitch to dispatch across both channels</p>
       </div>
 
-      {/* Grid */}
-      <div className="premium-card" style={{ overflowX: 'auto' }}>
-        <div style={{ minWidth: 980 }}>
-          {/* Header row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '220px repeat(6, 1fr) 40px', background: '#002855' }}>
-            <div style={{ padding: '12px 14px' }}>
-              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#DBB85E', fontWeight: 700 }}>CUSTOMER NAME</p>
-            </div>
-            {columns.map(col => (
-              <div key={col.key} style={{ padding: '12px 8px', textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
-                <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', color: '#FCF7F2', fontWeight: 700, lineHeight: 1.3 }}>{col.label.toUpperCase()}</p>
+      {/* Summary banner */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
+        {PLANNER_CHANNELS.map(ch => {
+          const s = summaryByChannel[ch] || {};
+          return (
+            <div key={ch} className="premium-card p-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <p className="font-display" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: '#002855' }}>{ch.toUpperCase()}</p>
+                <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, color: '#5A7A99' }}>{s.total || 0} PROJECT{s.total !== 1 ? 'S' : ''}</span>
               </div>
-            ))}
-            <div></div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 9, color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600, letterSpacing: '0.1em', marginBottom: 4 }}>SALES COMPLETE</p>
+                  <ProgressBar pct={s.total ? Math.round((s.salesDone / s.total) * 100) : 0} color="#BC8D26" />
+                  <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 3 }}>{s.salesDone || 0} of {s.total || 0}</p>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 9, color: '#5A7A99', fontFamily: "'Cinzel',serif", fontWeight: 600, letterSpacing: '0.1em', marginBottom: 4 }}>PRODUCTION COMPLETE</p>
+                  <ProgressBar pct={s.total ? Math.round((s.prodDone / s.total) * 100) : 0} color="#5A7A99" />
+                  <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 3 }}>{s.prodDone || 0} of {s.total || 0}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Channel toggle */}
+      <div style={{ display: 'flex', gap: 0, border: '1px solid rgba(0,40,85,0.2)', width: 'fit-content', overflow: 'hidden' }}>
+        {PLANNER_CHANNELS.map(ch => (
+          <button key={ch} onClick={() => setActiveChannel(ch)}
+            style={{ padding: '9px 24px', fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: '0.2em', fontWeight: 700, border: 'none', cursor: 'pointer', background: activeChannel === ch ? '#002855' : 'transparent', color: activeChannel === ch ? '#FCF7F2' : '#002855', transition: 'all 0.15s' }}>
+            {ch.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* Project rows */}
+      <div className="premium-card" style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: 900 }}>
+
+          {/* ── PHASE 1: SALES / SETUP ── */}
+          <div style={{ background: '#002855', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 6, height: 6, background: '#DBB85E', transform: 'rotate(45deg)', flexShrink: 0 }} />
+            <p style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.25em', color: '#DBB85E', fontWeight: 700, margin: 0 }}>PHASE 1 — SALES & SETUP</p>
+            <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', margin: 0, marginLeft: 4 }}>
+              Collapses to a tick once 100% complete
+            </p>
           </div>
 
-          {/* Data rows */}
-          {rows.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-              <p className="italic ocean" style={{ fontSize: 13 }}>No production projects yet — add the first customer below.</p>
+          {/* Phase 1 header row */}
+          <div style={{ display: 'grid', gridTemplateColumns: `200px repeat(${salesFields.length},1fr) 120px`, background: 'rgba(0,40,85,0.06)', borderBottom: '2px solid rgba(0,40,85,0.1)' }}>
+            <div style={{ padding: '8px 12px' }}>
+              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontWeight: 700, margin: 0 }}>PROJECT / LEAD</p>
             </div>
-          ) : (
-            rows.map((row, i) => (
-              <div key={row.id} style={{
-                display: 'grid', gridTemplateColumns: '220px repeat(6, 1fr) 40px',
-                borderTop: '1px solid rgba(0,40,85,0.08)',
-                background: justAddedId === row.id ? 'rgba(188,141,38,0.14)' : (i % 2 === 0 ? '#FCF7F2' : 'rgba(0,40,85,0.02)'),
-                alignItems: 'center',
-                transition: 'background 0.8s ease',
-              }}>
-                {/* Customer name — freely editable */}
-                <div style={{ padding: '8px 14px', position: 'relative' }}>
+            {salesFields.map(f => (
+              <div key={f.key} style={{ padding: '8px 6px', textAlign: 'center', borderLeft: '1px solid rgba(0,40,85,0.08)' }}>
+                <p style={{ fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.08em', color: '#5A7A99', fontWeight: 700, margin: 0, lineHeight: 1.4 }}>{f.label.toUpperCase()}</p>
+              </div>
+            ))}
+            <div style={{ padding: '8px 10px', textAlign: 'center', borderLeft: '1px solid rgba(0,40,85,0.08)' }}>
+              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', color: '#BC8D26', fontWeight: 700, margin: 0 }}>PROGRESS</p>
+            </div>
+          </div>
+
+          {/* Phase 1 data rows */}
+          {channelRows.length === 0 ? (
+            <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+              <p className="italic ocean" style={{ fontSize: 13 }}>No {activeChannel} projects yet — add one below.</p>
+            </div>
+          ) : channelRows.map((row, i) => {
+            const salesPct = calcSalesProgress(row, activeChannel);
+            const salesDone = salesPct >= 100;
+            return (
+              <div key={`s-${row.id}`}
+                style={{ display: 'grid', gridTemplateColumns: `200px repeat(${salesFields.length},1fr) 120px`, borderTop: i === 0 ? 'none' : '1px solid rgba(0,40,85,0.07)', background: justAddedId === row.id ? 'rgba(188,141,38,0.08)' : (i % 2 === 0 ? '#FCF7F2' : 'rgba(0,40,85,0.015)'), alignItems: 'center', transition: 'background 0.8s' }}>
+                {/* Project name */}
+                <div style={{ padding: '8px 12px', position: 'relative' }}>
                   <input
                     type="text"
                     ref={el => { if (el) nameInputRefs.current[row.id] = el; }}
                     value={row.customerName}
                     onChange={e => handleNameChange(row, e.target.value)}
-                    placeholder="Customer name..."
-                    style={{ width: '100%', padding: '6px 8px', border: justAddedId === row.id ? '1px solid #BC8D26' : '1px solid rgba(0,40,85,0.15)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 13, color: '#002855', fontWeight: 700, outline: 'none' }}
+                    placeholder="Project / Lead name..."
+                    style={{ width: '100%', padding: '5px 7px', border: justAddedId === row.id ? '1px solid #BC8D26' : '1px solid rgba(0,40,85,0.15)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 12, color: '#002855', fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
                   />
-                  {savingId === row.id && (
-                    <span style={{ position: 'absolute', right: 18, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#BC8D26', fontStyle: 'italic' }}>saving…</span>
-                  )}
+                  {savingId === row.id && <span style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#BC8D26', fontStyle: 'italic' }}>saving…</span>}
                 </div>
-
-                {/* Status columns */}
-                {columns.map(col => (
-                  <div key={col.key} style={{ padding: '8px' }}>
-                    {col.type === 'yesno' ? (
-                      <YesNoSelect value={row[col.key]} onChange={(val) => onUpdate(row.id, { [col.key]: val })} />
-                    ) : (
-                      <ProductionStageSelect value={row[col.key]} onChange={(val) => onUpdate(row.id, { [col.key]: val })} />
-                    )}
+                {/* Yes/No cells — collapsed to a single ✓ when 100% */}
+                {salesDone ? (
+                  <div style={{ gridColumn: `2 / ${salesFields.length + 2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px 12px' }}>
+                    <span style={{ fontSize: 18, color: '#2d8659' }}>✓</span>
+                    <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, color: '#2d8659', fontWeight: 700, letterSpacing: '0.1em' }}>SALES COMPLETE</span>
+                  </div>
+                ) : salesFields.map(f => (
+                  <div key={f.key} style={{ padding: '6px 5px', borderLeft: '1px solid rgba(0,40,85,0.07)' }}>
+                    <YNPill value={row[f.key] || 'No'} onChange={val => handleYN(row, f.key, val)} />
                   </div>
                 ))}
+                {/* Progress */}
+                <div style={{ padding: '8px 10px', borderLeft: '1px solid rgba(0,40,85,0.07)' }}>
+                  <ProgressBar pct={salesPct} color="#BC8D26" />
+                </div>
+              </div>
+            );
+          })}
 
-                {/* Delete */}
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+          {/* ── PHASE 2: PRODUCTION ── */}
+          <div style={{ background: '#002855', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+            <div style={{ width: 6, height: 6, background: '#5A7A99', transform: 'rotate(45deg)', flexShrink: 0 }} />
+            <p style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.25em', color: 'rgba(255,255,255,0.8)', fontWeight: 700, margin: 0 }}>PHASE 2 — PRODUCTION</p>
+          </div>
+
+          {/* Phase 2 header */}
+          <div style={{ display: 'grid', gridTemplateColumns: `200px repeat(${PRODUCTION_FIELDS.length},1fr) 120px`, background: 'rgba(0,40,85,0.06)', borderBottom: '2px solid rgba(0,40,85,0.1)' }}>
+            <div style={{ padding: '8px 12px' }}>
+              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 700, margin: 0 }}>PROJECT</p>
+            </div>
+            {PRODUCTION_FIELDS.map(f => (
+              <div key={f.key} style={{ padding: '8px 6px', textAlign: 'center', borderLeft: '1px solid rgba(0,40,85,0.08)' }}>
+                <p style={{ fontFamily: "'Cinzel',serif", fontSize: 7, letterSpacing: '0.08em', color: '#5A7A99', fontWeight: 700, margin: 0, lineHeight: 1.4 }}>{f.label.toUpperCase()}</p>
+              </div>
+            ))}
+            <div style={{ padding: '8px 10px', textAlign: 'center', borderLeft: '1px solid rgba(0,40,85,0.08)' }}>
+              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.1em', color: '#5A7A99', fontWeight: 700, margin: 0 }}>PROGRESS</p>
+            </div>
+          </div>
+
+          {/* Phase 2 data rows */}
+          {channelRows.length === 0 ? null : channelRows.map((row, i) => {
+            const prodPct = calcProductionProgress(row);
+            const prodDone = prodPct >= 100;
+            return (
+              <div key={`p-${row.id}`}
+                style={{ display: 'grid', gridTemplateColumns: `200px repeat(${PRODUCTION_FIELDS.length},1fr) 120px`, borderTop: i === 0 ? '2px solid rgba(0,40,85,0.1)' : '1px solid rgba(0,40,85,0.07)', background: i % 2 === 0 ? '#FCF7F2' : 'rgba(0,40,85,0.015)', alignItems: 'center' }}>
+                {/* Project name label (read-only — copied from Phase 1) */}
+                <div style={{ padding: '8px 12px' }}>
+                  <p style={{ fontFamily: "'Cinzel',serif", fontSize: 11, fontWeight: 700, color: '#002855', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {row.customerName || <span style={{ color: 'rgba(0,40,85,0.3)', fontStyle: 'italic', fontFamily: 'inherit' }}>Unnamed project</span>}
+                  </p>
+                </div>
+                {/* Production Yes/No cells */}
+                {prodDone ? (
+                  <div style={{ gridColumn: `2 / ${PRODUCTION_FIELDS.length + 2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px 12px' }}>
+                    <span style={{ fontSize: 18, color: '#2d8659' }}>✓</span>
+                    <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, color: '#2d8659', fontWeight: 700, letterSpacing: '0.1em' }}>PRODUCTION COMPLETE</span>
+                  </div>
+                ) : PRODUCTION_FIELDS.map(f => (
+                  <div key={f.key} style={{ padding: '6px 5px', borderLeft: '1px solid rgba(0,40,85,0.07)' }}>
+                    <YNPill value={row[f.key] || 'No'} onChange={val => handleYN(row, f.key, val)} />
+                  </div>
+                ))}
+                {/* Progress + delete */}
+                <div style={{ padding: '8px 10px', borderLeft: '1px solid rgba(0,40,85,0.07)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <ProgressBar pct={prodPct} color="#5A7A99" />
                   <button
-                    onClick={() => askConfirm({
-                      title: 'Remove this project?',
-                      message: `${row.customerName || 'Unnamed project'}\n\nThis cannot be undone.`,
-                      confirmLabel: 'DELETE',
-                      danger: true,
-                      onConfirm: () => onDelete(row.id),
-                    })}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(204,35,58,0.5)', padding: 6, display: 'flex' }}
+                    onClick={() => askConfirm({ title: 'Remove this project?', message: `${row.customerName || 'Unnamed'}
+
+This cannot be undone.`, confirmLabel: 'DELETE', danger: true, onConfirm: () => onDelete(row.id) })}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(204,35,58,0.4)', padding: 0, fontSize: 11, fontFamily: "'Cinzel',serif", letterSpacing: '0.05em', textAlign: 'left' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#CC233A'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(204,35,58,0.5)'}
-                    title="Remove project">
-                    <Trash2 style={{ width: 14, height: 14 }} />
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(204,35,58,0.4)'}>
+                    ✕ remove
                   </button>
                 </div>
               </div>
-            ))
-          )}
+            );
+          })}
 
-          {/* Add new row */}
+          {/* Add new project row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderTop: '2px solid rgba(188,141,38,0.3)', background: 'rgba(188,141,38,0.04)', flexWrap: 'wrap' }}>
             <UserPlus style={{ width: 14, height: 14, color: '#BC8D26', flexShrink: 0 }} />
             <input
@@ -3910,24 +4052,21 @@ function B2BCustomsPage({ rows, onAdd, onUpdate, onDelete, askConfirm }) {
               value={newName}
               onChange={e => { setNewName(e.target.value); if (addError) setAddError(''); }}
               onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
-              placeholder="Add new customer / project..."
-              style={{ flex: 1, maxWidth: 300, padding: '8px 10px', border: addError ? '1px solid #CC233A' : '1px solid rgba(0,40,85,0.2)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 13, color: '#002855', outline: 'none' }}
+              placeholder={`Add new ${activeChannel} project / lead...`}
+              style={{ flex: 1, maxWidth: 320, padding: '8px 10px', border: addError ? '1px solid #CC233A' : '1px solid rgba(0,40,85,0.2)', background: '#fff', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 13, color: '#002855', outline: 'none' }}
             />
-            <button
-              onClick={handleAdd}
-              disabled={adding || !newName.trim()}
+            <button onClick={handleAdd} disabled={adding || !newName.trim()}
               style={{ padding: '8px 16px', background: adding || !newName.trim() ? 'rgba(0,40,85,0.2)' : '#002855', color: '#FCF7F2', border: 'none', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, cursor: adding || !newName.trim() ? 'default' : 'pointer' }}>
-              {adding ? 'ADDING...' : 'ADD PROJECT'}
+              {adding ? 'ADDING...' : `ADD ${activeChannel.toUpperCase()} PROJECT`}
             </button>
-            {addError && (
-              <span style={{ fontSize: 11, color: '#CC233A', fontStyle: 'italic', width: '100%' }}>{addError}</span>
-            )}
+            {addError && <span style={{ fontSize: 11, color: '#CC233A', fontStyle: 'italic', width: '100%' }}>{addError}</span>}
           </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 function MonthFilter({ value, onChange }) {
   // value = 'All' | 'YYYY-MM'
