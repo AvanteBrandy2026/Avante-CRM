@@ -678,7 +678,31 @@ function AvanteCRMApp({ currentUser, onLogout }) {
         const { data: customsRows, error: customsErr } = await supabase
           .from('b2b_customs').select('*').order('created_at');
         if (!customsErr && customsRows) {
-          setB2bCustoms(customsRows.map(b2bCustomFromDb));
+          // Merge localStorage overrides so channel/phase fields survive refresh
+          // even when the Supabase table doesn't have those columns yet
+          const merged = customsRows.map(r => {
+            const base = b2bCustomFromDb(r);
+            const id = base.id;
+            const lsGet = (k, def) => { try { const v = localStorage.getItem(`bpc_${id}_${k}`); return v !== null ? v : def; } catch(e) { return def; } };
+            return {
+              ...base,
+              channel:        lsGet('channel',        base.channel        || 'B2B'),
+              pitched:        lsGet('pitched',        base.pitched        || 'No'),
+              design:         lsGet('design',         base.design         || 'No'),
+              bottleDev:      lsGet('bottleDev',      base.bottleDev      || 'No'),
+              salesAgreement: lsGet('salesAgreement', base.salesAgreement || 'No'),
+              ecom:           lsGet('ecom',           base.ecom           || 'No'),
+              marketing:      lsGet('marketing',      base.marketing      || 'No'),
+              autoResponse:   lsGet('autoResponse',   base.autoResponse   || 'No'),
+              depositPaid:    lsGet('depositPaid',    base.depositPaid    || 'No'),
+              dryGoods:       lsGet('dryGoods',       base.dryGoods       || 'No'),
+              briefed:        lsGet('briefed',        base.briefed        || 'No'),
+              liquidLinedUp:  lsGet('liquidLinedUp',  base.liquidLinedUp  || 'No'),
+              balancePaid:    lsGet('balancePaid',    base.balancePaid    || 'No'),
+              readyDispatch:  lsGet('readyDispatch',  base.readyDispatch  || 'No'),
+            };
+          });
+          setB2bCustoms(merged);
         } else if (customsErr) {
           console.warn('[b2b_customs] table missing or not yet created:', customsErr.message);
         }
