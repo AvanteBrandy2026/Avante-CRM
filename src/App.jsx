@@ -938,6 +938,10 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       b2bSchemaExtended.current = false;
       ({ data: inserted, error } = await supabase
         .from('b2b_customs').insert({ customer_name: fullPayload.customer_name }).select().single());
+      // Persist the channel to localStorage so it survives refresh until SQL is run
+      if (!error && inserted?.id) {
+        try { localStorage.setItem(`b2b_custom_channel_${inserted.id}`, fullPayload.channel || 'B2B'); } catch(e) {}
+      }
     } else if (!error) {
       b2bSchemaExtended.current = true;
     }
@@ -945,7 +949,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
     if (error) { console.error('[addB2bCustom]', error); throw new Error(error.message); }
     const newRow = b2bCustomFromDb(inserted);
     // Merge in fields that weren't saved so UI shows them correctly
-    const fullRow = { ...newRow, ...row, id: newRow.id };
+    const fullRow = { ...newRow, ...row, id: newRow.id, channel: row.channel || 'B2B' };
     setB2bCustoms(prev => [...prev, fullRow]);
     return fullRow;
   };
@@ -972,6 +976,10 @@ function AvanteCRMApp({ currentUser, onLogout }) {
 
     // Optimistic local update always happens immediately
     setB2bCustoms(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+    // Always persist channel to localStorage as a reliable fallback
+    if (patch.channel) {
+      try { localStorage.setItem(`b2b_custom_channel_${id}`, patch.channel); } catch(e) {}
+    }
 
     if (Object.keys(dbPatch).length === 0) return;
 
@@ -3797,7 +3805,7 @@ function plannerFromDb(r) {
   return {
     id:             Number(r.id),
     customerName:   r.customer_name || '',
-    channel:        r.channel || 'B2B',
+    channel:        r.channel || (typeof localStorage !== 'undefined' && localStorage.getItem(`b2b_custom_channel_${Number(r.id)}`)) || 'B2B',
     pitched:        r.pitched || 'No',
     design:         r.design || 'No',
     bottleDev:      r.bottle_dev || 'No',
