@@ -938,9 +938,15 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       b2bSchemaExtended.current = false;
       ({ data: inserted, error } = await supabase
         .from('b2b_customs').insert({ customer_name: fullPayload.customer_name }).select().single());
-      // Persist the channel to localStorage so it survives refresh until SQL is run
+      // Persist ALL fields to localStorage so they survive refresh until SQL is run
       if (!error && inserted?.id) {
-        try { localStorage.setItem(`b2b_custom_channel_${inserted.id}`, fullPayload.channel || 'B2B'); } catch(e) {}
+        const fid = inserted.id;
+        const LS_FIELDS = ['channel','pitched','design','bottleDev','salesAgreement','ecom','marketing','autoResponse','depositPaid','dryGoods','briefed','liquidLinedUp','balancePaid','readyDispatch'];
+        LS_FIELDS.forEach(k => {
+          if (fullPayload[k] !== undefined) {
+            try { localStorage.setItem(`bpc_${fid}_${k}`, fullPayload[k] || 'No'); } catch(e) {}
+          }
+        });
       }
     } else if (!error) {
       b2bSchemaExtended.current = true;
@@ -976,10 +982,14 @@ function AvanteCRMApp({ currentUser, onLogout }) {
 
     // Optimistic local update always happens immediately
     setB2bCustoms(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
-    // Always persist channel to localStorage as a reliable fallback
-    if (patch.channel) {
-      try { localStorage.setItem(`b2b_custom_channel_${id}`, patch.channel); } catch(e) {}
-    }
+    // Always persist ALL field changes to localStorage as a reliable fallback
+    // until the Supabase schema migration is run
+    const LS_FIELDS = ['channel','pitched','design','bottleDev','salesAgreement','ecom','marketing','autoResponse','depositPaid','dryGoods','briefed','liquidLinedUp','balancePaid','readyDispatch'];
+    LS_FIELDS.forEach(k => {
+      if (patch[k] !== undefined) {
+        try { localStorage.setItem(`bpc_${id}_${k}`, patch[k]); } catch(e) {}
+      }
+    });
 
     if (Object.keys(dbPatch).length === 0) return;
 
@@ -3802,23 +3812,30 @@ function plannerToDb(row) {
 }
 
 function plannerFromDb(r) {
+  const id = Number(r.id);
+  const ls = (key, fallback) => {
+    try {
+      const v = localStorage.getItem(`bpc_${id}_${key}`);
+      return v !== null ? v : fallback;
+    } catch(e) { return fallback; }
+  };
   return {
-    id:             Number(r.id),
+    id,
     customerName:   r.customer_name || '',
-    channel:        r.channel || (typeof localStorage !== 'undefined' && localStorage.getItem(`b2b_custom_channel_${Number(r.id)}`)) || 'B2B',
-    pitched:        r.pitched || 'No',
-    design:         r.design || 'No',
-    bottleDev:      r.bottle_dev || 'No',
-    salesAgreement: r.sales_agreement || 'No',
-    ecom:           r.ecom || 'No',
-    marketing:      r.marketing || 'No',
-    autoResponse:   r.auto_response || 'No',
-    depositPaid:    r.deposit_paid || 'No',
-    dryGoods:       r.dry_goods || 'No',
-    briefed:        r.briefed || 'No',
-    liquidLinedUp:  r.liquid_lined_up || 'No',
-    balancePaid:    r.balance_paid || 'No',
-    readyDispatch:  r.ready_dispatch || 'No',
+    channel:        r.channel        || ls('channel',        'B2B'),
+    pitched:        r.pitched        || ls('pitched',        'No'),
+    design:         r.design         || ls('design',         'No'),
+    bottleDev:      r.bottle_dev     || ls('bottleDev',      'No'),
+    salesAgreement: r.sales_agreement|| ls('salesAgreement', 'No'),
+    ecom:           r.ecom           || ls('ecom',           'No'),
+    marketing:      r.marketing      || ls('marketing',      'No'),
+    autoResponse:   r.auto_response  || ls('autoResponse',   'No'),
+    depositPaid:    r.deposit_paid   || ls('depositPaid',    'No'),
+    dryGoods:       r.dry_goods      || ls('dryGoods',       'No'),
+    briefed:        r.briefed        || ls('briefed',        'No'),
+    liquidLinedUp:  r.liquid_lined_up|| ls('liquidLinedUp',  'No'),
+    balancePaid:    r.balance_paid   || ls('balancePaid',    'No'),
+    readyDispatch:  r.ready_dispatch || ls('readyDispatch',  'No'),
     createdAt:      r.created_at || '',
   };
 }
