@@ -917,13 +917,37 @@ function AvanteCRMApp({ currentUser, onLogout }) {
   };
 
   // ------- B2B Customs (production tracker) operations -------
+  // Track whether the b2b_customs table has the new planner columns
+  // Detected on first failed insert/update — falls back to base columns
+  const b2bSchemaExtended = useRef(null); // null=unknown, true=has new cols, false=old schema
+
   const addB2bCustom = async (row) => {
-    const { data: inserted, error } = await supabase
-      .from('b2b_customs').insert(b2bCustomToDb(row)).select().single();
+    const fullPayload = b2bCustomToDb(row);
+
+    // If we already know the schema is old, strip new columns immediately
+    const tryPayload = (b2bSchemaExtended.current === false)
+      ? { customer_name: fullPayload.customer_name, channel: 'B2B' }
+      : fullPayload;
+
+    let { data: inserted, error } = await supabase
+      .from('b2b_customs').insert(tryPayload).select().single();
+
+    if (error && error.message && error.message.includes('column')) {
+      // New columns don't exist yet — retry with just customer_name
+      console.warn('[addB2bCustom] new columns missing, retrying with base schema');
+      b2bSchemaExtended.current = false;
+      ({ data: inserted, error } = await supabase
+        .from('b2b_customs').insert({ customer_name: fullPayload.customer_name }).select().single());
+    } else if (!error) {
+      b2bSchemaExtended.current = true;
+    }
+
     if (error) { console.error('[addB2bCustom]', error); throw new Error(error.message); }
     const newRow = b2bCustomFromDb(inserted);
-    setB2bCustoms(prev => [...prev, newRow]);
-    return newRow;
+    // Merge in fields that weren't saved so UI shows them correctly
+    const fullRow = { ...newRow, ...row, id: newRow.id };
+    setB2bCustoms(prev => [...prev, fullRow]);
+    return fullRow;
   };
 
   const updateB2bCustom = async (id, patch) => {
@@ -935,11 +959,38 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       dryGoods: 'dry_goods', briefed: 'briefed', liquidLinedUp: 'liquid_lined_up',
       balancePaid: 'balance_paid', readyDispatch: 'ready_dispatch',
     };
+    // Base columns that always exist in the old schema
+    const baseFields = new Set(['customerName', 'depositPaid', 'briefed', 'liquidLinedUp', 'balancePaid', 'readyDispatch']);
+
+    // Build DB patch — if schema is old, only send base fields
     const dbPatch = {};
-    Object.entries(patch).forEach(([k, v]) => { if (fieldMap[k]) dbPatch[fieldMap[k]] = v; });
+    Object.entries(patch).forEach(([k, v]) => {
+      if (!fieldMap[k]) return;
+      if (b2bSchemaExtended.current === false && !baseFields.has(k)) return;
+      dbPatch[fieldMap[k]] = v;
+    });
+
+    // Optimistic local update always happens immediately
     setB2bCustoms(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+
+    if (Object.keys(dbPatch).length === 0) return;
+
     const { error } = await supabase.from('b2b_customs').update(dbPatch).eq('id', id);
-    if (error) console.error('[updateB2bCustom]', error);
+    if (error && error.message && error.message.includes('column')) {
+      // New columns rejected — mark schema as old and retry with base only
+      b2bSchemaExtended.current = false;
+      const basePatch = {};
+      Object.entries(patch).forEach(([k, v]) => {
+        if (fieldMap[k] && baseFields.has(k)) basePatch[fieldMap[k]] = v;
+      });
+      if (Object.keys(basePatch).length > 0) {
+        await supabase.from('b2b_customs').update(basePatch).eq('id', id);
+      }
+    } else if (!error) {
+      b2bSchemaExtended.current = true;
+    } else if (error) {
+      console.error('[updateB2bCustom]', error);
+    }
   };
 
   const deleteB2bCustom = async (id) => {
