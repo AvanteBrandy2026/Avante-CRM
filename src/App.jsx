@@ -4196,37 +4196,91 @@ const DEFAULT_OBJECTIVES = [
   {
     id: 'obj-critical',
     title: 'Critical number: 1M & Theme: "Show me the money!"',
-    quarter: 'Q3 2026',
-    collapsed: false,
+    quarter: 'Q3 2026', collapsed: false,
     keyResults: [
-      { id: 'kr-1', title: 'Cumulative contribution margin converted into cash', owner: 'Rob', dueDate: '2026-09-30', current: 0, target: 1000000, unit: 'Rands' },
+      { id: 'kr-c1', title: 'Cumulative contribution margin converted into cash', owner: 'Rob', dueDate: '2026-09-30', current: 0, target: 1000000, unit: 'Rands' },
     ],
     assignees: ['Rob'],
   },
   {
     id: 'obj-1',
     title: '1: Deliver profitable sales through the priority demand engines & collaborations',
-    quarter: 'Q3 2026',
-    collapsed: false,
+    quarter: 'Q3 2026', collapsed: false,
     keyResults: [
-      { id: 'kr-2', title: 'Chiefs launched across the agreed minimum viable channels', owner: 'Rob', dueDate: '2026-09-30', current: 0, target: 500000, unit: 'Rands' },
-      { id: 'kr-3', title: 'Big Zulu agreed, launched & selling', owner: 'Loydz', dueDate: '2026-08-31', current: 0, target: 500000, unit: 'Rands' },
-      { id: 'kr-4', title: 'On-Con channel revenue target achieved', owner: 'Lehmarc', dueDate: '2026-09-30', current: 0, target: 300000, unit: 'Rands' },
+      { id: 'kr-1-1', title: 'Chiefs launched across the agreed minimum viable channels', owner: 'Rob', dueDate: '2026-09-30', current: 0, target: 500000, unit: 'Rands' },
+      { id: 'kr-1-2', title: 'Big Zulu agreed, launched & selling', owner: 'Loydz', dueDate: '2026-08-31', current: 0, target: 500000, unit: 'Rands' },
+      { id: 'kr-1-3', title: 'Greatest Rivalry & related offers Contribution margin (Stan & Sales team)', owner: '', dueDate: '2026-09-12', current: 0, target: 200000, unit: 'Rands' },
+      { id: 'kr-1-4', title: 'Greatest Rivalry to clear out old VSOP & VS in trade (Stan & Sales team)', owner: 'Lehmarc', dueDate: '2026-09-12', current: 0, target: 2000, unit: 'bottles' },
+      { id: 'kr-1-5', title: 'Trade ave sell-through rate (Sales Team)', owner: 'Loydz', dueDate: '2026-09-30', current: 0, target: 2, unit: 'bottles per outlet per month' },
+      { id: 'kr-1-6', title: 'Launch AB in UK & SA (Stan)', owner: 'Rob', dueDate: '2026-09-25', current: 0, target: 100, unit: 'bottles' },
+      { id: 'kr-1-7', title: 'B2B sales (Stan)', owner: '', dueDate: '2026-09-29', current: 0, target: 2000000, unit: 'Rands' },
+      { id: 'kr-1-8', title: 'Corporate sales', owner: '', dueDate: '2026-09-30', current: 0, target: 1000000, unit: 'Rands' },
+      { id: 'kr-1-9', title: 'Schools & Residences (Ant)', owner: '', dueDate: '2026-09-30', current: 0, target: 1000000, unit: 'Rands' },
+      { id: 'kr-1-10', title: 'Music / artists / festivals', owner: 'Loydz', dueDate: '2026-09-30', current: 0, target: 200000, unit: 'Rands' },
     ],
-    assignees: ['Rob', 'Loydz', 'Lehmarc'],
+    assignees: ['Rob', 'Loydz', 'Lehmarc', 'Anthony'],
+  },
+  {
+    id: 'obj-2',
+    title: '2. Establish financial and commercial control (Dina)',
+    quarter: 'Q3 2026', collapsed: false,
+    keyResults: [
+      { id: 'kr-2-1', title: 'Single source of truth: All sales and direct costs are captured through the system', owner: '', dueDate: '2026-08-28', current: 0, target: 1, unit: 'Source of Truth' },
+      { id: 'kr-2-2', title: 'Inventory system up and running for all sales & production (Dina)', owner: '', dueDate: '2026-08-28', current: 0, target: 1, unit: 'System in place' },
+      { id: 'kr-2-3', title: 'Management accounts are accurate and issued by the agreed monthly deadline', owner: '', dueDate: '2026-08-31', current: 0, target: 1, unit: 'reports' },
+      { id: 'kr-2-4', title: 'A weekly 13-week cash-flow and runway forecast is maintained (Dina)', owner: '', dueDate: '2026-08-28', current: 0, target: 13, unit: 'weeks' },
+      { id: 'kr-2-5', title: 'Contribution margin is visible by product, channel and major initiative', owner: '', dueDate: '2026-08-28', current: 0, target: 20, unit: '% Cont Margin' },
+      { id: 'kr-2-6', title: 'Track Rate Of Sale', owner: 'Matthew', dueDate: '2026-08-29', current: 0, target: 2, unit: 'Bottles on ave per month per outlet' },
+      { id: 'kr-2-7', title: 'Payments with Dina', owner: 'Rob', dueDate: '2026-07-30', current: 0, target: 1, unit: 'all' },
+    ],
+    assignees: ['Matthew', 'Rob'],
+  },
+  {
+    id: 'obj-3',
+    title: '3: Ensure execution of product, production & Fulfilment: 30 Inventory days',
+    quarter: 'Q3 2026', collapsed: false,
+    keyResults: [
+      { id: 'kr-3-1', title: '30-45 days of Inventory', owner: 'Matthew', dueDate: '2026-08-31', current: 0, target: 30, unit: 'days of inventory' },
+      { id: 'kr-3-2', title: 'On time & on-profit delivery & fulfilment of all sales, collabs & collaborations', owner: 'Matthew', dueDate: '2026-09-30', current: 0, target: 12, unit: 'Custom run deliveries' },
+      { id: 'kr-3-3', title: 'One integrated production plan covering collaborations, gifting, DTC', owner: 'Matthew', dueDate: '2026-08-07', current: 0, target: 1, unit: 'Plan' },
+      { id: 'kr-3-4', title: 'The product, production, marketing, fulfilment and cash-outlay plan is live', owner: 'Matthew', dueDate: '2026-08-14', current: 0, target: 1, unit: 'Plan' },
+      { id: 'kr-3-5', title: 'Required stock and key components are confirmed against base, upside and downside scenarios', owner: 'Matthew', dueDate: '2026-08-28', current: 0, target: 1, unit: 'all' },
+      { id: 'kr-3-6', title: 'Material inventory locations and ownership are reconciled to an agreed system', owner: 'Matthew', dueDate: '2026-08-21', current: 0, target: 1, unit: 'system' },
+      { id: 'kr-3-7', title: 'On time fulfilment (Louis)', owner: '', dueDate: '2026-07-30', current: 0, target: 1, unit: 'Day to despatch' },
+      { id: 'kr-3-8', title: 'Net Promoter Score (Louis)', owner: '', dueDate: '2026-09-29', current: 0, target: 9, unit: 'NPS' },
+    ],
+    assignees: ['Matthew', 'Louis'],
+  },
+  {
+    id: 'obj-4',
+    title: '4: Execute sales & marketing. Plan & Build peak-season execution readiness',
+    quarter: 'Q3 2026', collapsed: false,
+    keyResults: [
+      { id: 'kr-4-1', title: 'One integrated festive marketing plan covering collaborations, gifting, DTC and trade channels', owner: '', dueDate: '2026-08-06', current: 0, target: 1, unit: 'Plan' },
+      { id: 'kr-4-2', title: 'One integrated festive production plan covering collaborations, gifting, DTC and trade channels', owner: '', dueDate: '2026-08-06', current: 0, target: 1, unit: 'Plan' },
+      { id: 'kr-4-3', title: 'Every Q3 initiative has an owner, deadline, budget, contribution-margin target & is tracked weekly', owner: '', dueDate: '2026-07-31', current: 0, target: 10, unit: 'Initiatives planned & tracked' },
+      { id: 'kr-4-4', title: 'Every Q4 initiative has an owner, deadline, budget, contribution-margin target', owner: '', dueDate: '2026-08-28', current: 0, target: 1, unit: 'Campaign' },
+      { id: 'kr-4-5', title: 'Known capacity risks are either resolved or explicitly removed from the plan', owner: '', dueDate: '2026-08-14', current: 0, target: 100, unit: '%' },
+      { id: 'kr-4-6', title: 'Single festive marketing campaign to capture festive, rugby and all big moments', owner: '', dueDate: '2026-08-28', current: 0, target: 200000, unit: 'Rands Budget' },
+      { id: 'kr-4-7', title: 'Sustained DTC sales through winning static and player/collaborator content', owner: '', dueDate: '2026-08-28', current: 0, target: 2, unit: 'POAS' },
+      { id: 'kr-4-8', title: 'Profitable and dialed in B2B funnel producing high value leads at scale', owner: '', dueDate: '2026-08-28', current: 0, target: 30, unit: 'Great leads converted' },
+      { id: 'kr-4-9', title: 'Prep for Q4: Revamped Website geared toward both DTC offering and gifting', owner: '', dueDate: '2026-08-27', current: 0, target: 1, unit: 'Website and campaign ready' },
+      { id: 'kr-4-10', title: 'Prep for Q4: Full stack digital marketing campaign for festive DTC coverage', owner: '', dueDate: '2026-08-28', current: 0, target: 1, unit: 'Plan' },
+    ],
+    assignees: [],
   },
 ];
 
 const DEFAULT_PRIORITIES = [
-  { id: 'p-1', title: 'Attain Xero permission and resolve Sales rep invoicing', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-22', owner: '', linkedOKR: '' },
-  { id: 'p-2', title: 'Meet with Big Zulu Will to go live with ads & soft sell (Askew)', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '' },
-  { id: 'p-3', title: 'Develop new B2B creative (Matt A)', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: 'Matthew', linkedOKR: '' },
-  { id: 'p-4', title: 'Win Marriot F&B manager as Avante Champion (ALEX)', description: 'Woo him at a tasting and achieve emotional buy-in so that F&B will sell the...', status: 'In Progress', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-20', owner: 'Alex', linkedOKR: '' },
-  { id: 'p-5', title: 'SACS Old Boys bottle sell to OBU (Lehmarc)', description: 'OBU', status: 'In Progress', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-09-03', owner: 'Lehmarc', linkedOKR: '' },
-  { id: 'p-6', title: 'Go live with new UK ads so as to achieve 2 x ROAS', description: '', status: 'Blocked', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-22', owner: '', linkedOKR: '' },
-  { id: 'p-7', title: 'Sell into Whisky & Cigar lounge - Full range listed with tasting experience (LEHMARC)', description: '', status: 'Blocked', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-09-04', owner: 'Lehmarc', linkedOKR: '' },
-  { id: 'p-8', title: 'Makro Big Zulu sell in', description: 'Produce and sell in 500 bottles of Big Zulu VSOP to attain PO', status: 'Complete', impact: 'high impact', effort: 'medium effort', dueDate: '2026-05-22', owner: 'Matthew', linkedOKR: '' },
-  { id: 'p-9', title: '400 bottle customised private order (Alex)', description: 'JP Viljoen sale of 400 customised VSOPs. Confirm sale and deposit.', status: 'Complete', impact: 'high impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '' },
+  { id: 'p-1', title: 'Attain Xero permission and resolve Sales rep invoicing', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-22', owner: '', linkedOKR: '', linkedKR: '' },
+  { id: 'p-2', title: 'Meet with Big Zulu Will to go live with ads & soft sell (Askew)', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '', linkedKR: '' },
+  { id: 'p-3', title: 'Develop new B2B creative (Matt A)', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: 'Matthew', linkedOKR: '', linkedKR: '' },
+  { id: 'p-4', title: 'Win Marriot F&B manager as Avante Champion (ALEX)', description: 'Woo him at a tasting and achieve emotional buy-in so that F&B will sell the...', status: 'In Progress', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-20', owner: 'Alex', linkedOKR: '', linkedKR: '' },
+  { id: 'p-5', title: 'SACS Old Boys bottle sell to OBU (Lehmarc)', description: 'OBU', status: 'In Progress', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-09-03', owner: 'Lehmarc', linkedOKR: '', linkedKR: '' },
+  { id: 'p-6', title: 'Go live with new UK ads so as to achieve 2 x ROAS', description: '', status: 'Blocked', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-22', owner: '', linkedOKR: '', linkedKR: '' },
+  { id: 'p-7', title: 'Sell into Whisky & Cigar lounge - Full range listed with tasting experience (LEHMARC)', description: '', status: 'Blocked', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-09-04', owner: 'Lehmarc', linkedOKR: '', linkedKR: '' },
+  { id: 'p-8', title: 'Makro Big Zulu sell in', description: 'Produce and sell in 500 bottles of Big Zulu VSOP to attain PO', status: 'Complete', impact: 'high impact', effort: 'medium effort', dueDate: '2026-05-22', owner: 'Matthew', linkedOKR: '', linkedKR: '' },
+  { id: 'p-9', title: '400 bottle customised private order (Alex)', description: 'JP Viljoen sale of 400 customised VSOPs. Confirm sale and deposit.', status: 'Complete', impact: 'high impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '', linkedKR: '' },
 ];
 
 // ── Avatar pill component ────────────────────────────────────────────────────
@@ -4243,8 +4297,13 @@ function OwnerPill({ name, size = 26 }) {
 }
 
 // ── OKR KEY RESULT ROW ───────────────────────────────────────────────────────
-function KeyResultRow({ kr, onUpdate, onDelete, userIsManager }) {
-  const pct = kr.target > 0 ? Math.min(100, Math.round((kr.current / kr.target) * 100)) : 0;
+function KeyResultRow({ kr, onUpdate, onDelete, userIsManager, priorities }) {
+  // Progress = check-in value (manual) OR % of linked priorities that are Complete
+  const linkedPris = (priorities || []).filter(p => p.linkedKR === kr.id);
+  const pct = kr.target > 0 ? Math.min(100, Math.round((kr.current / kr.target) * 100))
+    : linkedPris.length > 0
+      ? Math.round((linkedPris.filter(p => p.status === 'Complete').length / linkedPris.length) * 100)
+      : 0;
   const [editing, setEditing] = useState(false);
   const [localCurrent, setLocalCurrent] = useState(String(kr.current));
 
@@ -4292,7 +4351,7 @@ function KeyResultRow({ kr, onUpdate, onDelete, userIsManager }) {
 }
 
 // ── OBJECTIVE BLOCK ──────────────────────────────────────────────────────────
-function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps }) {
+function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps, priorities }) {
   const [collapsed, setCollapsed] = useState(obj.collapsed || false);
   const [addingKR, setAddingKR] = useState(false);
   const [newKRTitle, setNewKRTitle] = useState('');
@@ -4363,7 +4422,7 @@ function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps }) {
 
           {/* KR rows */}
           {obj.keyResults.map(kr => (
-            <KeyResultRow key={kr.id} kr={kr} onUpdate={updateKR} userIsManager={userIsManager} />
+            <KeyResultRow key={kr.id} kr={kr} onUpdate={updateKR} userIsManager={userIsManager} priorities={priorities} />
           ))}
 
           {/* Add KR */}
@@ -4418,6 +4477,7 @@ function PriorityCard({ item, onUpdate, onDelete, onDragStart, userIsManager, ob
   const impactColor = item.impact === 'high impact' ? '#CC233A' : item.impact === 'medium impact' ? '#BC8D26' : '#5A7A99';
   const effortColor = '#5A7A99';
   const linkedObj = (objectives || []).find(o => o.id === item.linkedOKR);
+  const linkedKR = linkedObj?.keyResults?.find(kr => kr.id === item.linkedKR);
 
   if (editing) {
     return (
@@ -4444,16 +4504,31 @@ function PriorityCard({ item, onUpdate, onDelete, onDragStart, userIsManager, ob
           <input type="date" value={item.dueDate} onChange={e => onUpdate({...item, dueDate:e.target.value})}
             style={{ padding:'4px 6px', border:'1px solid rgba(0,40,85,0.2)', fontSize:11, borderRadius:4 }} />
         </div>
-        {/* Link to OKR */}
+        {/* Link to OKR + Key Result */}
         <div style={{ marginBottom:10, padding:'10px 12px', background:'rgba(0,40,85,0.03)', border:'1px solid rgba(0,40,85,0.1)', borderRadius:6 }}>
-          <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#BC8D26', fontWeight:700, margin:'0 0 6px' }}>LINK TO OKR</p>
-          <select value={item.linkedOKR || ''} onChange={e => onUpdate({...item, linkedOKR:e.target.value})}
-            style={{ width:'100%', padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', fontSize:12, color:'#002855', outline:'none', borderRadius:4, background:'#fff', boxSizing:'border-box' }}>
-            <option value="">— No OKR linked —</option>
+          <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#BC8D26', fontWeight:700, margin:'0 0 8px' }}>LINK TO OKR</p>
+          {/* Step 1 — pick objective */}
+          <select value={item.linkedOKR || ''} onChange={e => onUpdate({...item, linkedOKR:e.target.value, linkedKR:''})}
+            style={{ width:'100%', padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', fontSize:12, color:'#002855', outline:'none', borderRadius:4, background:'#fff', boxSizing:'border-box', marginBottom:6 }}>
+            <option value="">— Select an OKR —</option>
             {(objectives || []).map(o => (
-              <option key={o.id} value={o.id}>{o.title.length > 60 ? o.title.slice(0,60)+'…' : o.title}</option>
+              <option key={o.id} value={o.id}>{o.title.length > 65 ? o.title.slice(0,65)+'…' : o.title}</option>
             ))}
           </select>
+          {/* Step 2 — pick key result (only shown once an OKR is selected) */}
+          {item.linkedOKR && (() => {
+            const obj = (objectives||[]).find(o => o.id === item.linkedOKR);
+            const krs = obj?.keyResults || [];
+            return krs.length > 0 ? (
+              <select value={item.linkedKR || ''} onChange={e => onUpdate({...item, linkedKR:e.target.value})}
+                style={{ width:'100%', padding:'6px 8px', border:'1px solid rgba(0,40,85,0.15)', fontSize:12, color:'#002855', outline:'none', borderRadius:4, background:'rgba(0,40,85,0.02)', boxSizing:'border-box' }}>
+                <option value="">— Select a Key Result (optional) —</option>
+                {krs.map(kr => (
+                  <option key={kr.id} value={kr.id}>{kr.title.length > 65 ? kr.title.slice(0,65)+'…' : kr.title}</option>
+                ))}
+              </select>
+            ) : <p style={{ fontSize:11, color:'#9E8E7A', fontStyle:'italic', margin:0 }}>No key results on this OKR yet.</p>;
+          })()}
         </div>
         <div style={{ display:'flex', gap:6 }}>
           <button onClick={() => setEditing(false)} style={{ padding:'5px 12px', background:'#002855', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>DONE</button>
@@ -4476,13 +4551,23 @@ function PriorityCard({ item, onUpdate, onDelete, onDragStart, userIsManager, ob
       {item.description && (
         <p style={{ fontSize:11, color:'#5A7A99', lineHeight:1.5, marginBottom:8, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{item.description}</p>
       )}
-      {/* Linked OKR badge */}
+      {/* Linked OKR + KR badge */}
       {linkedObj && (
-        <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:8, padding:'4px 8px', background:'rgba(0,40,85,0.05)', borderRadius:6, border:'1px solid rgba(0,40,85,0.1)' }}>
-          <Target style={{ width:10, height:10, color:'#BC8D26', flexShrink:0 }} />
-          <span style={{ fontSize:10, color:'#5A7A99', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {linkedObj.title.length > 45 ? linkedObj.title.slice(0,45)+'…' : linkedObj.title}
-          </span>
+        <div style={{ marginBottom:8, padding:'5px 8px', background:'rgba(0,40,85,0.05)', borderRadius:6, border:'1px solid rgba(0,40,85,0.1)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom: linkedKR ? 3 : 0 }}>
+            <Target style={{ width:10, height:10, color:'#BC8D26', flexShrink:0 }} />
+            <span style={{ fontSize:10, color:'#5A7A99', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              {linkedObj.title.length > 40 ? linkedObj.title.slice(0,40)+'…' : linkedObj.title}
+            </span>
+          </div>
+          {linkedKR && (
+            <div style={{ display:'flex', alignItems:'center', gap:5, paddingLeft:15 }}>
+              <ChevronRight style={{ width:9, height:9, color:'#9E8E7A', flexShrink:0 }} />
+              <span style={{ fontSize:9, color:'#9E8E7A', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {linkedKR.title.length > 45 ? linkedKR.title.slice(0,45)+'…' : linkedKR.title}
+              </span>
+            </div>
+          )}
         </div>
       )}
       <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
@@ -4622,7 +4707,8 @@ function OKRPage({ currentUser, userIsManager }) {
         setPriorities(priRows.length > 0 ? priRows.map(r => ({
           id: r.id, title: r.title, description: r.description,
           status: r.status, impact: r.impact, effort: r.effort,
-          dueDate: r.due_date, owner: r.owner, linkedOKR: r.linked_okr,
+          dueDate: r.due_date, owner: r.owner,
+          linkedOKR: r.linked_okr, linkedKR: r.linked_kr || '',
         })) : DEFAULT_PRIORITIES);
       }
       setLoading(false);
@@ -4643,7 +4729,8 @@ function OKRPage({ currentUser, userIsManager }) {
     const { error } = await supabase.from('okr_priorities').upsert({
       id: pri.id, title: pri.title, description: pri.description,
       status: pri.status, impact: pri.impact, effort: pri.effort,
-      due_date: pri.dueDate, owner: pri.owner, linked_okr: pri.linkedOKR || '',
+      due_date: pri.dueDate, owner: pri.owner,
+      linked_okr: pri.linkedOKR || '', linked_kr: pri.linkedKR || '',
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' });
     if (error) console.error('[OKR] upsert priority:', error.message);
@@ -4680,7 +4767,7 @@ function OKRPage({ currentUser, userIsManager }) {
 
   const addPriority = async () => {
     if (!newPriTitle.trim()) return;
-    const newPri = { id: `p-${Date.now()}`, title: newPriTitle.trim(), description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '' };
+    const newPri = { id: `p-${Date.now()}`, title: newPriTitle.trim(), description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '', linkedKR: '' };
     setPriorities(prev => [...prev, newPri]);
     await persistPriority(newPri);
     setNewPriTitle(''); setAddingPri(false);
@@ -4746,7 +4833,7 @@ function OKRPage({ currentUser, userIsManager }) {
             )}
 
             {objectives.map(obj => (
-              <ObjectiveBlock key={obj.id} obj={obj} onUpdate={updateObjective} onDelete={deleteObjective} userIsManager={userIsManager} allReps={SALES_REPS} />
+              <ObjectiveBlock key={obj.id} obj={obj} onUpdate={updateObjective} onDelete={deleteObjective} userIsManager={userIsManager} allReps={SALES_REPS} priorities={priorities} />
             ))}
           </div>
         )}
