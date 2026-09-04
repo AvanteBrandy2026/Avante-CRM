@@ -587,12 +587,6 @@ function AvanteCRMApp({ currentUser, onLogout }) {
 
   // ── APP STATE ─────────────────────────────────────────────────────────────
   const [view, setView] = useState('dashboard');
-  // Partners can only access dashboard, b2bcustoms and okr
-  const PARTNER_ALLOWED_VIEWS = new Set(['dashboard', 'b2bcustoms', 'okr', 'notifications']);
-  const safeSetView = (v) => {
-    if (userIsPartner && !PARTNER_ALLOWED_VIEWS.has(v)) return;
-    setView(v);
-  };
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState([]);
   const [visits, setVisits] = useState([]);
@@ -1698,6 +1692,7 @@ function ConfirmModal({ title, message, confirmLabel, danger, onCancel, onConfir
 // =================== Header ===================
 function Header({ view, setView, onLog, visits, clients, currentUser, onLogout, onNavigate }) {
   const userIsManager = isManager(currentUser);
+  const userIsPartner = isPartner(currentUser);
 
   const tabs = userIsPartner
     ? [
@@ -1798,7 +1793,10 @@ function Header({ view, setView, onLog, visits, clients, currentUser, onLogout, 
           {tabs.map(t => {
             const Icon = t.icon;
             return (
-              <button key={t.id} onClick={() => safeSetView(t.id)}
+              <button key={t.id} onClick={() => {
+                if (userIsPartner && !['dashboard','b2bcustoms','okr','notifications'].includes(t.id)) return;
+                setView(t.id);
+              }}
                 className={'crm-nav-btn' + (view === t.id ? ' active' : '')}>
                 <Icon style={{ width: 13, height: 13, flexShrink: 0 }} />
                 <span>{t.label.toUpperCase()}</span>
