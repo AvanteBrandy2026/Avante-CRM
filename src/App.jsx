@@ -4426,11 +4426,12 @@ function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps }) {
 }
 
 // ── PRIORITY CARD (Kanban) ───────────────────────────────────────────────────
-function PriorityCard({ item, onUpdate, onDelete, onDragStart, userIsManager }) {
+function PriorityCard({ item, onUpdate, onDelete, onDragStart, userIsManager, objectives }) {
   const [editing, setEditing] = useState(false);
   const sc = STATUS_COLORS[item.status] || STATUS_COLORS['To Do'];
   const impactColor = item.impact === 'high impact' ? '#CC233A' : item.impact === 'medium impact' ? '#BC8D26' : '#5A7A99';
   const effortColor = '#5A7A99';
+  const linkedObj = (objectives || []).find(o => o.id === item.linkedOKR);
 
   if (editing) {
     return (
@@ -4457,6 +4458,17 @@ function PriorityCard({ item, onUpdate, onDelete, onDragStart, userIsManager }) 
           <input type="date" value={item.dueDate} onChange={e => onUpdate({...item, dueDate:e.target.value})}
             style={{ padding:'4px 6px', border:'1px solid rgba(0,40,85,0.2)', fontSize:11, borderRadius:4 }} />
         </div>
+        {/* Link to OKR */}
+        <div style={{ marginBottom:10, padding:'10px 12px', background:'rgba(0,40,85,0.03)', border:'1px solid rgba(0,40,85,0.1)', borderRadius:6 }}>
+          <p style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', color:'#BC8D26', fontWeight:700, margin:'0 0 6px' }}>LINK TO OKR</p>
+          <select value={item.linkedOKR || ''} onChange={e => onUpdate({...item, linkedOKR:e.target.value})}
+            style={{ width:'100%', padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', fontSize:12, color:'#002855', outline:'none', borderRadius:4, background:'#fff', boxSizing:'border-box' }}>
+            <option value="">— No OKR linked —</option>
+            {(objectives || []).map(o => (
+              <option key={o.id} value={o.id}>{o.title.length > 60 ? o.title.slice(0,60)+'…' : o.title}</option>
+            ))}
+          </select>
+        </div>
         <div style={{ display:'flex', gap:6 }}>
           <button onClick={() => setEditing(false)} style={{ padding:'5px 12px', background:'#002855', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>DONE</button>
           <button onClick={() => { onDelete(item.id); setEditing(false); }} style={{ padding:'5px 10px', background:'none', border:'1px solid rgba(204,35,58,0.3)', color:'#CC233A', fontSize:11, cursor:'pointer', borderRadius:4 }}>Delete</button>
@@ -4478,6 +4490,15 @@ function PriorityCard({ item, onUpdate, onDelete, onDragStart, userIsManager }) 
       {item.description && (
         <p style={{ fontSize:11, color:'#5A7A99', lineHeight:1.5, marginBottom:8, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{item.description}</p>
       )}
+      {/* Linked OKR badge */}
+      {linkedObj && (
+        <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:8, padding:'4px 8px', background:'rgba(0,40,85,0.05)', borderRadius:6, border:'1px solid rgba(0,40,85,0.1)' }}>
+          <Target style={{ width:10, height:10, color:'#BC8D26', flexShrink:0 }} />
+          <span style={{ fontSize:10, color:'#5A7A99', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {linkedObj.title.length > 45 ? linkedObj.title.slice(0,45)+'…' : linkedObj.title}
+          </span>
+        </div>
+      )}
       <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
         <span style={{ padding:'2px 7px', background:`${impactColor}18`, color:impactColor, borderRadius:12, fontSize:10, fontWeight:600 }}>{item.impact}</span>
         <span style={{ padding:'2px 7px', background:`${effortColor}18`, color:effortColor, borderRadius:12, fontSize:10, fontWeight:600 }}>{item.effort}</span>
@@ -4492,7 +4513,7 @@ function PriorityCard({ item, onUpdate, onDelete, onDragStart, userIsManager }) 
 }
 
 // ── PRIORITIES KANBAN ────────────────────────────────────────────────────────
-function PrioritiesKanban({ items, onUpdateItem, onDeleteItem, userIsManager }) {
+function PrioritiesKanban({ items, onUpdateItem, onDeleteItem, userIsManager, objectives }) {
   const [dragging, setDragging] = useState(null);
 
   const handleDrop = (status) => {
@@ -4520,7 +4541,7 @@ function PrioritiesKanban({ items, onUpdateItem, onDeleteItem, userIsManager }) 
             {/* Cards */}
             <div style={{ minHeight:120 }}>
               {col.map(item => (
-                <PriorityCard key={item.id} item={item} onUpdate={onUpdateItem} onDelete={onDeleteItem} onDragStart={setDragging} userIsManager={userIsManager} />
+                <PriorityCard key={item.id} item={item} onUpdate={onUpdateItem} onDelete={onDeleteItem} onDragStart={setDragging} userIsManager={userIsManager} objectives={objectives} />
               ))}
             </div>
           </div>
@@ -4531,12 +4552,12 @@ function PrioritiesKanban({ items, onUpdateItem, onDeleteItem, userIsManager }) 
 }
 
 // ── PRIORITIES LIST ──────────────────────────────────────────────────────────
-function PrioritiesList({ items, onUpdateItem, onDeleteItem, userIsManager }) {
+function PrioritiesList({ items, onUpdateItem, onDeleteItem, userIsManager, objectives }) {
   return (
     <div style={{ border:'1px solid rgba(0,40,85,0.1)', borderRadius:8, overflow:'hidden' }}>
       {/* Header */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 100px 100px 120px 110px 80px', gap:8, padding:'10px 16px', background:'rgba(0,40,85,0.04)', borderBottom:'2px solid rgba(0,40,85,0.1)' }}>
-        {['Priority','Status','Impact','Effort','Owner','Due Date'].map(h => (
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 100px 100px 120px 110px 160px 80px', gap:8, padding:'10px 16px', background:'rgba(0,40,85,0.04)', borderBottom:'2px solid rgba(0,40,85,0.1)' }}>
+        {['Priority','Status','Impact','Effort','Owner','Linked OKR','Due Date'].map(h => (
           <span key={h} style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', color:'#5A7A99', fontWeight:700 }}>{h.toUpperCase()}</span>
         ))}
       </div>
@@ -4545,8 +4566,9 @@ function PrioritiesList({ items, onUpdateItem, onDeleteItem, userIsManager }) {
       ) : items.map((item, i) => {
         const sc = STATUS_COLORS[item.status] || STATUS_COLORS['To Do'];
         const impactColor = item.impact === 'high impact' ? '#CC233A' : item.impact === 'medium impact' ? '#BC8D26' : '#5A7A99';
+        const linkedObj = (objectives||[]).find(o => o.id === item.linkedOKR);
         return (
-          <div key={item.id} style={{ display:'grid', gridTemplateColumns:'1fr 100px 100px 120px 110px 80px', gap:8, padding:'11px 16px', borderBottom:'1px solid rgba(0,40,85,0.06)', background: i%2===0 ? '#FEFCF9':'#FAF8F5', alignItems:'center' }}>
+          <div key={item.id} style={{ display:'grid', gridTemplateColumns:'1fr 100px 100px 120px 110px 160px 80px', gap:8, padding:'11px 16px', borderBottom:'1px solid rgba(0,40,85,0.06)', background: i%2===0 ? '#FEFCF9':'#FAF8F5', alignItems:'center' }}>
             <div>
               <p style={{ fontSize:13, fontWeight:600, color:'#002855', margin:0 }}>{item.title}</p>
               {item.description && <p style={{ fontSize:11, color:'#9E8E7A', margin:'2px 0 0', fontStyle:'italic' }}>{item.description.slice(0,60)}{item.description.length>60?'…':''}</p>}
@@ -4560,6 +4582,14 @@ function PrioritiesList({ items, onUpdateItem, onDeleteItem, userIsManager }) {
             <span style={{ padding:'2px 8px', background:`${impactColor}18`, color:impactColor, borderRadius:12, fontSize:10, fontWeight:600, display:'inline-block' }}>{item.impact}</span>
             <span style={{ padding:'2px 8px', background:'rgba(90,122,153,0.12)', color:'#5A7A99', borderRadius:12, fontSize:10, fontWeight:600, display:'inline-block' }}>{item.effort}</span>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}><OwnerPill name={item.owner} size={20} /><span style={{ fontSize:11, color:'#5A7A99' }}>{item.owner||'—'}</span></div>
+            {/* Linked OKR — inline editable dropdown */}
+            <select value={item.linkedOKR||''} onChange={e => onUpdateItem({...item, linkedOKR:e.target.value})}
+              style={{ padding:'3px 6px', border:'1px solid rgba(0,40,85,0.15)', borderRadius:6, fontSize:10, color: linkedObj ? '#002855' : '#9E8E7A', background: linkedObj ? 'rgba(0,40,85,0.05)' : 'transparent', cursor:'pointer', outline:'none', maxWidth:'100%' }}>
+              <option value="">— None —</option>
+              {(objectives||[]).map(o => (
+                <option key={o.id} value={o.id}>{o.title.length>35?o.title.slice(0,35)+'…':o.title}</option>
+              ))}
+            </select>
             <span style={{ fontSize:11, color:'#9E8E7A' }}>{item.dueDate||'—'}</span>
           </div>
         );
@@ -4574,6 +4604,7 @@ function OKRPage({ currentUser, userIsManager }) {
   const [objectives, setObjectives] = useState(() => loadOKRs() || DEFAULT_OBJECTIVES);
   const [priorities, setPriorities] = useState(() => loadPriorities() || DEFAULT_PRIORITIES);
   const [priView, setPriView] = useState('kanban');
+  const [priOwnerFilter, setPriOwnerFilter] = useState('All');
   const [addingObj, setAddingObj] = useState(false);
   const [newObjTitle, setNewObjTitle] = useState('');
   const [addingPri, setAddingPri] = useState(false);
@@ -4667,6 +4698,14 @@ function OKRPage({ currentUser, userIsManager }) {
                 <p style={{ fontSize:12, color:'#5A7A99', fontStyle:'italic', marginTop:4 }}>Identify and prioritise the most important initiatives for your organisation. Focus on high-impact, achievable actions that move your team closer to its goals.</p>
               </div>
               <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                {/* Owner filter */}
+                <select value={priOwnerFilter} onChange={e => setPriOwnerFilter(e.target.value)}
+                  style={{ padding:'7px 10px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:6, fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.1em', fontWeight:700, color:'#002855', background:'#FCF7F2', cursor:'pointer', outline:'none' }}>
+                  <option value="All">ALL MEMBERS</option>
+                  {['Rob','Matthew','Alex','Lehmarc','Loydz','Louis','Anthony'].map(r => (
+                    <option key={r} value={r}>{r.toUpperCase()}</option>
+                  ))}
+                </select>
                 {/* View toggle */}
                 <div style={{ display:'flex', border:'1px solid rgba(0,40,85,0.2)', borderRadius:6, overflow:'hidden' }}>
                   {[{id:'list',label:'List'},{id:'kanban',label:'Kanban'}].map(v => (
@@ -4695,9 +4734,9 @@ function OKRPage({ currentUser, userIsManager }) {
             )}
 
             {priView === 'kanban' ? (
-              <PrioritiesKanban items={priorities} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} />
+              <PrioritiesKanban items={priorities.filter(p => priOwnerFilter === 'All' || p.owner === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} objectives={objectives} />
             ) : (
-              <PrioritiesList items={priorities} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} />
+              <PrioritiesList items={priorities.filter(p => priOwnerFilter === 'All' || p.owner === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} objectives={objectives} />
             )}
           </div>
         )}
