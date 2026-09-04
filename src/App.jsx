@@ -1496,6 +1496,9 @@ function AvanteCRMApp({ currentUser, onLogout }) {
             currentUser={currentUser}
           />
         )}
+        {view === 'okr' && (
+          <OKRPage currentUser={currentUser} userIsManager={userIsManager} />
+        )}
         {view === 'manager' && userIsManager && (
           <ManagerPortal
             targets={targets}
@@ -1688,6 +1691,7 @@ function Header({ view, setView, onLog, visits, clients, currentUser, onLogout, 
     { id: 'orders', label: 'Client Order History', icon: ShoppingCart },
     { id: 'visits', label: 'Visit Log', icon: ClipboardList },
     { id: 'b2bcustoms', label: 'B2B Customs', icon: Briefcase },
+    { id: 'okr', label: 'OKR', icon: Target },
     // Manager tab only visible to manager
     ...(userIsManager ? [{ id: 'manager', label: 'Manager', icon: Settings }] : []),
   ];
@@ -4167,6 +4171,49 @@ This cannot be undone.`, confirmLabel: 'DELETE', danger: true, onConfirm: () => 
   );
 }
 
+
+// ── OKR PAGE ─────────────────────────────────────────────────────────────────
+// Team OKRs — lives as a standalone section inside the CRM but is designed
+// to be self-contained and eventually publishable as its own page/link.
+function OKRPage({ currentUser, userIsManager }) {
+  return (
+    <div className="fade-up space-y-6">
+      {/* Header */}
+      <div className="pb-3 border-b">
+        <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>STRATEGIC EXECUTION</p>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
+          <div>
+            <h1 className="font-display ink" style={{ fontWeight: 700, fontSize: 28 }}>TEAM OKRs</h1>
+            <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>
+              Objectives & Key Results — Break Free Beverages · Avante Cape Brandy
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Target style={{ width: 20, height: 20, color: '#BC8D26' }} />
+            <span className="font-display copper" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em' }}>2026</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Coming soon body */}
+      <div className="premium-card" style={{ padding: '48px 32px', textAlign: 'center' }}>
+        <div style={{ width: 64, height: 64, background: 'rgba(188,141,38,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <Target style={{ width: 32, height: 32, color: '#BC8D26' }} />
+        </div>
+        <h2 className="font-display ink mb-3" style={{ fontWeight: 700, fontSize: 20, letterSpacing: '0.05em' }}>
+          OKR BOARD — COMING SOON
+        </h2>
+        <p className="italic ocean mb-2" style={{ fontSize: 13, maxWidth: 480, margin: '0 auto 8px' }}>
+          This is where the team's Objectives & Key Results will live. We're building it out next.
+        </p>
+        <p style={{ fontSize: 11, color: 'rgba(0,40,85,0.4)', maxWidth: 420, margin: '0 auto' }}>
+          Once built, this page can also be shared as a standalone link outside the CRM — 
+          accessible to stakeholders without a CRM login.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function MonthFilter({ value, onChange }) {
   // value = 'All' | 'YYYY-MM'
