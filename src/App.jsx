@@ -4175,41 +4175,532 @@ This cannot be undone.`, confirmLabel: 'DELETE', danger: true, onConfirm: () => 
 // ── OKR PAGE ─────────────────────────────────────────────────────────────────
 // Team OKRs — lives as a standalone section inside the CRM but is designed
 // to be self-contained and eventually publishable as its own page/link.
-function OKRPage({ currentUser, userIsManager }) {
+// ── OKR + PRIORITIES SYSTEM ──────────────────────────────────────────────────
+// Shared localStorage keys: okr_objectives, okr_priorities
+// All data persists locally — no Supabase table needed for MVP
+
+const OKR_STORAGE_KEY = 'avante_okr_data';
+const PRI_STORAGE_KEY = 'avante_pri_data';
+const OKR_QUARTER = 'Q3 2026';
+
+const IMPACT_LEVELS = ['low impact', 'medium impact', 'high impact'];
+const EFFORT_LEVELS = ['low effort', 'medium effort', 'high effort'];
+const PRI_STATUSES = ['To Do', 'In Progress', 'Blocked', 'Complete'];
+const STATUS_COLORS = {
+  'To Do':      { bg: '#F5F0EB', border: '#C8BAA8', dot: '#9E8E7A' },
+  'In Progress':{ bg: '#EEF3FF', border: '#7B8FD4', dot: '#3B5BDB' },
+  'Blocked':    { bg: '#FFF0F0', border: '#E8A0A0', dot: '#CC233A' },
+  'Complete':   { bg: '#EEFAF4', border: '#7ECBA1', dot: '#2d8659' },
+};
+
+function loadOKRs() {
+  try { return JSON.parse(localStorage.getItem(OKR_STORAGE_KEY) || 'null'); } catch(e) { return null; }
+}
+function saveOKRs(data) {
+  try { localStorage.setItem(OKR_STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function loadPriorities() {
+  try { return JSON.parse(localStorage.getItem(PRI_STORAGE_KEY) || 'null'); } catch(e) { return null; }
+}
+function savePriorities(data) {
+  try { localStorage.setItem(PRI_STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+const DEFAULT_OBJECTIVES = [
+  {
+    id: 'obj-critical',
+    title: 'Critical number: 1M & Theme: "Show me the money!"',
+    quarter: 'Q3 2026',
+    collapsed: false,
+    keyResults: [
+      { id: 'kr-1', title: 'Cumulative contribution margin converted into cash', owner: 'Rob', dueDate: '2026-09-30', current: 0, target: 1000000, unit: 'Rands' },
+    ],
+    assignees: ['Rob'],
+  },
+  {
+    id: 'obj-1',
+    title: '1: Deliver profitable sales through the priority demand engines & collaborations',
+    quarter: 'Q3 2026',
+    collapsed: false,
+    keyResults: [
+      { id: 'kr-2', title: 'Chiefs launched across the agreed minimum viable channels', owner: 'Rob', dueDate: '2026-09-30', current: 0, target: 500000, unit: 'Rands' },
+      { id: 'kr-3', title: 'Big Zulu agreed, launched & selling', owner: 'Loydz', dueDate: '2026-08-31', current: 0, target: 500000, unit: 'Rands' },
+      { id: 'kr-4', title: 'On-Con channel revenue target achieved', owner: 'Lehmarc', dueDate: '2026-09-30', current: 0, target: 300000, unit: 'Rands' },
+    ],
+    assignees: ['Rob', 'Loydz', 'Lehmarc'],
+  },
+];
+
+const DEFAULT_PRIORITIES = [
+  { id: 'p-1', title: 'Attain Xero permission and resolve Sales rep invoicing', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-22', owner: '', linkedOKR: '' },
+  { id: 'p-2', title: 'Meet with Big Zulu Will to go live with ads & soft sell (Askew)', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '' },
+  { id: 'p-3', title: 'Develop new B2B creative (Matt A)', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: 'Matthew', linkedOKR: '' },
+  { id: 'p-4', title: 'Win Marriot F&B manager as Avante Champion (ALEX)', description: 'Woo him at a tasting and achieve emotional buy-in so that F&B will sell the...', status: 'In Progress', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-20', owner: 'Alex', linkedOKR: '' },
+  { id: 'p-5', title: 'SACS Old Boys bottle sell to OBU (Lehmarc)', description: 'OBU', status: 'In Progress', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-09-03', owner: 'Lehmarc', linkedOKR: '' },
+  { id: 'p-6', title: 'Go live with new UK ads so as to achieve 2 x ROAS', description: '', status: 'Blocked', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-22', owner: '', linkedOKR: '' },
+  { id: 'p-7', title: 'Sell into Whisky & Cigar lounge - Full range listed with tasting experience (LEHMARC)', description: '', status: 'Blocked', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-09-04', owner: 'Lehmarc', linkedOKR: '' },
+  { id: 'p-8', title: 'Makro Big Zulu sell in', description: 'Produce and sell in 500 bottles of Big Zulu VSOP to attain PO', status: 'Complete', impact: 'high impact', effort: 'medium effort', dueDate: '2026-05-22', owner: 'Matthew', linkedOKR: '' },
+  { id: 'p-9', title: '400 bottle customised private order (Alex)', description: 'JP Viljoen sale of 400 customised VSOPs. Confirm sale and deposit.', status: 'Complete', impact: 'high impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '' },
+];
+
+// ── Avatar pill component ────────────────────────────────────────────────────
+function OwnerPill({ name, size = 26 }) {
+  if (!name) return (
+    <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:size, height:size, borderRadius:'50%', background:'rgba(0,40,85,0.1)', fontSize:size*0.4, color:'#5A7A99', fontFamily:"'Cinzel',serif", fontWeight:700, flexShrink:0 }}>?</span>
+  );
+  const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const colors = ['002855','BC8D26','2d8659','CC233A','5A7A99','8B5CF6'];
+  const color = colors[name.charCodeAt(0) % colors.length];
   return (
-    <div className="fade-up space-y-6">
-      {/* Header */}
-      <div className="pb-3 border-b">
-        <p className="font-display text-[9px] tracking-[0.4em] copper" style={{ fontWeight: 600 }}>STRATEGIC EXECUTION</p>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
-          <div>
-            <h1 className="font-display ink" style={{ fontWeight: 700, fontSize: 28 }}>TEAM OKRs</h1>
-            <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>
-              Objectives & Key Results — Break Free Beverages · Avante Cape Brandy
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Target style={{ width: 20, height: 20, color: '#BC8D26' }} />
-            <span className="font-display copper" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em' }}>2026</span>
-          </div>
+    <span title={name} style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:size, height:size, borderRadius:'50%', background:`#${color}`, fontSize:size*0.38, color:'#FFFFFF', fontFamily:"'Cinzel',serif", fontWeight:700, flexShrink:0, letterSpacing:'0.02em' }}>{initials}</span>
+  );
+}
+
+// ── OKR KEY RESULT ROW ───────────────────────────────────────────────────────
+function KeyResultRow({ kr, onUpdate, onDelete, userIsManager }) {
+  const pct = kr.target > 0 ? Math.min(100, Math.round((kr.current / kr.target) * 100)) : 0;
+  const [editing, setEditing] = useState(false);
+  const [localCurrent, setLocalCurrent] = useState(String(kr.current));
+
+  const handleCurrentBlur = () => {
+    const val = parseFloat(localCurrent) || 0;
+    onUpdate({ ...kr, current: val });
+    setEditing(false);
+  };
+
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 110px 200px 70px', alignItems:'center', gap:8, padding:'10px 16px', borderTop:'1px solid rgba(0,40,85,0.06)', background:'#FAFAF8' }}>
+      {/* Title */}
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <ChevronRight style={{ width:14, height:14, color:'rgba(0,40,85,0.3)', flexShrink:0 }} />
+        <span style={{ fontSize:13, color:'#002855', fontWeight:500 }}>{kr.title}</span>
+      </div>
+      {/* Owner */}
+      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+        <OwnerPill name={kr.owner} size={24} />
+        <span style={{ fontSize:11, color:'#5A7A99', fontWeight:600 }}>{kr.owner || '—'}</span>
+      </div>
+      {/* Due date */}
+      <span style={{ fontSize:11, color:'#5A7A99' }}>{kr.dueDate || '—'}</span>
+      {/* Check-in / progress */}
+      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+        <input
+          type="number"
+          value={editing ? localCurrent : kr.current}
+          onFocus={() => { setEditing(true); setLocalCurrent(String(kr.current)); }}
+          onChange={e => setLocalCurrent(e.target.value)}
+          onBlur={handleCurrentBlur}
+          style={{ width:70, padding:'4px 8px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:4, fontFamily:"'Libre Baskerville',Georgia,serif", fontSize:12, color:'#002855', textAlign:'right' }}
+        />
+        <span style={{ fontSize:11, color:'#5A7A99', whiteSpace:'nowrap' }}>/ {kr.target.toLocaleString()} {kr.unit}</span>
+      </div>
+      {/* Progress */}
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:3 }}>
+        <span style={{ fontSize:11, fontWeight:700, color: pct >= 70 ? '#2d8659' : pct >= 30 ? '#BC8D26' : '#CC233A' }}>{pct}%</span>
+        <div style={{ width:60, height:5, background:'rgba(0,40,85,0.1)', borderRadius:3, overflow:'hidden' }}>
+          <div style={{ width:`${pct}%`, height:'100%', background: pct >= 70 ? '#2d8659' : pct >= 30 ? '#BC8D26' : '#CC233A', transition:'width 0.4s' }} />
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Coming soon body */}
-      <div className="premium-card" style={{ padding: '48px 32px', textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, background: 'rgba(188,141,38,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-          <Target style={{ width: 32, height: 32, color: '#BC8D26' }} />
+// ── OBJECTIVE BLOCK ──────────────────────────────────────────────────────────
+function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps }) {
+  const [collapsed, setCollapsed] = useState(obj.collapsed || false);
+  const [addingKR, setAddingKR] = useState(false);
+  const [newKRTitle, setNewKRTitle] = useState('');
+  const [newKROwner, setNewKROwner] = useState('');
+  const [newKRTarget, setNewKRTarget] = useState('');
+  const [newKRDue, setNewKRDue] = useState('');
+  const [newKRUnit, setNewKRUnit] = useState('Rands');
+
+  const avgPct = obj.keyResults.length > 0
+    ? Math.round(obj.keyResults.reduce((s, kr) => s + (kr.target > 0 ? Math.min(100, (kr.current/kr.target)*100) : 0), 0) / obj.keyResults.length)
+    : 0;
+
+  const updateKR = (updated) => {
+    onUpdate({ ...obj, keyResults: obj.keyResults.map(k => k.id === updated.id ? updated : k) });
+  };
+
+  const addKR = () => {
+    if (!newKRTitle.trim()) return;
+    const newKR = {
+      id: `kr-${Date.now()}`,
+      title: newKRTitle.trim(),
+      owner: newKROwner,
+      dueDate: newKRDue,
+      current: 0,
+      target: parseFloat(newKRTarget) || 0,
+      unit: newKRUnit || 'Rands',
+    };
+    onUpdate({ ...obj, keyResults: [...obj.keyResults, newKR] });
+    setNewKRTitle(''); setNewKROwner(''); setNewKRTarget(''); setNewKRDue(''); setNewKRUnit('Rands');
+    setAddingKR(false);
+  };
+
+  return (
+    <div style={{ border:'1px solid rgba(0,40,85,0.1)', borderRadius:8, overflow:'hidden', marginBottom:16 }}>
+      {/* Objective header */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 16px', background:'#FEFCF9', cursor:'pointer', userSelect:'none' }}
+        onClick={() => setCollapsed(c => !c)}>
+        <ChevronRight style={{ width:16, height:16, color:'#5A7A99', transform: collapsed ? 'rotate(0deg)' : 'rotate(90deg)', transition:'transform 0.2s', flexShrink:0 }} />
+        <span style={{ fontSize:15, fontWeight:700, color:'#002855', flex:1 }}>{obj.title}</span>
+        <span style={{ padding:'2px 8px', background:'rgba(0,40,85,0.08)', borderRadius:12, fontFamily:"'Cinzel',serif", fontSize:9, fontWeight:700, color:'#5A7A99', letterSpacing:'0.05em', flexShrink:0 }}>{obj.quarter}</span>
+        <span style={{ padding:'2px 8px', background:'rgba(0,40,85,0.06)', borderRadius:12, fontSize:11, color:'#5A7A99', flexShrink:0 }}>{obj.keyResults.length}</span>
+        {/* Progress bar */}
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+          <div style={{ width:120, height:6, background:'rgba(0,40,85,0.1)', borderRadius:3, overflow:'hidden' }}>
+            <div style={{ width:`${avgPct}%`, height:'100%', background: avgPct >= 70 ? '#2d8659' : avgPct >= 30 ? '#BC8D26' : 'rgba(0,40,85,0.3)', transition:'width 0.4s' }} />
+          </div>
+          <span style={{ fontSize:12, fontWeight:700, color:'#5A7A99', minWidth:30 }}>{avgPct}%</span>
         </div>
-        <h2 className="font-display ink mb-3" style={{ fontWeight: 700, fontSize: 20, letterSpacing: '0.05em' }}>
-          OKR BOARD — COMING SOON
-        </h2>
-        <p className="italic ocean mb-2" style={{ fontSize: 13, maxWidth: 480, margin: '0 auto 8px' }}>
-          This is where the team's Objectives & Key Results will live. We're building it out next.
-        </p>
-        <p style={{ fontSize: 11, color: 'rgba(0,40,85,0.4)', maxWidth: 420, margin: '0 auto' }}>
-          Once built, this page can also be shared as a standalone link outside the CRM — 
-          accessible to stakeholders without a CRM login.
-        </p>
+        {userIsManager && (
+          <button onClick={e => { e.stopPropagation(); onDelete(obj.id); }}
+            style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(204,35,58,0.3)', padding:4, marginLeft:4 }}
+            onMouseEnter={e => e.currentTarget.style.color='#CC233A'}
+            onMouseLeave={e => e.currentTarget.style.color='rgba(204,35,58,0.3)'}>
+            <X style={{ width:14, height:14 }} />
+          </button>
+        )}
+      </div>
+
+      {/* Key results table */}
+      {!collapsed && (
+        <div>
+          {/* Table header */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 110px 200px 70px', gap:8, padding:'8px 16px', background:'rgba(0,40,85,0.03)', borderTop:'1px solid rgba(0,40,85,0.08)' }}>
+            {['Key Result','Owner','Due date','Check-in','Progress'].map(h => (
+              <span key={h} style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', color:'#5A7A99', fontWeight:700 }}>{h.toUpperCase()}</span>
+            ))}
+          </div>
+
+          {/* KR rows */}
+          {obj.keyResults.map(kr => (
+            <KeyResultRow key={kr.id} kr={kr} onUpdate={updateKR} userIsManager={userIsManager} />
+          ))}
+
+          {/* Add KR */}
+          {addingKR ? (
+            <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(0,40,85,0.06)', background:'rgba(188,141,38,0.04)', display:'flex', flexDirection:'column', gap:8 }}>
+              <input value={newKRTitle} onChange={e => setNewKRTitle(e.target.value)} placeholder="Key result description..." autoFocus
+                style={{ padding:'8px 10px', border:'1px solid rgba(0,40,85,0.2)', fontSize:13, color:'#002855', outline:'none', borderRadius:4 }} />
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                <select value={newKROwner} onChange={e => setNewKROwner(e.target.value)}
+                  style={{ padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', fontSize:12, color:'#002855', outline:'none', borderRadius:4 }}>
+                  <option value="">Owner</option>
+                  {['Rob','Matthew','Alex','Lehmarc','Loydz','Louis','Anthony'].map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <input type="date" value={newKRDue} onChange={e => setNewKRDue(e.target.value)}
+                  style={{ padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', fontSize:12, outline:'none', borderRadius:4 }} />
+                <input type="number" value={newKRTarget} onChange={e => setNewKRTarget(e.target.value)} placeholder="Target value"
+                  style={{ width:120, padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', fontSize:12, outline:'none', borderRadius:4 }} />
+                <input value={newKRUnit} onChange={e => setNewKRUnit(e.target.value)} placeholder="Unit (e.g. Rands)"
+                  style={{ width:100, padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', fontSize:12, outline:'none', borderRadius:4 }} />
+                <button onClick={addKR} style={{ padding:'6px 14px', background:'#002855', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>ADD</button>
+                <button onClick={() => setAddingKR(false)} style={{ padding:'6px 10px', background:'none', border:'1px solid rgba(0,40,85,0.2)', color:'#5A7A99', cursor:'pointer', borderRadius:4, fontSize:12 }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setAddingKR(true)} style={{ display:'flex', alignItems:'center', gap:6, padding:'10px 16px', background:'none', border:'none', cursor:'pointer', color:'#5A7A99', fontSize:13, width:'100%', borderTop:'1px solid rgba(0,40,85,0.06)' }}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(0,40,85,0.03)'}
+              onMouseLeave={e => e.currentTarget.style.background='none'}>
+              <Plus style={{ width:14, height:14 }} /> Add Key Result
+            </button>
+          )}
+
+          {/* Assignees */}
+          <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(0,40,85,0.06)', display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ fontSize:11, color:'#5A7A99', fontStyle:'italic' }}>Assigned to:</span>
+            {obj.assignees.map(a => (
+              <span key={a} style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'3px 8px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:16, fontSize:11, color:'#002855', fontWeight:600, background:'#FCF7F2' }}>
+                <OwnerPill name={a} size={16} />
+                {a}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── PRIORITY CARD (Kanban) ───────────────────────────────────────────────────
+function PriorityCard({ item, onUpdate, onDelete, onDragStart, userIsManager }) {
+  const [editing, setEditing] = useState(false);
+  const sc = STATUS_COLORS[item.status] || STATUS_COLORS['To Do'];
+  const impactColor = item.impact === 'high impact' ? '#CC233A' : item.impact === 'medium impact' ? '#BC8D26' : '#5A7A99';
+  const effortColor = '#5A7A99';
+
+  if (editing) {
+    return (
+      <div style={{ background:'#fff', border:'2px solid #002855', borderRadius:8, padding:14, marginBottom:10 }}>
+        <input autoFocus value={item.title} onChange={e => onUpdate({...item, title:e.target.value})}
+          style={{ width:'100%', padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', fontSize:13, fontWeight:600, color:'#002855', outline:'none', borderRadius:4, marginBottom:8, boxSizing:'border-box' }} />
+        <textarea value={item.description} onChange={e => onUpdate({...item, description:e.target.value})}
+          placeholder="Description (optional)..." rows={2}
+          style={{ width:'100%', padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', fontSize:12, color:'#5A7A99', outline:'none', borderRadius:4, resize:'vertical', marginBottom:8, boxSizing:'border-box' }} />
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
+          <select value={item.impact} onChange={e => onUpdate({...item, impact:e.target.value})}
+            style={{ padding:'4px 6px', border:'1px solid rgba(0,40,85,0.2)', fontSize:11, borderRadius:4 }}>
+            {IMPACT_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <select value={item.effort} onChange={e => onUpdate({...item, effort:e.target.value})}
+            style={{ padding:'4px 6px', border:'1px solid rgba(0,40,85,0.2)', fontSize:11, borderRadius:4 }}>
+            {EFFORT_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <select value={item.owner} onChange={e => onUpdate({...item, owner:e.target.value})}
+            style={{ padding:'4px 6px', border:'1px solid rgba(0,40,85,0.2)', fontSize:11, borderRadius:4 }}>
+            <option value="">No owner</option>
+            {SALES_REPS.concat(['Rob']).map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <input type="date" value={item.dueDate} onChange={e => onUpdate({...item, dueDate:e.target.value})}
+            style={{ padding:'4px 6px', border:'1px solid rgba(0,40,85,0.2)', fontSize:11, borderRadius:4 }} />
+        </div>
+        <div style={{ display:'flex', gap:6 }}>
+          <button onClick={() => setEditing(false)} style={{ padding:'5px 12px', background:'#002855', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>DONE</button>
+          <button onClick={() => { onDelete(item.id); setEditing(false); }} style={{ padding:'5px 10px', background:'none', border:'1px solid rgba(204,35,58,0.3)', color:'#CC233A', fontSize:11, cursor:'pointer', borderRadius:4 }}>Delete</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div draggable onDragStart={() => onDragStart(item)}
+      style={{ background:'#fff', border:`1px solid ${sc.border}`, borderRadius:8, padding:12, marginBottom:10, cursor:'grab', transition:'box-shadow 0.15s' }}
+      onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 12px rgba(0,40,85,0.1)'}
+      onMouseLeave={e => e.currentTarget.style.boxShadow='none'}
+      onClick={() => setEditing(true)}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:6, marginBottom:item.description ? 6 : 10 }}>
+        <span style={{ fontSize:13, fontWeight:700, color:'#002855', lineHeight:1.4 }}>{item.title}</span>
+        {item.owner && <OwnerPill name={item.owner} size={22} />}
+      </div>
+      {item.description && (
+        <p style={{ fontSize:11, color:'#5A7A99', lineHeight:1.5, marginBottom:8, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{item.description}</p>
+      )}
+      <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+        <span style={{ padding:'2px 7px', background:`${impactColor}18`, color:impactColor, borderRadius:12, fontSize:10, fontWeight:600 }}>{item.impact}</span>
+        <span style={{ padding:'2px 7px', background:`${effortColor}18`, color:effortColor, borderRadius:12, fontSize:10, fontWeight:600 }}>{item.effort}</span>
+        {item.dueDate && (
+          <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:10, color:'#9E8E7A', marginLeft:'auto' }}>
+            📅 {item.dueDate}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── PRIORITIES KANBAN ────────────────────────────────────────────────────────
+function PrioritiesKanban({ items, onUpdateItem, onDeleteItem, userIsManager }) {
+  const [dragging, setDragging] = useState(null);
+
+  const handleDrop = (status) => {
+    if (!dragging) return;
+    onUpdateItem({ ...dragging, status });
+    setDragging(null);
+  };
+
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:16, overflowX:'auto', minWidth:900 }}>
+      {PRI_STATUSES.map(status => {
+        const col = items.filter(i => i.status === status);
+        const sc = STATUS_COLORS[status];
+        return (
+          <div key={status}
+            onDragOver={e => e.preventDefault()}
+            onDrop={() => handleDrop(status)}
+            style={{ minHeight:200 }}>
+            {/* Column header */}
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+              <div style={{ width:10, height:10, borderRadius:'50%', background:sc.dot, flexShrink:0 }} />
+              <span style={{ fontFamily:"'Cinzel',serif", fontSize:11, fontWeight:700, color:'#002855', letterSpacing:'0.1em' }}>{status.toUpperCase()}</span>
+              <span style={{ marginLeft:'auto', background:'rgba(0,40,85,0.08)', color:'#5A7A99', borderRadius:10, padding:'1px 7px', fontSize:11, fontWeight:600 }}>{col.length}</span>
+            </div>
+            {/* Cards */}
+            <div style={{ minHeight:120 }}>
+              {col.map(item => (
+                <PriorityCard key={item.id} item={item} onUpdate={onUpdateItem} onDelete={onDeleteItem} onDragStart={setDragging} userIsManager={userIsManager} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── PRIORITIES LIST ──────────────────────────────────────────────────────────
+function PrioritiesList({ items, onUpdateItem, onDeleteItem, userIsManager }) {
+  return (
+    <div style={{ border:'1px solid rgba(0,40,85,0.1)', borderRadius:8, overflow:'hidden' }}>
+      {/* Header */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 100px 100px 120px 110px 80px', gap:8, padding:'10px 16px', background:'rgba(0,40,85,0.04)', borderBottom:'2px solid rgba(0,40,85,0.1)' }}>
+        {['Priority','Status','Impact','Effort','Owner','Due Date'].map(h => (
+          <span key={h} style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', color:'#5A7A99', fontWeight:700 }}>{h.toUpperCase()}</span>
+        ))}
+      </div>
+      {items.length === 0 ? (
+        <div style={{ padding:'24px 16px', textAlign:'center', color:'#5A7A99', fontStyle:'italic', fontSize:13 }}>No priorities yet.</div>
+      ) : items.map((item, i) => {
+        const sc = STATUS_COLORS[item.status] || STATUS_COLORS['To Do'];
+        const impactColor = item.impact === 'high impact' ? '#CC233A' : item.impact === 'medium impact' ? '#BC8D26' : '#5A7A99';
+        return (
+          <div key={item.id} style={{ display:'grid', gridTemplateColumns:'1fr 100px 100px 120px 110px 80px', gap:8, padding:'11px 16px', borderBottom:'1px solid rgba(0,40,85,0.06)', background: i%2===0 ? '#FEFCF9':'#FAF8F5', alignItems:'center' }}>
+            <div>
+              <p style={{ fontSize:13, fontWeight:600, color:'#002855', margin:0 }}>{item.title}</p>
+              {item.description && <p style={{ fontSize:11, color:'#9E8E7A', margin:'2px 0 0', fontStyle:'italic' }}>{item.description.slice(0,60)}{item.description.length>60?'…':''}</p>}
+            </div>
+            <div>
+              <select value={item.status} onChange={e => onUpdateItem({...item, status:e.target.value})}
+                style={{ padding:'3px 6px', border:`1px solid ${sc.border}`, background:sc.bg, color:sc.dot, borderRadius:12, fontSize:11, fontWeight:600, cursor:'pointer', outline:'none' }}>
+                {PRI_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <span style={{ padding:'2px 8px', background:`${impactColor}18`, color:impactColor, borderRadius:12, fontSize:10, fontWeight:600, display:'inline-block' }}>{item.impact}</span>
+            <span style={{ padding:'2px 8px', background:'rgba(90,122,153,0.12)', color:'#5A7A99', borderRadius:12, fontSize:10, fontWeight:600, display:'inline-block' }}>{item.effort}</span>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}><OwnerPill name={item.owner} size={20} /><span style={{ fontSize:11, color:'#5A7A99' }}>{item.owner||'—'}</span></div>
+            <span style={{ fontSize:11, color:'#9E8E7A' }}>{item.dueDate||'—'}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── MAIN OKR PAGE (with side nav) ───────────────────────────────────────────
+function OKRPage({ currentUser, userIsManager }) {
+  const [activeSection, setActiveSection] = useState('okrs');
+  const [objectives, setObjectives] = useState(() => loadOKRs() || DEFAULT_OBJECTIVES);
+  const [priorities, setPriorities] = useState(() => loadPriorities() || DEFAULT_PRIORITIES);
+  const [priView, setPriView] = useState('kanban');
+  const [addingObj, setAddingObj] = useState(false);
+  const [newObjTitle, setNewObjTitle] = useState('');
+  const [addingPri, setAddingPri] = useState(false);
+  const [newPriTitle, setNewPriTitle] = useState('');
+
+  // Persist on every change
+  useEffect(() => { saveOKRs(objectives); }, [objectives]);
+  useEffect(() => { savePriorities(priorities); }, [priorities]);
+
+  const updateObjective = (updated) => setObjectives(prev => prev.map(o => o.id === updated.id ? updated : o));
+  const deleteObjective = (id) => setObjectives(prev => prev.filter(o => o.id !== id));
+  const addObjective = () => {
+    if (!newObjTitle.trim()) return;
+    setObjectives(prev => [...prev, { id:`obj-${Date.now()}`, title:newObjTitle.trim(), quarter:OKR_QUARTER, collapsed:false, keyResults:[], assignees:[] }]);
+    setNewObjTitle(''); setAddingObj(false);
+  };
+
+  const updatePriority = (updated) => setPriorities(prev => prev.map(p => p.id === updated.id ? updated : p));
+  const deletePriority = (id) => setPriorities(prev => prev.filter(p => p.id !== id));
+  const addPriority = () => {
+    if (!newPriTitle.trim()) return;
+    setPriorities(prev => [...prev, { id:`p-${Date.now()}`, title:newPriTitle.trim(), description:'', status:'To Do', impact:'medium impact', effort:'medium effort', dueDate:'', owner:'', linkedOKR:'' }]);
+    setNewPriTitle(''); setAddingPri(false);
+  };
+
+  const navItems = [
+    { id:'okrs',       label:'OKRs',       icon:Target },
+    { id:'priorities', label:'Priorities', icon:BarChart3 },
+  ];
+
+  return (
+    <div style={{ display:'flex', gap:0, minHeight:'70vh' }}>
+      {/* Side nav */}
+      <div style={{ width:180, flexShrink:0, borderRight:'1px solid rgba(0,40,85,0.1)', paddingTop:8, marginRight:24 }}>
+        <p style={{ fontFamily:"'Cinzel',serif", fontSize:8, letterSpacing:'0.3em', color:'rgba(0,40,85,0.4)', fontWeight:700, padding:'8px 12px 12px', margin:0 }}>STRATEGIC</p>
+        {navItems.map(item => {
+          const Icon = item.icon;
+          const active = activeSection === item.id;
+          return (
+            <button key={item.id} onClick={() => setActiveSection(item.id)}
+              style={{ display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 14px', border:'none', background: active ? 'rgba(0,40,85,0.08)' : 'none', cursor:'pointer', borderLeft: active ? '3px solid #002855' : '3px solid transparent', transition:'all 0.15s' }}>
+              <Icon style={{ width:16, height:16, color: active ? '#002855' : '#5A7A99', flexShrink:0 }} />
+              <span style={{ fontFamily:"'Cinzel',serif", fontSize:11, fontWeight: active ? 700 : 600, color: active ? '#002855' : '#5A7A99', letterSpacing:'0.08em' }}>{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex:1, minWidth:0 }}>
+
+        {/* ── OKRs SECTION ── */}
+        {activeSection === 'okrs' && (
+          <div className="fade-up">
+            <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+              <div>
+                <h2 className="font-display ink" style={{ fontWeight:700, fontSize:24, margin:0 }}>Organisation OKRs</h2>
+                <p style={{ fontSize:12, color:'#5A7A99', fontStyle:'italic', marginTop:4 }}>OKRs help you set ambitious objectives with measurable key results. They create focus, alignment, and accountability while encouraging teams to stretch beyond what seems possible.</p>
+              </div>
+              {userIsManager && (
+                <button onClick={() => setAddingObj(true)}
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 18px', background:'#002855', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>
+                  <Plus style={{ width:14, height:14 }} /> NEW OKR
+                </button>
+              )}
+            </div>
+
+            {addingObj && (
+              <div style={{ padding:'14px 16px', border:'2px solid #BC8D26', borderRadius:8, marginBottom:16, background:'rgba(188,141,38,0.04)', display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                <input autoFocus value={newObjTitle} onChange={e => setNewObjTitle(e.target.value)}
+                  onKeyDown={e => { if(e.key==='Enter')addObjective(); if(e.key==='Escape')setAddingObj(false); }}
+                  placeholder="New objective title..."
+                  style={{ flex:1, minWidth:200, padding:'8px 10px', border:'1px solid rgba(0,40,85,0.2)', fontSize:14, fontWeight:600, color:'#002855', outline:'none', borderRadius:4 }} />
+                <button onClick={addObjective} style={{ padding:'8px 16px', background:'#002855', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>ADD</button>
+                <button onClick={() => setAddingObj(false)} style={{ padding:'8px 10px', background:'none', border:'1px solid rgba(0,40,85,0.2)', color:'#5A7A99', cursor:'pointer', borderRadius:4, fontSize:12 }}>Cancel</button>
+              </div>
+            )}
+
+            {objectives.map(obj => (
+              <ObjectiveBlock key={obj.id} obj={obj} onUpdate={updateObjective} onDelete={deleteObjective} userIsManager={userIsManager} allReps={SALES_REPS} />
+            ))}
+          </div>
+        )}
+
+        {/* ── PRIORITIES SECTION ── */}
+        {activeSection === 'priorities' && (
+          <div className="fade-up">
+            <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:12 }}>
+              <div>
+                <h2 className="font-display ink" style={{ fontWeight:700, fontSize:24, margin:0 }}>Team Priorities</h2>
+                <p style={{ fontSize:12, color:'#5A7A99', fontStyle:'italic', marginTop:4 }}>Identify and prioritise the most important initiatives for your organisation. Focus on high-impact, achievable actions that move your team closer to its goals.</p>
+              </div>
+              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                {/* View toggle */}
+                <div style={{ display:'flex', border:'1px solid rgba(0,40,85,0.2)', borderRadius:6, overflow:'hidden' }}>
+                  {[{id:'list',label:'List'},{id:'kanban',label:'Kanban'}].map(v => (
+                    <button key={v.id} onClick={() => setPriView(v.id)}
+                      style={{ padding:'6px 14px', border:'none', background: priView===v.id ? '#002855' : 'transparent', color: priView===v.id ? '#FCF7F2' : '#5A7A99', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', fontWeight:700, cursor:'pointer', transition:'all 0.15s' }}>
+                      {v.label.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setAddingPri(true)}
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', background:'#BC8D26', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>
+                  <Plus style={{ width:13, height:13 }} /> NEW PRIORITY
+                </button>
+              </div>
+            </div>
+
+            {addingPri && (
+              <div style={{ padding:'12px 14px', border:'2px solid #BC8D26', borderRadius:8, marginBottom:16, background:'rgba(188,141,38,0.04)', display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                <input autoFocus value={newPriTitle} onChange={e => setNewPriTitle(e.target.value)}
+                  onKeyDown={e => { if(e.key==='Enter')addPriority(); if(e.key==='Escape')setAddingPri(false); }}
+                  placeholder="New priority title..."
+                  style={{ flex:1, minWidth:200, padding:'8px 10px', border:'1px solid rgba(0,40,85,0.2)', fontSize:13, fontWeight:600, color:'#002855', outline:'none', borderRadius:4 }} />
+                <button onClick={addPriority} style={{ padding:'8px 14px', background:'#BC8D26', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>ADD</button>
+                <button onClick={() => setAddingPri(false)} style={{ padding:'8px 10px', background:'none', border:'1px solid rgba(0,40,85,0.2)', color:'#5A7A99', cursor:'pointer', borderRadius:4, fontSize:12 }}>Cancel</button>
+              </div>
+            )}
+
+            {priView === 'kanban' ? (
+              <PrioritiesKanban items={priorities} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} />
+            ) : (
+              <PrioritiesList items={priorities} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
