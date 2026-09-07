@@ -4698,6 +4698,7 @@ function OKRPage({ currentUser, userIsManager }) {
   const [newObjTitle, setNewObjTitle] = useState('');
   const [addingPri, setAddingPri] = useState(false);
   const [newPriTitle, setNewPriTitle] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   // ── Load from Supabase on mount ──────────────────────────────────────────
   useEffect(() => {
@@ -4707,26 +4708,52 @@ function OKRPage({ currentUser, userIsManager }) {
         supabase.from('okr_objectives').select('*').order('sort_order').order('created_at'),
         supabase.from('okr_priorities').select('*').order('sort_order').order('created_at'),
       ]);
+      // ── Objectives ────────────────────────────────────────────────────
       if (objErr) {
-        console.warn('[OKR] objectives table missing — using defaults:', objErr.message);
+        console.warn('[OKR] objectives table error:', objErr.message);
         setObjectives(DEFAULT_OBJECTIVES);
-      } else {
-        setObjectives(objRows.length > 0 ? objRows.map(r => ({
+      } else if (objRows && objRows.length > 0) {
+        setObjectives(objRows.map(r => ({
           id: r.id, title: r.title, quarter: r.quarter,
           collapsed: r.collapsed, keyResults: r.key_results || [],
           assignees: r.assignees || [],
-        })) : DEFAULT_OBJECTIVES);
-      }
-      if (priErr) {
-        console.warn('[OKR] priorities table missing — using defaults:', priErr.message);
-        setPriorities(DEFAULT_PRIORITIES);
+        })));
       } else {
-        setPriorities(priRows.length > 0 ? priRows.map(r => ({
+        // Table exists but empty — seed with defaults and save to Supabase
+        setObjectives(DEFAULT_OBJECTIVES);
+        for (const obj of DEFAULT_OBJECTIVES) {
+          await supabase.from('okr_objectives').upsert({
+            id: obj.id, title: obj.title, quarter: obj.quarter,
+            collapsed: obj.collapsed, key_results: obj.keyResults,
+            assignees: obj.assignees, sort_order: 0,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+        }
+      }
+
+      // ── Priorities ────────────────────────────────────────────────────
+      if (priErr) {
+        console.warn('[OKR] priorities table error:', priErr.message);
+        setPriorities(DEFAULT_PRIORITIES);
+      } else if (priRows && priRows.length > 0) {
+        setPriorities(priRows.map(r => ({
           id: r.id, title: r.title, description: r.description,
           status: r.status, impact: r.impact, effort: r.effort,
           dueDate: r.due_date, owner: r.owner,
-          linkedOKR: r.linked_okr, linkedKR: r.linked_kr || '',
-        })) : DEFAULT_PRIORITIES);
+          linkedOKR: r.linked_okr || '', linkedKR: r.linked_kr || '',
+        })));
+      } else {
+        // Table exists but empty — seed with defaults and save to Supabase
+        setPriorities(DEFAULT_PRIORITIES);
+        for (const pri of DEFAULT_PRIORITIES) {
+          await supabase.from('okr_priorities').upsert({
+            id: pri.id, title: pri.title, description: pri.description || '',
+            status: pri.status, impact: pri.impact, effort: pri.effort,
+            due_date: pri.dueDate || '', owner: pri.owner || '',
+            linked_okr: pri.linkedOKR || '', linked_kr: pri.linkedKR || '',
+            sort_order: 0, updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+        }
       }
       setLoading(false);
     })();
@@ -4737,20 +4764,31 @@ function OKRPage({ currentUser, userIsManager }) {
     const { error } = await supabase.from('okr_objectives').upsert({
       id: obj.id, title: obj.title, quarter: obj.quarter,
       collapsed: obj.collapsed, key_results: obj.keyResults,
-      assignees: obj.assignees, updated_at: new Date().toISOString(),
+      assignees: obj.assignees, sort_order: 0,
+      updated_at: new Date().toISOString(),
     }, { onConflict: 'id' });
-    if (error) console.error('[OKR] upsert objective:', error.message);
+    if (error) {
+      console.error('[OKR] upsert objective failed:', error.message);
+      setSaveError('Could not save — run create_okr_tables.sql in Supabase first.');
+    } else {
+      setSaveError('');
+    }
   };
 
   const persistPriority = async (pri) => {
     const { error } = await supabase.from('okr_priorities').upsert({
-      id: pri.id, title: pri.title, description: pri.description,
+      id: pri.id, title: pri.title, description: pri.description || '',
       status: pri.status, impact: pri.impact, effort: pri.effort,
-      due_date: pri.dueDate, owner: pri.owner,
+      due_date: pri.dueDate || '', owner: pri.owner || '',
       linked_okr: pri.linkedOKR || '', linked_kr: pri.linkedKR || '',
-      updated_at: new Date().toISOString(),
+      sort_order: 0, updated_at: new Date().toISOString(),
     }, { onConflict: 'id' });
-    if (error) console.error('[OKR] upsert priority:', error.message);
+    if (error) {
+      console.error('[OKR] upsert priority failed:', error.message);
+      setSaveError('Could not save — run create_okr_tables.sql in Supabase first.');
+    } else {
+      setSaveError('');
+    }
   };
 
   // ── CRUD ─────────────────────────────────────────────────────────────────
@@ -4821,6 +4859,14 @@ function OKRPage({ currentUser, userIsManager }) {
             <span style={{ fontFamily:"'Cinzel',serif", fontSize:10, color:'#5A7A99', letterSpacing:'0.2em' }}>LOADING...</span>
           </div>
         ) : (<>
+
+        {/* Save error banner — shown when Supabase tables are missing */}
+        {saveError && (
+          <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(204,35,58,0.08)', border:'1px solid rgba(204,35,58,0.3)', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+            <span style={{ fontSize:12, color:'#CC233A', fontStyle:'italic' }}>⚠️ {saveError}</span>
+            <button onClick={() => setSaveError('')} style={{ background:'none', border:'none', cursor:'pointer', color:'#CC233A', fontSize:16, lineHeight:1 }}>×</button>
+          </div>
+        )}
 
         {/* ── OKRs SECTION ── */}
         {activeSection === 'okrs' && (
@@ -4900,9 +4946,9 @@ function OKRPage({ currentUser, userIsManager }) {
             )}
 
             {priView === 'kanban' ? (
-              <PrioritiesKanban items={priorities.filter(p => priOwnerFilter === 'All' || p.owner === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} objectives={objectives} />
+              <PrioritiesKanban items={priorities.filter(p => priOwnerFilter === 'All' || (p.owner||'').trim() === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} objectives={objectives} />
             ) : (
-              <PrioritiesList items={priorities.filter(p => priOwnerFilter === 'All' || p.owner === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} objectives={objectives} />
+              <PrioritiesList items={priorities.filter(p => priOwnerFilter === 'All' || (p.owner||'').trim() === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} objectives={objectives} />
             )}
           </div>
         )}
