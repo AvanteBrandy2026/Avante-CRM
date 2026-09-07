@@ -4703,10 +4703,13 @@ function OKRPage({ currentUser, userIsManager }) {
   // ── Load: localStorage first (instant), then try Supabase (optional sync) ──
   useEffect(() => {
     // 1. Load from localStorage immediately — no network, no delay
-    const lsObj = (() => { try { const v = localStorage.getItem('avante_okr_data'); return v ? JSON.parse(v) : null; } catch { return null; } })();
-    const lsPri = (() => { try { const v = localStorage.getItem('avante_pri_data'); return v ? JSON.parse(v) : null; } catch { return null; } })();
+    const lsObj = (() => { try { const v = localStorage.getItem('avante_okr_data'); const p = v ? JSON.parse(v) : null; return (p && p.length > 0) ? p : null; } catch { return null; } })();
+    const lsPri = (() => { try { const v = localStorage.getItem('avante_pri_data'); const p = v ? JSON.parse(v) : null; return (p && p.length > 0) ? p : null; } catch { return null; } })();
     setObjectives(lsObj || DEFAULT_OBJECTIVES);
     setPriorities(lsPri || DEFAULT_PRIORITIES);
+    // Save defaults to localStorage if nothing was there
+    if (!lsObj) { try { localStorage.setItem('avante_okr_data', JSON.stringify(DEFAULT_OBJECTIVES)); } catch {} }
+    if (!lsPri) { try { localStorage.setItem('avante_pri_data', JSON.stringify(DEFAULT_PRIORITIES)); } catch {} }
     setLoading(false);
 
     // 2. Try Supabase in background — update if we get fresher data
