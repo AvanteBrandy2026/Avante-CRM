@@ -4315,61 +4315,123 @@ function OwnerPill({ name, size = 26 }) {
 
 // ── OKR KEY RESULT ROW ───────────────────────────────────────────────────────
 function KeyResultRow({ kr, onUpdate, onDelete, userIsManager, priorities }) {
-  // Progress = check-in value (manual) OR % of linked priorities that are Complete
   const linkedPris = (priorities || []).filter(p => p.linkedKR === kr.id);
   const pct = kr.target > 0 ? Math.min(100, Math.round((kr.current / kr.target) * 100))
     : linkedPris.length > 0
       ? Math.round((linkedPris.filter(p => p.status === 'Complete').length / linkedPris.length) * 100)
       : 0;
-  const [editing, setEditing] = useState(false);
-  const [localCurrent, setLocalCurrent] = useState(String(kr.current));
 
-  const handleCurrentBlur = () => {
-    const val = parseFloat(localCurrent) || 0;
-    onUpdate({ ...kr, current: val });
-    setEditing(false);
+  const [editMode, setEditMode] = useState(false);
+  const [draft, setDraft] = useState({ ...kr });
+
+  useEffect(() => { if (!editMode) setDraft({ ...kr }); }, [kr, editMode]);
+
+  const handleSaveKR = () => {
+    onUpdate({ ...draft });
+    setEditMode(false);
   };
 
+  const handleCancelKR = () => {
+    setDraft({ ...kr });
+    setEditMode(false);
+  };
+
+  if (editMode) {
+    return (
+      <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(0,40,85,0.06)', background:'rgba(188,141,38,0.04)', display:'flex', flexDirection:'column', gap:8 }}>
+        <input
+          autoFocus
+          value={draft.title}
+          onChange={e => setDraft(d => ({ ...d, title: e.target.value }))}
+          onKeyDown={e => { if(e.key==='Escape') handleCancelKR(); }}
+          placeholder="Key result title..."
+          style={{ width:'100%', padding:'7px 10px', border:'1px solid #BC8D26', borderRadius:4, fontSize:13, fontWeight:600, color:'#002855', outline:'none', boxSizing:'border-box' }}
+        />
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+          <select value={draft.owner || ''} onChange={e => setDraft(d => ({ ...d, owner: e.target.value }))}
+            style={{ padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:4, fontSize:12, color:'#002855', outline:'none', background:'#fff' }}>
+            <option value="">No owner</option>
+            {ALL_PEOPLE.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <input type="date" value={draft.dueDate || ''}
+            onChange={e => setDraft(d => ({ ...d, dueDate: e.target.value }))}
+            style={{ padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:4, fontSize:12, outline:'none' }} />
+          <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <span style={{ fontSize:11, color:'#5A7A99' }}>Target:</span>
+            <input type="number" value={draft.target}
+              onChange={e => setDraft(d => ({ ...d, target: parseFloat(e.target.value) || 0 }))}
+              style={{ width:90, padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:4, fontSize:12, outline:'none', textAlign:'right' }} />
+          </div>
+          <input value={draft.unit || ''} placeholder="Unit (e.g. Rands)"
+            onChange={e => setDraft(d => ({ ...d, unit: e.target.value }))}
+            style={{ width:120, padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:4, fontSize:12, outline:'none' }} />
+          <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <span style={{ fontSize:11, color:'#5A7A99' }}>Check-in:</span>
+            <input type="number" value={draft.current}
+              onChange={e => setDraft(d => ({ ...d, current: parseFloat(e.target.value) || 0 }))}
+              style={{ width:80, padding:'6px 8px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:4, fontSize:12, outline:'none', textAlign:'right' }} />
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <button onClick={handleSaveKR}
+            style={{ padding:'6px 14px', background:'#002855', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>
+            SAVE
+          </button>
+          <button onClick={handleCancelKR}
+            style={{ padding:'6px 10px', background:'none', border:'1px solid rgba(0,40,85,0.2)', color:'#5A7A99', fontSize:12, cursor:'pointer', borderRadius:4 }}>
+            Cancel
+          </button>
+          {onDelete && (
+            <button onClick={() => { if (window.confirm('Delete this key result?')) onDelete(kr.id); }}
+              style={{ marginLeft:'auto', padding:'6px 10px', background:'none', border:'1px solid rgba(204,35,58,0.3)', color:'#CC233A', fontSize:11, cursor:'pointer', borderRadius:4 }}>
+              Delete KR
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 110px 200px 70px', alignItems:'center', gap:8, padding:'10px 16px', borderTop:'1px solid rgba(0,40,85,0.06)', background:'#FAFAF8' }}>
-      {/* Title */}
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 110px 180px 60px 36px', alignItems:'center', gap:8, padding:'10px 16px', borderTop:'1px solid rgba(0,40,85,0.06)', background:'#FAFAF8' }}>
       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
         <ChevronRight style={{ width:14, height:14, color:'rgba(0,40,85,0.3)', flexShrink:0 }} />
-        <span style={{ fontSize:13, color:'#002855', fontWeight:500 }}>{kr.title}</span>
+        <span style={{ fontSize:13, color:'#002855', fontWeight:500, cursor:'pointer' }} onClick={() => setEditMode(true)} title="Click to edit">{kr.title}</span>
       </div>
-      {/* Owner */}
       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
         <OwnerPill name={kr.owner} size={24} />
         <span style={{ fontSize:11, color:'#5A7A99', fontWeight:600 }}>{kr.owner || '—'}</span>
       </div>
-      {/* Due date */}
       <span style={{ fontSize:11, color:'#5A7A99' }}>{kr.dueDate || '—'}</span>
-      {/* Check-in / progress */}
       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-        <input
-          type="number"
-          value={editing ? localCurrent : kr.current}
-          onFocus={() => { setEditing(true); setLocalCurrent(String(kr.current)); }}
-          onChange={e => setLocalCurrent(e.target.value)}
-          onBlur={handleCurrentBlur}
-          style={{ width:70, padding:'4px 8px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:4, fontFamily:"'Libre Baskerville',Georgia,serif", fontSize:12, color:'#002855', textAlign:'right' }}
-        />
-        <span style={{ fontSize:11, color:'#5A7A99', whiteSpace:'nowrap' }}>/ {kr.target.toLocaleString()} {kr.unit}</span>
+        <input type="number" value={draft.current}
+          onChange={e => setDraft(d => ({ ...d, current: parseFloat(e.target.value) || 0 }))}
+          onBlur={() => onUpdate({ ...kr, current: draft.current })}
+          style={{ width:65, padding:'4px 6px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:4, fontFamily:"'Libre Baskerville',Georgia,serif", fontSize:12, color:'#002855', textAlign:'right', outline:'none' }} />
+        <span style={{ fontSize:10, color:'#5A7A99', whiteSpace:'nowrap' }}>/ {(kr.target||0).toLocaleString()} {kr.unit}</span>
       </div>
-      {/* Progress */}
       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:3 }}>
         <span style={{ fontSize:11, fontWeight:700, color: pct >= 70 ? '#2d8659' : pct >= 30 ? '#BC8D26' : '#CC233A' }}>{pct}%</span>
-        <div style={{ width:60, height:5, background:'rgba(0,40,85,0.1)', borderRadius:3, overflow:'hidden' }}>
+        <div style={{ width:50, height:5, background:'rgba(0,40,85,0.1)', borderRadius:3, overflow:'hidden' }}>
           <div style={{ width:`${pct}%`, height:'100%', background: pct >= 70 ? '#2d8659' : pct >= 30 ? '#BC8D26' : '#CC233A', transition:'width 0.4s' }} />
         </div>
       </div>
+      <button onClick={() => setEditMode(true)} title="Edit key result"
+        style={{ background:'none', border:'1px solid rgba(0,40,85,0.15)', borderRadius:4, padding:'4px 6px', cursor:'pointer', color:'rgba(0,40,85,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}
+        onMouseEnter={e => { e.currentTarget.style.color='#002855'; e.currentTarget.style.borderColor='#002855'; }}
+        onMouseLeave={e => { e.currentTarget.style.color='rgba(0,40,85,0.4)'; e.currentTarget.style.borderColor='rgba(0,40,85,0.15)'; }}>
+        <Edit2 style={{ width:11, height:11 }} />
+      </button>
     </div>
   );
 }
 
+
 // ── OBJECTIVE BLOCK ──────────────────────────────────────────────────────────
 function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps, priorities }) {
   const [collapsed, setCollapsed] = useState(obj.collapsed || false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(obj.title);
   const [addingKR, setAddingKR] = useState(false);
   const [newKRTitle, setNewKRTitle] = useState('');
   const [newKROwner, setNewKROwner] = useState('');
@@ -4383,6 +4445,14 @@ function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps, prior
 
   const updateKR = (updated) => {
     onUpdate({ ...obj, keyResults: obj.keyResults.map(k => k.id === updated.id ? updated : k) });
+  };
+
+  const deleteKR = (krId) => {
+    onUpdate({ ...obj, keyResults: obj.keyResults.filter(k => k.id !== krId) });
+  };
+
+  const deleteKR = (id) => {
+    onUpdate({ ...obj, keyResults: obj.keyResults.filter(k => k.id !== id) });
   };
 
   const addKR = () => {
@@ -4407,7 +4477,18 @@ function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps, prior
       <div style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 16px', background:'#FEFCF9', cursor:'pointer', userSelect:'none' }}
         onClick={() => setCollapsed(c => !c)}>
         <ChevronRight style={{ width:16, height:16, color:'#5A7A99', transform: collapsed ? 'rotate(0deg)' : 'rotate(90deg)', transition:'transform 0.2s', flexShrink:0 }} />
-        <span style={{ fontSize:15, fontWeight:700, color:'#002855', flex:1 }}>{obj.title}</span>
+        {editingTitle ? (
+          <input autoFocus value={draftTitle}
+            onChange={e => setDraftTitle(e.target.value)}
+            onBlur={() => { onUpdate({ ...obj, title: draftTitle.trim() || obj.title }); setEditingTitle(false); }}
+            onKeyDown={e => { if(e.key==='Enter'){onUpdate({...obj,title:draftTitle.trim()||obj.title});setEditingTitle(false);} if(e.key==='Escape'){setDraftTitle(obj.title);setEditingTitle(false);} }}
+            onClick={e => e.stopPropagation()}
+            style={{ flex:1, fontSize:15, fontWeight:700, color:'#002855', border:'none', borderBottom:'2px solid #BC8D26', outline:'none', background:'transparent', padding:'2px 0' }} />
+        ) : (
+          <span style={{ fontSize:15, fontWeight:700, color:'#002855', flex:1 }}
+            onDoubleClick={e => { e.stopPropagation(); setDraftTitle(obj.title); setEditingTitle(true); }}
+            title="Double-click to edit objective title">{obj.title}</span>
+        )}
         <span style={{ padding:'2px 8px', background:'rgba(0,40,85,0.08)', borderRadius:12, fontFamily:"'Cinzel',serif", fontSize:9, fontWeight:700, color:'#5A7A99', letterSpacing:'0.05em', flexShrink:0 }}>{obj.quarter}</span>
         <span style={{ padding:'2px 8px', background:'rgba(0,40,85,0.06)', borderRadius:12, fontSize:11, color:'#5A7A99', flexShrink:0 }}>{obj.keyResults.length}</span>
         {/* Progress bar */}
@@ -4431,15 +4512,15 @@ function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps, prior
       {!collapsed && (
         <div>
           {/* Table header */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 110px 200px 70px', gap:8, padding:'8px 16px', background:'rgba(0,40,85,0.03)', borderTop:'1px solid rgba(0,40,85,0.08)' }}>
-            {['Key Result','Owner','Due date','Check-in','Progress'].map(h => (
-              <span key={h} style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', color:'#5A7A99', fontWeight:700 }}>{h.toUpperCase()}</span>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 110px 200px 70px 32px', gap:8, padding:'8px 16px', background:'rgba(0,40,85,0.03)', borderTop:'1px solid rgba(0,40,85,0.08)' }}>
+            {['Key Result','Owner','Due date','Check-in','Progress',''].map((h,i) => (
+              <span key={i} style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', color:'#5A7A99', fontWeight:700 }}>{h.toUpperCase()}</span>
             ))}
           </div>
 
           {/* KR rows */}
           {obj.keyResults.map(kr => (
-            <KeyResultRow key={kr.id} kr={kr} onUpdate={updateKR} userIsManager={userIsManager} priorities={priorities} />
+            <KeyResultRow key={kr.id} kr={kr} onUpdate={updateKR} onDelete={deleteKR} userIsManager={userIsManager} priorities={priorities} />
           ))}
 
           {/* Add KR */}
