@@ -4447,10 +4447,6 @@ function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps, prior
     onUpdate({ ...obj, keyResults: obj.keyResults.map(k => k.id === updated.id ? updated : k) });
   };
 
-  const deleteKR = (krId) => {
-    onUpdate({ ...obj, keyResults: obj.keyResults.filter(k => k.id !== krId) });
-  };
-
   const deleteKR = (id) => {
     onUpdate({ ...obj, keyResults: obj.keyResults.filter(k => k.id !== id) });
   };
