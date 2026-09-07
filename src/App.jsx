@@ -4698,133 +4698,124 @@ function OKRPage({ currentUser, userIsManager }) {
   const [newObjTitle, setNewObjTitle] = useState('');
   const [addingPri, setAddingPri] = useState(false);
   const [newPriTitle, setNewPriTitle] = useState('');
-  const [saveError, setSaveError] = useState('');
 
-  // ── Load from Supabase on mount ──────────────────────────────────────────
+
+  // ── Load: localStorage first (instant), then try Supabase (optional sync) ──
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const [{ data: objRows, error: objErr }, { data: priRows, error: priErr }] = await Promise.all([
-        supabase.from('okr_objectives').select('*').order('sort_order').order('created_at'),
-        supabase.from('okr_priorities').select('*').order('sort_order').order('created_at'),
-      ]);
-      // ── Objectives ────────────────────────────────────────────────────
-      if (objErr) {
-        console.warn('[OKR] objectives table error:', objErr.message);
-        setObjectives(DEFAULT_OBJECTIVES);
-      } else if (objRows && objRows.length > 0) {
-        setObjectives(objRows.map(r => ({
-          id: r.id, title: r.title, quarter: r.quarter,
-          collapsed: r.collapsed, keyResults: r.key_results || [],
-          assignees: r.assignees || [],
-        })));
-      } else {
-        // Table exists but empty — seed with defaults and save to Supabase
-        setObjectives(DEFAULT_OBJECTIVES);
-        for (const obj of DEFAULT_OBJECTIVES) {
-          await supabase.from('okr_objectives').upsert({
-            id: obj.id, title: obj.title, quarter: obj.quarter,
-            collapsed: obj.collapsed, key_results: obj.keyResults,
-            assignees: obj.assignees, sort_order: 0,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
-        }
-      }
+    // 1. Load from localStorage immediately — no network, no delay
+    const lsObj = (() => { try { const v = localStorage.getItem('avante_okr_data'); return v ? JSON.parse(v) : null; } catch { return null; } })();
+    const lsPri = (() => { try { const v = localStorage.getItem('avante_pri_data'); return v ? JSON.parse(v) : null; } catch { return null; } })();
+    setObjectives(lsObj || DEFAULT_OBJECTIVES);
+    setPriorities(lsPri || DEFAULT_PRIORITIES);
+    setLoading(false);
 
-      // ── Priorities ────────────────────────────────────────────────────
-      if (priErr) {
-        console.warn('[OKR] priorities table error:', priErr.message);
-        setPriorities(DEFAULT_PRIORITIES);
-      } else if (priRows && priRows.length > 0) {
-        setPriorities(priRows.map(r => ({
-          id: r.id, title: r.title, description: r.description,
-          status: r.status, impact: r.impact, effort: r.effort,
-          dueDate: r.due_date, owner: r.owner,
-          linkedOKR: r.linked_okr || '', linkedKR: r.linked_kr || '',
-        })));
-      } else {
-        // Table exists but empty — seed with defaults and save to Supabase
-        setPriorities(DEFAULT_PRIORITIES);
-        for (const pri of DEFAULT_PRIORITIES) {
-          await supabase.from('okr_priorities').upsert({
-            id: pri.id, title: pri.title, description: pri.description || '',
-            status: pri.status, impact: pri.impact, effort: pri.effort,
-            due_date: pri.dueDate || '', owner: pri.owner || '',
-            linked_okr: pri.linkedOKR || '', linked_kr: pri.linkedKR || '',
-            sort_order: 0, updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
+    // 2. Try Supabase in background — update if we get fresher data
+    (async () => {
+      try {
+        const [{ data: objRows, error: objErr }, { data: priRows, error: priErr }] = await Promise.all([
+          supabase.from('okr_objectives').select('*').order('sort_order').order('created_at'),
+          supabase.from('okr_priorities').select('*').order('sort_order').order('created_at'),
+        ]);
+        if (!objErr && objRows && objRows.length > 0) {
+          const mapped = objRows.map(r => ({
+            id: r.id, title: r.title, quarter: r.quarter,
+            collapsed: r.collapsed, keyResults: r.key_results || [],
+            assignees: r.assignees || [],
+          }));
+          setObjectives(mapped);
+          try { localStorage.setItem('avante_okr_data', JSON.stringify(mapped)); } catch {}
         }
+        if (!priErr && priRows && priRows.length > 0) {
+          const mapped = priRows.map(r => ({
+            id: r.id, title: r.title, description: r.description,
+            status: r.status, impact: r.impact, effort: r.effort,
+            dueDate: r.due_date, owner: r.owner,
+            linkedOKR: r.linked_okr || '', linkedKR: r.linked_kr || '',
+          }));
+          setPriorities(mapped);
+          try { localStorage.setItem('avante_pri_data', JSON.stringify(mapped)); } catch {}
+        }
+      } catch (e) {
+        // Supabase unavailable — localStorage is the source of truth
+        console.warn('[OKR] Supabase sync skipped:', e.message);
       }
-      setLoading(false);
     })();
   }, []);
 
   // ── Supabase upsert helpers ──────────────────────────────────────────────
-  const persistObjective = async (obj) => {
-    const { error } = await supabase.from('okr_objectives').upsert({
+  const persistObjective = async (obj, allObjs) => {
+    // Always save to localStorage immediately (works without SQL)
+    const toSave = allObjs || objectives;
+    try { localStorage.setItem('avante_okr_data', JSON.stringify(toSave)); } catch {}
+    // Also try Supabase silently — no error shown if tables missing
+    supabase.from('okr_objectives').upsert({
       id: obj.id, title: obj.title, quarter: obj.quarter,
       collapsed: obj.collapsed, key_results: obj.keyResults,
       assignees: obj.assignees, sort_order: 0,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
-    if (error) {
-      console.error('[OKR] upsert objective failed:', error.message);
-      setSaveError('Could not save — run create_okr_tables.sql in Supabase first.');
-    } else {
-      setSaveError('');
-    }
+    }, { onConflict: 'id' }).then(({ error }) => {
+      if (error) console.warn('[OKR] Supabase objective sync skipped:', error.message);
+    });
   };
 
-  const persistPriority = async (pri) => {
-    const { error } = await supabase.from('okr_priorities').upsert({
+  const persistPriority = async (pri, allPris) => {
+    // Always save to localStorage immediately (works without SQL)
+    const toSave = allPris || priorities;
+    try { localStorage.setItem('avante_pri_data', JSON.stringify(toSave)); } catch {}
+    // Also try Supabase silently — no error shown if tables missing
+    supabase.from('okr_priorities').upsert({
       id: pri.id, title: pri.title, description: pri.description || '',
       status: pri.status, impact: pri.impact, effort: pri.effort,
       due_date: pri.dueDate || '', owner: pri.owner || '',
       linked_okr: pri.linkedOKR || '', linked_kr: pri.linkedKR || '',
       sort_order: 0, updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
-    if (error) {
-      console.error('[OKR] upsert priority failed:', error.message);
-      setSaveError('Could not save — run create_okr_tables.sql in Supabase first.');
-    } else {
-      setSaveError('');
-    }
+    }, { onConflict: 'id' }).then(({ error }) => {
+      if (error) console.warn('[OKR] Supabase priority sync skipped:', error.message);
+    });
   };
 
   // ── CRUD ─────────────────────────────────────────────────────────────────
   const updateObjective = async (updated) => {
-    setObjectives(prev => prev.map(o => o.id === updated.id ? updated : o));
-    await persistObjective(updated);
+    const newList = objectives.map(o => o.id === updated.id ? updated : o);
+    setObjectives(newList);
+    await persistObjective(updated, newList);
   };
 
   const deleteObjective = async (id) => {
-    setObjectives(prev => prev.filter(o => o.id !== id));
-    await supabase.from('okr_objectives').delete().eq('id', id);
+    const newList = objectives.filter(o => o.id !== id);
+    setObjectives(newList);
+    try { localStorage.setItem('avante_okr_data', JSON.stringify(newList)); } catch {}
+    supabase.from('okr_objectives').delete().eq('id', id).then(({error}) => { if(error) console.warn('[OKR] delete obj:', error.message); });
   };
 
   const addObjective = async () => {
     if (!newObjTitle.trim()) return;
     const newObj = { id: `obj-${Date.now()}`, title: newObjTitle.trim(), quarter: OKR_QUARTER, collapsed: false, keyResults: [], assignees: [] };
-    setObjectives(prev => [...prev, newObj]);
-    await persistObjective(newObj);
+    const newList = [...objectives, newObj];
+    setObjectives(newList);
+    await persistObjective(newObj, newList);
     setNewObjTitle(''); setAddingObj(false);
   };
 
   const updatePriority = async (updated) => {
-    setPriorities(prev => prev.map(p => p.id === updated.id ? updated : p));
-    await persistPriority(updated);
+    const newList = priorities.map(p => p.id === updated.id ? updated : p);
+    setPriorities(newList);
+    await persistPriority(updated, newList);
   };
 
   const deletePriority = async (id) => {
-    setPriorities(prev => prev.filter(p => p.id !== id));
-    await supabase.from('okr_priorities').delete().eq('id', id);
+    const newList = priorities.filter(p => p.id !== id);
+    setPriorities(newList);
+    try { localStorage.setItem('avante_pri_data', JSON.stringify(newList)); } catch {}
+    supabase.from('okr_priorities').delete().eq('id', id).then(({error}) => { if(error) console.warn('[OKR] delete pri:', error.message); });
   };
 
   const addPriority = async () => {
     if (!newPriTitle.trim()) return;
     const newPri = { id: `p-${Date.now()}`, title: newPriTitle.trim(), description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '', linkedKR: '' };
-    setPriorities(prev => [...prev, newPri]);
-    await persistPriority(newPri);
+    const newList = [...priorities, newPri];
+    setPriorities(newList);
+    await persistPriority(newPri, newList);
     setNewPriTitle(''); setAddingPri(false);
   };
 
@@ -4860,13 +4851,7 @@ function OKRPage({ currentUser, userIsManager }) {
           </div>
         ) : (<>
 
-        {/* Save error banner — shown when Supabase tables are missing */}
-        {saveError && (
-          <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(204,35,58,0.08)', border:'1px solid rgba(204,35,58,0.3)', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
-            <span style={{ fontSize:12, color:'#CC233A', fontStyle:'italic' }}>⚠️ {saveError}</span>
-            <button onClick={() => setSaveError('')} style={{ background:'none', border:'none', cursor:'pointer', color:'#CC233A', fontSize:16, lineHeight:1 }}>×</button>
-          </div>
-        )}
+
 
         {/* ── OKRs SECTION ── */}
         {activeSection === 'okrs' && (
