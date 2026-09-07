@@ -4393,16 +4393,32 @@ function KeyResultRow({ kr, onUpdate, onDelete, userIsManager, priorities }) {
   }
 
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 110px 180px 60px 36px', alignItems:'center', gap:8, padding:'10px 16px', borderTop:'1px solid rgba(0,40,85,0.06)', background:'#FAFAF8' }}>
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 150px 130px 180px 60px 36px', alignItems:'center', gap:8, padding:'10px 16px', borderTop:'1px solid rgba(0,40,85,0.06)', background:'#FAFAF8' }}>
+      {/* Title — click to open full edit */}
       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
         <ChevronRight style={{ width:14, height:14, color:'rgba(0,40,85,0.3)', flexShrink:0 }} />
-        <span style={{ fontSize:13, color:'#002855', fontWeight:500, cursor:'pointer' }} onClick={() => setEditMode(true)} title="Click to edit">{kr.title}</span>
+        <span style={{ fontSize:13, color:'#002855', fontWeight:500, cursor:'pointer' }}
+          onClick={() => setEditMode(true)} title="Click to edit full details">{kr.title}</span>
       </div>
+      {/* Owner — inline dropdown, saves on change */}
       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-        <OwnerPill name={kr.owner} size={24} />
-        <span style={{ fontSize:11, color:'#5A7A99', fontWeight:600 }}>{kr.owner || '—'}</span>
+        <OwnerPill name={kr.owner} size={20} />
+        <select
+          value={kr.owner || ''}
+          onChange={e => onUpdate({ ...kr, owner: e.target.value })}
+          style={{ flex:1, padding:'4px 6px', border:'1px solid rgba(0,40,85,0.15)', borderRadius:4, fontFamily:"'Cinzel',serif", fontSize:10, fontWeight:700, color:'#002855', background:'transparent', cursor:'pointer', outline:'none' }}>
+          <option value="">No owner</option>
+          {ALL_PEOPLE.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
       </div>
-      <span style={{ fontSize:11, color:'#5A7A99' }}>{kr.dueDate || '—'}</span>
+      {/* Due date — inline date input, saves on change */}
+      <input
+        type="date"
+        value={kr.dueDate || ''}
+        onChange={e => onUpdate({ ...kr, dueDate: e.target.value })}
+        style={{ width:'100%', padding:'4px 6px', border:'1px solid rgba(0,40,85,0.15)', borderRadius:4, fontSize:11, color: kr.dueDate ? '#002855' : '#9E8E7A', outline:'none', background:'transparent', cursor:'pointer' }}
+      />
+      {/* Check-in number */}
       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
         <input type="number" value={draft.current}
           onChange={e => setDraft(d => ({ ...d, current: parseFloat(e.target.value) || 0 }))}
@@ -4410,13 +4426,15 @@ function KeyResultRow({ kr, onUpdate, onDelete, userIsManager, priorities }) {
           style={{ width:65, padding:'4px 6px', border:'1px solid rgba(0,40,85,0.2)', borderRadius:4, fontFamily:"'Libre Baskerville',Georgia,serif", fontSize:12, color:'#002855', textAlign:'right', outline:'none' }} />
         <span style={{ fontSize:10, color:'#5A7A99', whiteSpace:'nowrap' }}>/ {(kr.target||0).toLocaleString()} {kr.unit}</span>
       </div>
+      {/* Progress */}
       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:3 }}>
         <span style={{ fontSize:11, fontWeight:700, color: pct >= 70 ? '#2d8659' : pct >= 30 ? '#BC8D26' : '#CC233A' }}>{pct}%</span>
         <div style={{ width:50, height:5, background:'rgba(0,40,85,0.1)', borderRadius:3, overflow:'hidden' }}>
           <div style={{ width:`${pct}%`, height:'100%', background: pct >= 70 ? '#2d8659' : pct >= 30 ? '#BC8D26' : '#CC233A', transition:'width 0.4s' }} />
         </div>
       </div>
-      <button onClick={() => setEditMode(true)} title="Edit key result"
+      {/* Edit button — opens full edit form for title/target/unit */}
+      <button onClick={() => setEditMode(true)} title="Edit title, target & unit"
         style={{ background:'none', border:'1px solid rgba(0,40,85,0.15)', borderRadius:4, padding:'4px 6px', cursor:'pointer', color:'rgba(0,40,85,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}
         onMouseEnter={e => { e.currentTarget.style.color='#002855'; e.currentTarget.style.borderColor='#002855'; }}
         onMouseLeave={e => { e.currentTarget.style.color='rgba(0,40,85,0.4)'; e.currentTarget.style.borderColor='rgba(0,40,85,0.15)'; }}>
@@ -4508,7 +4526,7 @@ function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps, prior
       {!collapsed && (
         <div>
           {/* Table header */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 110px 200px 70px 32px', gap:8, padding:'8px 16px', background:'rgba(0,40,85,0.03)', borderTop:'1px solid rgba(0,40,85,0.08)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 150px 130px 180px 60px 36px', gap:8, padding:'8px 16px', background:'rgba(0,40,85,0.03)', borderTop:'1px solid rgba(0,40,85,0.08)' }}>
             {['Key Result','Owner','Due date','Check-in','Progress',''].map((h,i) => (
               <span key={i} style={{ fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.15em', color:'#5A7A99', fontWeight:700 }}>{h.toUpperCase()}</span>
             ))}
