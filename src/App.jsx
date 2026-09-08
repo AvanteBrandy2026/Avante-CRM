@@ -386,8 +386,6 @@ function visitToDb(v, includeExtended = true) {
     sales_rep: v.salesRep || '',
     date: v.date || null,
     outcome: v.outcome || '',
-    sale_type: v.saleType || 'single',
-    prospected_amount: v.prospectedAmount || 0,
     sale_amount: v.saleAmount || 0,
     items: v.items || [],
     notes: v.notes || '',
@@ -410,8 +408,6 @@ function visitFromDb(r) {
     salesRep: r.sales_rep || '',
     date: r.date || '',
     outcome: r.outcome || '',
-    saleType: r.sale_type || 'single',
-    prospectedAmount: Number(r.prospected_amount) || 0,
     saleAmount: Number(r.sale_amount) || 0,
     items: r.items || [],
     notes: r.notes || '',
@@ -1930,28 +1926,40 @@ function OverdueClients({ clients, visits, onNavigate, visibleReps }) {
 
 // =================== Prospect / Pipeline Forecast Widget ===================
 function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits = [], onNavigate }) {
-  // Collect pipeline entries from visits that have a prospectedAmount
-  const pipelineVisits = useMemo(() => {
-    return visits.filter(v => {
-      const amt = Number(v.prospectedAmount) || 0;
-      if (!amt) return false;
-      if (activeRep !== 'All' && v.salesRep !== activeRep) return false;
-      return true;
+  // B2B clients with a prospected amount, filtered by rep
+  const b2bClients = useMemo(() => {
+    return clients.filter(c => {
+      if (c.channel !== 'B2B') return false;
+      if (activeRep !== 'All' && c.accountManager !== activeRep) return false;
+      return Number(c.prospectedAmount) > 0;
+    }).sort((a, b) => (b.prospectedAmount || 0) - (a.prospectedAmount || 0));
+  }, [clients, activeRep]);
+
+  // For each client, find their most recent visit to get the latest outcome + saleType
+  const clientsWithMeta = useMemo(() => {
+    return b2bClients.map(c => {
+      const clientVisits = visits
+        .filter(v => v.clientId === c.id && OUTCOME_PROBABILITY[v.outcome] !== undefined)
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const latestVisit = clientVisits[0];
+      const outcome = latestVisit?.outcome || 'Met / Discussion';
+      const saleType = latestVisit?.saleType || 'single';
+      const prob = OUTCOME_PROBABILITY[outcome] ?? 0.20;
+      const raw = Number(c.prospectedAmount) || 0;
+      const weighted = raw * prob;
+      return { ...c, outcome, saleType, prob, raw, weighted };
     });
-  }, [visits, activeRep]);
+  }, [b2bClients, visits]);
 
   // Total weighted pipeline value
-  const totalWeightedPipeline = useMemo(() => {
-    return pipelineVisits.reduce((sum, v) => {
-      const raw = Number(v.prospectedAmount) || 0;
-      const prob = OUTCOME_PROBABILITY[v.outcome] ?? 0.20;
-      return sum + raw * prob;
-    }, 0);
-  }, [pipelineVisits]);
+  const totalWeightedPipeline = useMemo(
+    () => clientsWithMeta.reduce((s, c) => s + c.weighted, 0),
+    [clientsWithMeta]
+  );
 
-  // 6-month forecast:
-  // Single sale → weighted amount into the visit's month bucket
-  // Monthly sale → weighted amount spread equally over 6 months from visit date
+  // 6-month forecast using client prospectedAmount × probability
+  // Single sale → weighted amount into the client's latest visit month
+  // Monthly sale → weighted amount spread equally across 6 months
   const sixMonthForecast = useMemo(() => {
     const now = new Date();
     const months = Array.from({ length: 6 }, (_, i) => {
@@ -1959,44 +1967,18 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
       return { label: d.toLocaleString('default', { month: 'short' }).toUpperCase(), year: d.getFullYear(), monthIdx: d.getMonth(), amount: 0 };
     });
 
-    pipelineVisits.forEach(v => {
-      const raw = Number(v.prospectedAmount) || 0;
-      const prob = OUTCOME_PROBABILITY[v.outcome] ?? 0.20;
-      const weighted = raw * prob;
-      if (!weighted) return;
-      const visitDate = v.date ? new Date(v.date) : now;
-      const vYear = visitDate.getFullYear(), vMonth = visitDate.getMonth();
-
-      if (v.saleType === 'monthly') {
-        const eligibleMonths = months.filter((m, i) => {
-          const mDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
-          return mDate >= new Date(vYear, vMonth, 1);
-        });
-        const perMonth = eligibleMonths.length > 0 ? weighted / eligibleMonths.length : 0;
-        eligibleMonths.forEach(m => { m.amount += perMonth; });
+    clientsWithMeta.forEach(c => {
+      if (!c.weighted) return;
+      if (c.saleType === 'monthly') {
+        // Spread equally over all 6 months
+        months.forEach(m => { m.amount += c.weighted / 6; });
       } else {
-        const bucket = months.find(m => m.year === vYear && m.monthIdx === vMonth) || months[0];
-        if (bucket) bucket.amount += weighted;
+        // Single sale → current month
+        if (months[0]) months[0].amount += c.weighted;
       }
     });
     return months;
-  }, [pipelineVisits]);
-
-  // Per-client summary (highest weighted visit per client)
-  const clientMap = useMemo(() => {
-    const m = {};
-    pipelineVisits.forEach(v => {
-      const c = clients.find(cl => cl.id === v.clientId);
-      if (!c) return;
-      const raw = Number(v.prospectedAmount) || 0;
-      const prob = OUTCOME_PROBABILITY[v.outcome] ?? 0.20;
-      const weighted = raw * prob;
-      if (!m[c.id] || m[c.id].weighted < weighted) {
-        m[c.id] = { client: c, raw, weighted, outcome: v.outcome, saleType: v.saleType };
-      }
-    });
-    return Object.values(m).sort((a, b) => b.weighted - a.weighted);
-  }, [pipelineVisits, clients]);
+  }, [clientsWithMeta]);
 
   const maxMonthAmount = Math.max(...sixMonthForecast.map(m => m.amount), 1);
 
@@ -2011,22 +1993,22 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
           </h2>
         </div>
         <span className="font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>
-          {pipelineVisits.length} pipeline entr{pipelineVisits.length !== 1 ? 'ies' : 'y'}
+          {clientsWithMeta.length} client{clientsWithMeta.length !== 1 ? 's' : ''} in pipeline
         </span>
       </div>
 
-      {/* Total weighted */}
+      {/* Total */}
       <div className="flex items-end justify-between gap-4 mb-4">
         <div>
           <p className="font-display text-[10px] tracking-[0.25em] copper" style={{ fontWeight: 600 }}>WEIGHTED PIPELINE VALUE</p>
           <p className="font-display text-2xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(Math.round(totalWeightedPipeline))}</p>
           <p className="italic ocean" style={{ fontSize: 10, marginTop: 2 }}>
-            Prospected amounts × outcome probability — single &amp; monthly sales
+            Prospected amount × outcome probability per client
           </p>
         </div>
       </div>
 
-      {/* 6-Month Revenue Forecast Bars */}
+      {/* 6-Month Forecast Bars */}
       <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)', paddingTop: 12, marginBottom: 12 }}>
         <p className="font-display text-[9px] tracking-[0.25em] copper mb-3" style={{ fontWeight: 600 }}>6-MONTH WEIGHTED FORECAST</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>
@@ -2049,45 +2031,44 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
           })}
         </div>
         <p style={{ fontSize: 9, fontStyle: 'italic', color: '#5A7A99', marginTop: 8 }}>
-          Single sale = full weighted amount in visit month. Monthly sale = spread equally over 6 months.
+          Single sale = full weighted value in current month. Monthly sale = spread over 6 months. Probability set by latest visit outcome.
         </p>
       </div>
 
       {/* Client rows */}
-      {clientMap.length === 0 ? (
+      {clientsWithMeta.length === 0 ? (
         <div style={{ padding: '16px 0', textAlign: 'center', borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-          <p className="italic ocean" style={{ fontSize: 12 }}>No pipeline entries yet — log a visit with a Prospected Amount to start forecasting.</p>
+          <p className="italic ocean" style={{ fontSize: 12 }}>No B2B clients with a prospected amount yet — add one via the client profile.</p>
         </div>
       ) : (
         <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-          {clientMap.slice(0, 8).map(({ client: c, raw, weighted, outcome, saleType }, i) => {
-            const prob = OUTCOME_PROBABILITY[outcome] ?? 0.20;
-            const probPct = Math.round(prob * 100);
+          {clientsWithMeta.slice(0, 8).map((c, i) => {
+            const probPct = Math.round(c.prob * 100);
             return (
               <div key={c.id}
                 onClick={() => onNavigate && onNavigate('leads', c.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderBottom: i < Math.min(clientMap.length, 8) - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderBottom: i < Math.min(clientsWithMeta.length, 8) - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.03)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 <div style={{ width: 4, alignSelf: 'stretch', background: '#DBB85E', flexShrink: 0, borderRadius: 2 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.venue}</p>
                   <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 1 }}>
-                    {outcome} · {saleType === 'monthly' ? 'Monthly' : 'Single'}
+                    {c.outcome} · {c.saleType === 'monthly' ? 'Monthly' : 'Single'}
                   </p>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-                  <span style={{ fontFamily: "'Cinzel',serif", fontSize: 10, fontWeight: 700, color: probPct >= 80 ? '#2d8659' : probPct >= 40 ? '#BC8D26' : '#5A7A99' }}>
-                    {ZAR(Math.round(weighted))} <span style={{ fontWeight: 400, fontSize: 9 }}>({probPct}%)</span>
+                  <span style={{ fontFamily: "'Cinzel',serif", fontSize: 11, fontWeight: 700, color: probPct >= 80 ? '#2d8659' : probPct >= 40 ? '#BC8D26' : '#5A7A99' }}>
+                    {ZAR(Math.round(c.weighted))} <span style={{ fontWeight: 400, fontSize: 9 }}>({probPct}%)</span>
                   </span>
-                  <span style={{ fontSize: 9, color: '#9E8E7A' }}>of {ZAR(raw)}</span>
+                  <span style={{ fontSize: 9, color: '#9E8E7A' }}>of {ZAR(c.raw)}</span>
                 </div>
               </div>
             );
           })}
-          {clientMap.length > 8 && (
+          {clientsWithMeta.length > 8 && (
             <p style={{ textAlign: 'center', fontSize: 10, fontStyle: 'italic', color: '#5A7A99', padding: '8px 0' }}>
-              +{clientMap.length - 8} more pipeline entries
+              +{clientsWithMeta.length - 8} more clients
             </p>
           )}
         </div>
@@ -5475,8 +5456,6 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
   const [clientId, setClientId] = useState(existingVisit?.clientId ? String(existingVisit.clientId) : preselectedClientId ? String(preselectedClientId) : '');
   const [date, setDate] = useState(existingVisit?.date || todayISO());
   const [outcome, setOutcome] = useState(existingVisit?.outcome || 'Met / Discussion');
-  const [saleType, setSaleType] = useState(existingVisit?.saleType || 'single');
-  const [prospectedAmount, setProspectedAmount] = useState(existingVisit?.prospectedAmount || '');
   const [contactMethod, setContactMethod] = useState(existingVisit?.contactMethod || 'In Person');
   const [followUpDate, setFollowUpDate] = useState(existingVisit?.followUpDate || '');
   const [items, setItems] = useState(existingVisit?.items ? existingVisit.items.map(it => ({ ...it })) : []);
@@ -5710,8 +5689,6 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
         lineTotal: (Number(it.unitPrice) || 0) * (Number(it.qty) || 0),
       })),
       notes, followUp, taggedReps,
-      saleType,
-      prospectedAmount: Number(prospectedAmount) || 0,
     };
     try {
       notifyNewTags({
@@ -5831,34 +5808,6 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
             </div>
           </div>
 
-          {/* Sale Type + Prospected Amount */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>SALE TYPE</label>
-              <select value={saleType} onChange={(e) => setSaleType(e.target.value)} className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
-                <option value="single">Single Sale — applies to current month</option>
-                <option value="monthly">Monthly Sale — split over 6 months</option>
-              </select>
-            </div>
-            <div>
-              <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>
-                PROSPECTED AMOUNT (R)
-                {prospectedAmount > 0 && OUTCOME_PROBABILITY[outcome] && (
-                  <span style={{ marginLeft: 8, color: '#2d8659', fontWeight: 700 }}>
-                    → weighted {Math.round(Number(prospectedAmount) * OUTCOME_PROBABILITY[outcome]).toLocaleString('en-ZA')} @ {Math.round(OUTCOME_PROBABILITY[outcome]*100)}%
-                  </span>
-                )}
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={prospectedAmount}
-                onChange={(e) => setProspectedAmount(e.target.value)}
-                placeholder="0"
-                className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper"
-              />
-            </div>
-          </div>
 
           {/* Contact Method + Follow-up Date */}
           <div className="grid grid-cols-2 gap-3">
