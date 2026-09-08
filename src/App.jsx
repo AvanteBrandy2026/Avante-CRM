@@ -348,6 +348,9 @@ function clientToDb(c) {
     // sale_type stored in localStorage as fallback if DB column missing
     sale_type: c.saleType || 'single',
     pipeline_status: c.pipelineStatus || 'Met / Discussion',
+    billing_details: c.billingDetails || '',
+    delivery_details: c.deliveryDetails || '',
+    vat_number: c.vatNumber || '',
     client_tags: c.clientTags || [],
     prospected_amount: c.prospectedAmount || 0,
   };
@@ -376,6 +379,9 @@ function clientFromDb(r) {
     paymentTerms: r.payment_terms || '',
     saleType: r.sale_type || ((() => { try { return localStorage.getItem('cst_'+Number(r.id)) || 'single'; } catch(e) { return 'single'; } })()),
     pipelineStatus: r.pipeline_status || ((() => { try { return localStorage.getItem('cps_'+Number(r.id)) || 'Met / Discussion'; } catch(e) { return 'Met / Discussion'; } })()),
+    billingDetails: r.billing_details || '',
+    deliveryDetails: r.delivery_details || '',
+    vatNumber: r.vat_number || '',
     clientTags: r.client_tags || [],
     prospectedAmount: Number(r.prospected_amount) || 0,
   };
@@ -920,6 +926,9 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       try { localStorage.setItem('cps_'+id, patch.pipelineStatus); } catch(e) {}
       dbPatch.pipeline_status = patch.pipelineStatus;
     }
+    if (patch.billingDetails !== undefined) dbPatch.billing_details = patch.billingDetails;
+    if (patch.deliveryDetails !== undefined) dbPatch.delivery_details = patch.deliveryDetails;
+    if (patch.vatNumber !== undefined) dbPatch.vat_number = patch.vatNumber;
     if (patch.clientTags !== undefined) dbPatch.client_tags = patch.clientTags;
     if (patch.prospectedAmount !== undefined) dbPatch.prospected_amount = patch.prospectedAmount;
     if (Object.keys(dbPatch).length > 0) {
@@ -5584,8 +5593,27 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     if (c?.email && !isBlockedEmail(c.email)) lines.push(`Email Invoice:  ${c.email}`);
     const terms = c?.paymentTerms || 'COD';
     lines.push(`Payment Terms:  ${terms === 'COD' ? 'Cash on Delivery (COD)' : terms === '30 Days' ? '30 Days from Invoice' : terms === '60 Days' ? '60 Days from Invoice' : terms}`);
+    if (c?.vatNumber) lines.push(`VAT Number:     ${c.vatNumber}`);
     if (followUpDate) lines.push(`Follow-up Due:  ${followUpDate}`);
     lines.push('');
+
+    if (c?.billingDetails || c?.deliveryDetails) {
+      lines.push('─────────────────────────────────────────');
+      lines.push('BILLING & DELIVERY');
+      lines.push('─────────────────────────────────────────');
+      if (c?.billingDetails) {
+        lines.push('Billing Details:');
+        lines.push(c.billingDetails);
+        lines.push('');
+      }
+      const deliveryAddr = (c?.deliveryDetails || '').trim() || (c?.billingDetails || '').trim();
+      if (deliveryAddr) {
+        lines.push('Delivery Details:');
+        lines.push(deliveryAddr);
+        if (!(c?.deliveryDetails || '').trim()) lines.push('(same as billing)');
+        lines.push('');
+      }
+    }
 
     if (items.length > 0) {
       lines.push('─────────────────────────────────────────');
@@ -6369,6 +6397,9 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
     saleType: 'single',
     pipelineStatus: 'Met / Discussion',
     prospectedAmount: 0,
+    billingDetails: '',
+    deliveryDetails: '',
+    vatNumber: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -6549,6 +6580,30 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
               />
             </div>
           )}
+
+          {/* Billing / Delivery / VAT */}
+          <div>
+            <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>BILLING DETAILS</label>
+            <textarea value={form.billingDetails} onChange={(e) => setF('billingDetails', e.target.value)} rows="2"
+              placeholder="Company name, address, billing contact..."
+              className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
+          </div>
+          <div>
+            <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>DELIVERY DETAILS</label>
+            <p className="italic ocean mb-1" style={{ fontSize: 10 }}>Leave blank to use billing details</p>
+            <textarea value={form.deliveryDetails} onChange={(e) => setF('deliveryDetails', e.target.value)} rows="2"
+              placeholder="Delivery address if different from billing..."
+              className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
+            {!form.deliveryDetails.trim() && form.billingDetails.trim() && (
+              <p style={{ fontSize: 10, color: '#2d8659', fontStyle: 'italic', marginTop: 4 }}>✓ Will use billing details for delivery</p>
+            )}
+          </div>
+          <div>
+            <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>VAT NUMBER</label>
+            <input type="text" value={form.vatNumber} onChange={(e) => setF('vatNumber', e.target.value)}
+              placeholder="e.g. 4012345678"
+              className="w-full px-3 py-2.5 border border bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+          </div>
 
           {/* Account manager — full width */}
           <div>
@@ -7052,6 +7107,52 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               )}
             </div>
           </div>
+
+            {/* Billing Details */}
+            <div>
+              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>BILLING DETAILS</label>
+              {edit ? (
+                <textarea value={form.billingDetails || ''} onChange={(e) => setForm({ ...form, billingDetails: e.target.value })}
+                  rows="2" placeholder="Company name, address, billing contact..."
+                  className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
+              ) : (
+                <div className="text-sm ink py-1" style={{ whiteSpace:'pre-line' }}>{form.billingDetails || <span className="italic ocean">—</span>}</div>
+              )}
+            </div>
+
+            {/* Delivery Details */}
+            <div>
+              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>DELIVERY DETAILS</label>
+              {edit ? (
+                <>
+                  <p className="italic ocean mb-1" style={{ fontSize: 10 }}>Leave blank to use billing details</p>
+                  <textarea value={form.deliveryDetails || ''} onChange={(e) => setForm({ ...form, deliveryDetails: e.target.value })}
+                    rows="2" placeholder="Delivery address if different from billing..."
+                    className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper resize-none" />
+                  {!(form.deliveryDetails || '').trim() && (form.billingDetails || '').trim() && (
+                    <p style={{ fontSize: 10, color: '#2d8659', fontStyle: 'italic', marginTop: 4 }}>✓ Will use billing details for delivery</p>
+                  )}
+                </>
+              ) : (
+                <div className="text-sm ink py-1" style={{ whiteSpace:'pre-line' }}>
+                  {(form.deliveryDetails || '').trim() ? form.deliveryDetails
+                    : (form.billingDetails || '').trim() ? <span className="italic ocean">Same as billing</span>
+                    : <span className="italic ocean">—</span>}
+                </div>
+              )}
+            </div>
+
+            {/* VAT Number */}
+            <div>
+              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>VAT NUMBER</label>
+              {edit ? (
+                <input type="text" value={form.vatNumber || ''} onChange={(e) => setForm({ ...form, vatNumber: e.target.value })}
+                  placeholder="e.g. 4012345678"
+                  className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper" />
+              ) : (
+                <div className="text-sm ink py-1">{form.vatNumber || <span className="italic ocean">—</span>}</div>
+              )}
+            </div>
 
           {(edit || client.notes) && (
             <div>
