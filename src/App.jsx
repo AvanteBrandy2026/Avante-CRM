@@ -347,6 +347,7 @@ function clientToDb(c) {
     payment_terms: c.paymentTerms || '',
     // sale_type stored in localStorage as fallback if DB column missing
     sale_type: c.saleType || 'single',
+    pipeline_status: c.pipelineStatus || 'Met / Discussion',
     client_tags: c.clientTags || [],
     prospected_amount: c.prospectedAmount || 0,
   };
@@ -374,6 +375,7 @@ function clientFromDb(r) {
     totalSales: Number(r.total_sales) || 0,
     paymentTerms: r.payment_terms || '',
     saleType: r.sale_type || ((() => { try { return localStorage.getItem('cst_'+Number(r.id)) || 'single'; } catch(e) { return 'single'; } })()),
+    pipelineStatus: r.pipeline_status || ((() => { try { return localStorage.getItem('cps_'+Number(r.id)) || 'Met / Discussion'; } catch(e) { return 'Met / Discussion'; } })()),
     clientTags: r.client_tags || [],
     prospectedAmount: Number(r.prospected_amount) || 0,
   };
@@ -911,9 +913,12 @@ function AvanteCRMApp({ currentUser, onLogout }) {
     if (patch.lastContacted !== undefined) dbPatch.last_contacted = patch.lastContacted;
     if (patch.paymentTerms !== undefined) dbPatch.payment_terms = patch.paymentTerms;
     if (patch.saleType !== undefined) {
-      // Save to localStorage immediately — works even if DB column missing
       try { localStorage.setItem('cst_'+id, patch.saleType); } catch(e) {}
       dbPatch.sale_type = patch.saleType;
+    }
+    if (patch.pipelineStatus !== undefined) {
+      try { localStorage.setItem('cps_'+id, patch.pipelineStatus); } catch(e) {}
+      dbPatch.pipeline_status = patch.pipelineStatus;
     }
     if (patch.clientTags !== undefined) dbPatch.client_tags = patch.clientTags;
     if (patch.prospectedAmount !== undefined) dbPatch.prospected_amount = patch.prospectedAmount;
@@ -1950,12 +1955,8 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
   // saleType comes from the client profile itself
   const clientsWithMeta = useMemo(() => {
     return b2bClients.map(c => {
-      const clientVisits = visits
-        .filter(v => v.clientId === c.id && OUTCOME_PROBABILITY[v.outcome] !== undefined)
-        .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-      const latestVisit = clientVisits[0];
-      const outcome = latestVisit?.outcome || 'Met / Discussion';
-      // Read saleType from client profile, then localStorage fallback
+      // Use pipelineStatus set directly on the client profile
+      const outcome = c.pipelineStatus || ((() => { try { return localStorage.getItem('cps_'+c.id) || 'Met / Discussion'; } catch(e) { return 'Met / Discussion'; } })());
       const saleType = c.saleType !== 'single'
         ? c.saleType
         : ((() => { try { return localStorage.getItem('cst_'+c.id) || 'single'; } catch(e) { return 'single'; } })());
@@ -5829,7 +5830,13 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
             <div>
               <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>OUTCOME</label>
               <select value={outcome} onChange={(e) => setOutcome(e.target.value)} className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
-                {PIPELINE_OUTCOMES.map(o => <option key={o}>{o}</option>)}
+                <option>Met / Discussion</option>
+                <option>Sold In</option>
+                <option>Sample Drop</option>
+                <option>Quoted</option>
+                <option>Follow-Up Required</option>
+                <option>Rejected</option>
+                <option>No Show</option>
               </select>
             </div>
           </div>
@@ -6360,6 +6367,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
     notes: '',
     paymentTerms: 'COD',
     saleType: 'single',
+    pipelineStatus: 'Met / Discussion',
     prospectedAmount: 0,
   });
   const [saving, setSaving] = useState(false);
@@ -6989,7 +6997,7 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                   )}
                 </div>
               )}
-              {/* Prospected Amount — B2B channel only */}
+              {/* Prospected Amount + Pipeline Status — B2B channel only */}
               {(form.channel || client.channel) === 'B2B' && (
                 <div>
                   <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>PROSPECTED AMOUNT (R)</label>
@@ -7006,6 +7014,38 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                   ) : (
                     <div className="text-sm ink py-1">
                       {Number(form.prospectedAmount) > 0 ? ZAR(form.prospectedAmount) : <span className="italic ocean">—</span>}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Pipeline Status — B2B channel only */}
+              {(form.channel || client.channel) === 'B2B' && (
+                <div>
+                  <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>PIPELINE STATUS</label>
+                  {edit ? (
+                    <select
+                      value={form.pipelineStatus || 'Met / Discussion'}
+                      onChange={(e) => setForm({ ...form, pipelineStatus: e.target.value })}
+                      className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
+                      <option value="Met / Discussion">Met / Discussion — 20%</option>
+                      <option value="Discovery Completed">Discovery Completed — 40%</option>
+                      <option value="Pitched">Pitched — 60%</option>
+                      <option value="Signed">Signed — 80%</option>
+                      <option value="Invoiced">Invoiced — 95%</option>
+                      <option value="Paid">Paid — 99%</option>
+                      <option value="Delivered">Delivered — 100%</option>
+                    </select>
+                  ) : (
+                    <div className="text-sm ink py-1" style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <span>{form.pipelineStatus || 'Met / Discussion'}</span>
+                      <span style={{ fontFamily:"'Cinzel',serif", fontSize:11, fontWeight:700, color:'#2d8659' }}>
+                        {Math.round((OUTCOME_PROBABILITY[form.pipelineStatus || 'Met / Discussion'] ?? 0.20) * 100)}%
+                      </span>
+                      {Number(form.prospectedAmount) > 0 && (
+                        <span style={{ fontFamily:"'Cinzel',serif", fontSize:11, fontWeight:700, color:'#BC8D26' }}>
+                          → {ZAR(Math.round(Number(form.prospectedAmount) * (OUTCOME_PROBABILITY[form.pipelineStatus || 'Met / Discussion'] ?? 0.20)))} weighted
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
