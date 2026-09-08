@@ -345,6 +345,7 @@ function clientToDb(c) {
     notes: c.notes || '',
     total_sales: c.totalSales || 0,
     payment_terms: c.paymentTerms || '',
+    // sale_type stored in localStorage as fallback if DB column missing
     sale_type: c.saleType || 'single',
     client_tags: c.clientTags || [],
     prospected_amount: c.prospectedAmount || 0,
@@ -372,7 +373,7 @@ function clientFromDb(r) {
     notes: r.notes || '',
     totalSales: Number(r.total_sales) || 0,
     paymentTerms: r.payment_terms || '',
-    saleType: r.sale_type || 'single',
+    saleType: r.sale_type || ((() => { try { return localStorage.getItem('cst_'+Number(r.id)) || 'single'; } catch(e) { return 'single'; } })()),
     clientTags: r.client_tags || [],
     prospectedAmount: Number(r.prospected_amount) || 0,
   };
@@ -909,7 +910,11 @@ function AvanteCRMApp({ currentUser, onLogout }) {
     if (patch.totalSales !== undefined) dbPatch.total_sales = patch.totalSales;
     if (patch.lastContacted !== undefined) dbPatch.last_contacted = patch.lastContacted;
     if (patch.paymentTerms !== undefined) dbPatch.payment_terms = patch.paymentTerms;
-    if (patch.saleType !== undefined) dbPatch.sale_type = patch.saleType;
+    if (patch.saleType !== undefined) {
+      // Save to localStorage immediately — works even if DB column missing
+      try { localStorage.setItem('cst_'+id, patch.saleType); } catch(e) {}
+      dbPatch.sale_type = patch.saleType;
+    }
     if (patch.clientTags !== undefined) dbPatch.client_tags = patch.clientTags;
     if (patch.prospectedAmount !== undefined) dbPatch.prospected_amount = patch.prospectedAmount;
     if (Object.keys(dbPatch).length > 0) {
@@ -1950,7 +1955,10 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
         .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       const latestVisit = clientVisits[0];
       const outcome = latestVisit?.outcome || 'Met / Discussion';
-      const saleType = c.saleType || 'single';    // read from client profile
+      // Read saleType from client profile, then localStorage fallback
+      const saleType = c.saleType !== 'single'
+        ? c.saleType
+        : ((() => { try { return localStorage.getItem('cst_'+c.id) || 'single'; } catch(e) { return 'single'; } })());
       const prob = OUTCOME_PROBABILITY[outcome] ?? 0.20;
       const raw = Number(c.prospectedAmount) || 0;
       const weighted = raw * prob;
