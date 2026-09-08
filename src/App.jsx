@@ -107,6 +107,26 @@ function notifyNewTags({ prevTags = [], newTags = [], ...rest }) {
 }
 
 const CHANNELS = ['Trade', 'On-Con', 'B2B', 'Schools'];
+
+// Sales pipeline outcomes with probability weighting
+const PIPELINE_OUTCOMES = [
+  'Met / Discussion',
+  'Discovery Completed',
+  'Pitched',
+  'Signed',
+  'Invoiced',
+  'Paid',
+  'Delivered',
+];
+const OUTCOME_PROBABILITY = {
+  'Met / Discussion':    0.20,
+  'Discovery Completed': 0.40,
+  'Pitched':             0.60,
+  'Signed':              0.80,
+  'Invoiced':            0.95,
+  'Paid':                0.99,
+  'Delivered':           1.00,
+};
 const PAYMENT_TERMS = ['COD', '30 Days', '60 Days'];
 const CONTACT_METHODS = ['In Person', 'WhatsApp', 'Phone Call / Online Meet', 'Email'];
 const LOCATIONS = [
@@ -142,7 +162,7 @@ const getB2BPct = (statusLabel) => {
 // 3. It has a recorded saleAmount > 0
 // This keeps conversion rate consistent with the auto-convert-to-Converted logic in addVisit.
 const isSoldVisit = (v) =>
-  v.outcome === 'Sold In' ||
+  ['Sold In','Invoiced','Paid','Delivered','Signed'].includes(v.outcome) ||
   (Number(v.saleAmount) > 0) ||
   (Array.isArray(v.items) && v.items.some(it => Number(it.qty) > 0));
 
@@ -366,6 +386,8 @@ function visitToDb(v, includeExtended = true) {
     sales_rep: v.salesRep || '',
     date: v.date || null,
     outcome: v.outcome || '',
+    sale_type: v.saleType || 'single',
+    prospected_amount: v.prospectedAmount || 0,
     sale_amount: v.saleAmount || 0,
     items: v.items || [],
     notes: v.notes || '',
@@ -388,6 +410,8 @@ function visitFromDb(r) {
     salesRep: r.sales_rep || '',
     date: r.date || '',
     outcome: r.outcome || '',
+    saleType: r.sale_type || 'single',
+    prospectedAmount: Number(r.prospected_amount) || 0,
     saleAmount: Number(r.sale_amount) || 0,
     items: r.items || [],
     notes: r.notes || '',
@@ -774,7 +798,8 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       // 4. New client → Contacted
       // 5. Otherwise keep existing status
       const hasSale = computedTotal > 0 || (visit.items && visit.items.some(it => Number(it.qty) > 0));
-      const newStatus = visit.outcome === 'Sold In' ? 'Converted'
+      const newStatus = ['Delivered','Paid','Invoiced','Sold In'].includes(visit.outcome) ? 'Converted'
+        : visit.outcome === 'Signed' ? 'Prospect'
         : hasSale ? 'Converted'
         : visit.outcome === 'Rejected' ? 'Lost'
         : (client.status === 'New' ? 'Contacted' : client.status);
@@ -1904,53 +1929,74 @@ function OverdueClients({ clients, visits, onNavigate, visibleReps }) {
 }
 
 // =================== Prospect / Pipeline Forecast Widget ===================
-function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], onNavigate }) {
-  // B2B clients only, filtered by rep
-  const b2bClients = useMemo(() => {
-    return clients.filter(c => {
-      if (c.channel !== 'B2B') return false;
-      if (activeRep !== 'All' && c.accountManager !== activeRep) return false;
+function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits = [], onNavigate }) {
+  // Collect pipeline entries from visits that have a prospectedAmount
+  const pipelineVisits = useMemo(() => {
+    return visits.filter(v => {
+      const amt = Number(v.prospectedAmount) || 0;
+      if (!amt) return false;
+      if (activeRep !== 'All' && v.salesRep !== activeRep) return false;
       return true;
-    }).sort((a, b) => (b.prospectedAmount || 0) - (a.prospectedAmount || 0));
-  }, [clients, activeRep]);
+    });
+  }, [visits, activeRep]);
 
-  const totalPipeline = useMemo(
-    () => b2bClients.reduce((s, c) => s + (Number(c.prospectedAmount) || 0), 0),
-    [b2bClients]
-  );
+  // Total weighted pipeline value
+  const totalWeightedPipeline = useMemo(() => {
+    return pipelineVisits.reduce((sum, v) => {
+      const raw = Number(v.prospectedAmount) || 0;
+      const prob = OUTCOME_PROBABILITY[v.outcome] ?? 0.20;
+      return sum + raw * prob;
+    }, 0);
+  }, [pipelineVisits]);
 
-  const withAmount = b2bClients.filter(c => Number(c.prospectedAmount) > 0);
-
-  // Build 6-month forecast
-  // Rule: if status === 'Invoiced / Paid' → 50% this month, 50% next month
-  //        otherwise → full amount sits in current month (pipeline view)
+  // 6-month forecast:
+  // Single sale → weighted amount into the visit's month bucket
+  // Monthly sale → weighted amount spread equally over 6 months from visit date
   const sixMonthForecast = useMemo(() => {
     const now = new Date();
-    // Build 6 month buckets starting from current month
     const months = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      return {
-        label: d.toLocaleString('default', { month: 'short' }).toUpperCase(),
-        year: d.getFullYear(),
-        monthIdx: d.getMonth(),
-        amount: 0,
-      };
+      return { label: d.toLocaleString('default', { month: 'short' }).toUpperCase(), year: d.getFullYear(), monthIdx: d.getMonth(), amount: 0 };
     });
 
-    b2bClients.forEach(c => {
-      const amt = Number(c.prospectedAmount) || 0;
-      if (!amt) return;
+    pipelineVisits.forEach(v => {
+      const raw = Number(v.prospectedAmount) || 0;
+      const prob = OUTCOME_PROBABILITY[v.outcome] ?? 0.20;
+      const weighted = raw * prob;
+      if (!weighted) return;
+      const visitDate = v.date ? new Date(v.date) : now;
+      const vYear = visitDate.getFullYear(), vMonth = visitDate.getMonth();
 
-      if (c.status === 'Invoiced / Paid') {
-        // 50% this month, 50% next month
-        if (months[0]) months[0].amount += amt * 0.5;
-        if (months[1]) months[1].amount += amt * 0.5;
+      if (v.saleType === 'monthly') {
+        const eligibleMonths = months.filter((m, i) => {
+          const mDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
+          return mDate >= new Date(vYear, vMonth, 1);
+        });
+        const perMonth = eligibleMonths.length > 0 ? weighted / eligibleMonths.length : 0;
+        eligibleMonths.forEach(m => { m.amount += perMonth; });
+      } else {
+        const bucket = months.find(m => m.year === vYear && m.monthIdx === vMonth) || months[0];
+        if (bucket) bucket.amount += weighted;
       }
-      // Other statuses contribute to the pipeline total only (not placed into future months yet)
     });
-
     return months;
-  }, [b2bClients]);
+  }, [pipelineVisits]);
+
+  // Per-client summary (highest weighted visit per client)
+  const clientMap = useMemo(() => {
+    const m = {};
+    pipelineVisits.forEach(v => {
+      const c = clients.find(cl => cl.id === v.clientId);
+      if (!c) return;
+      const raw = Number(v.prospectedAmount) || 0;
+      const prob = OUTCOME_PROBABILITY[v.outcome] ?? 0.20;
+      const weighted = raw * prob;
+      if (!m[c.id] || m[c.id].weighted < weighted) {
+        m[c.id] = { client: c, raw, weighted, outcome: v.outcome, saleType: v.saleType };
+      }
+    });
+    return Object.values(m).sort((a, b) => b.weighted - a.weighted);
+  }, [pipelineVisits, clients]);
 
   const maxMonthAmount = Math.max(...sixMonthForecast.map(m => m.amount), 1);
 
@@ -1961,49 +2007,40 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], onNavig
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 diamond-clip" style={{ background: '#DBB85E' }}></div>
           <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
-            B2B PIPELINE FORECAST {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
+            PIPELINE FORECAST {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
           </h2>
         </div>
         <span className="font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>
-          {b2bClients.length} B2B client{b2bClients.length !== 1 ? 's' : ''}
+          {pipelineVisits.length} pipeline entr{pipelineVisits.length !== 1 ? 'ies' : 'y'}
         </span>
       </div>
 
-      {/* Total */}
+      {/* Total weighted */}
       <div className="flex items-end justify-between gap-4 mb-4">
         <div>
-          <p className="font-display text-[10px] tracking-[0.25em] copper" style={{ fontWeight: 600 }}>PROJECTED B2B PIPELINE</p>
-          <p className="font-display text-2xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(totalPipeline)}</p>
+          <p className="font-display text-[10px] tracking-[0.25em] copper" style={{ fontWeight: 600 }}>WEIGHTED PIPELINE VALUE</p>
+          <p className="font-display text-2xl ink mt-1" style={{ fontWeight: 700 }}>{ZAR(Math.round(totalWeightedPipeline))}</p>
           <p className="italic ocean" style={{ fontSize: 10, marginTop: 2 }}>
-            {withAmount.length} client{withAmount.length !== 1 ? 's' : ''} with prospected amounts
+            Prospected amounts × outcome probability — single &amp; monthly sales
           </p>
         </div>
       </div>
 
-      {/* 6-Month Revenue Forecast Bar */}
+      {/* 6-Month Revenue Forecast Bars */}
       <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)', paddingTop: 12, marginBottom: 12 }}>
-        <p className="font-display text-[9px] tracking-[0.25em] copper mb-3" style={{ fontWeight: 600 }}>6-MONTH REVENUE FORECAST · INVOICED / PAID CLIENTS</p>
+        <p className="font-display text-[9px] tracking-[0.25em] copper mb-3" style={{ fontWeight: 600 }}>6-MONTH WEIGHTED FORECAST</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>
           {sixMonthForecast.map((m, i) => {
             const barPct = maxMonthAmount > 0 ? (m.amount / maxMonthAmount) * 100 : 0;
             const isCurrentMonth = i === 0;
             return (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                {/* Bar */}
                 <div style={{ width: '100%', height: 60, display: 'flex', alignItems: 'flex-end', background: 'rgba(0,40,85,0.04)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{
-                    width: '100%',
-                    height: `${Math.max(barPct, m.amount > 0 ? 8 : 0)}%`,
-                    background: m.amount > 0 ? (isCurrentMonth ? '#BC8D26' : '#DBB85E') : 'transparent',
-                    transition: 'height 0.5s',
-                    borderRadius: '2px 2px 0 0',
-                  }} />
+                  <div style={{ width: '100%', height: `${Math.max(barPct, m.amount > 0 ? 8 : 0)}%`, background: m.amount > 0 ? (isCurrentMonth ? '#BC8D26' : '#DBB85E') : 'transparent', transition: 'height 0.5s', borderRadius: '2px 2px 0 0' }} />
                 </div>
-                {/* Amount */}
                 <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, fontWeight: 700, color: m.amount > 0 ? '#002855' : 'rgba(0,40,85,0.25)', textAlign: 'center', lineHeight: 1.3 }}>
-                  {m.amount > 0 ? ZAR(m.amount) : '—'}
+                  {m.amount > 0 ? ZAR(Math.round(m.amount)) : '—'}
                 </p>
-                {/* Month label */}
                 <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, fontWeight: 600, color: isCurrentMonth ? '#BC8D26' : '#5A7A99', letterSpacing: '0.1em', textAlign: 'center' }}>
                   {m.label}
                 </p>
@@ -2012,48 +2049,45 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], onNavig
           })}
         </div>
         <p style={{ fontSize: 9, fontStyle: 'italic', color: '#5A7A99', marginTop: 8 }}>
-          When a B2B client reaches <strong>Invoiced / Paid</strong> status, 50% of their prospected amount is allocated to the current month and 50% to the following month.
+          Single sale = full weighted amount in visit month. Monthly sale = spread equally over 6 months.
         </p>
       </div>
 
       {/* Client rows */}
-      {b2bClients.length === 0 ? (
+      {clientMap.length === 0 ? (
         <div style={{ padding: '16px 0', textAlign: 'center', borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-          <p className="italic ocean" style={{ fontSize: 12 }}>No B2B clients yet — add a client under the B2B channel to start forecasting.</p>
+          <p className="italic ocean" style={{ fontSize: 12 }}>No pipeline entries yet — log a visit with a Prospected Amount to start forecasting.</p>
         </div>
       ) : (
         <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-          {b2bClients.slice(0, 8).map((c, i) => {
-            const pct = getB2BPct(c.status);
+          {clientMap.slice(0, 8).map(({ client: c, raw, weighted, outcome, saleType }, i) => {
+            const prob = OUTCOME_PROBABILITY[outcome] ?? 0.20;
+            const probPct = Math.round(prob * 100);
             return (
               <div key={c.id}
                 onClick={() => onNavigate && onNavigate('leads', c.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderBottom: i < Math.min(b2bClients.length, 8) - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderBottom: i < Math.min(clientMap.length, 8) - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.03)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <div style={{ width: 4, alignSelf: 'stretch', background: Number(c.prospectedAmount) > 0 ? '#DBB85E' : 'rgba(0,40,85,0.1)', flexShrink: 0, borderRadius: 2 }}></div>
+                <div style={{ width: 4, alignSelf: 'stretch', background: '#DBB85E', flexShrink: 0, borderRadius: 2 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.venue}</p>
                   <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 1 }}>
-                    {c.accountManager}{c.status ? ` · ${c.status}` : ''}
+                    {outcome} · {saleType === 'monthly' ? 'Monthly' : 'Single'}
                   </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  {pct !== null && (
-                    <span style={{ fontFamily: "'Cinzel',serif", fontSize: 10, fontWeight: 700, color: pct >= 80 ? '#2d8659' : pct >= 40 ? '#BC8D26' : '#5A7A99' }}>
-                      {pct}%
-                    </span>
-                  )}
-                  <p className="font-display copper" style={{ fontWeight: 700, fontSize: 12 }}>
-                    {Number(c.prospectedAmount) > 0 ? ZAR(c.prospectedAmount) : <span style={{ color: 'rgba(0,40,85,0.3)', fontStyle: 'italic', fontSize: 10 }}>No amount</span>}
-                  </p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                  <span style={{ fontFamily: "'Cinzel',serif", fontSize: 10, fontWeight: 700, color: probPct >= 80 ? '#2d8659' : probPct >= 40 ? '#BC8D26' : '#5A7A99' }}>
+                    {ZAR(Math.round(weighted))} <span style={{ fontWeight: 400, fontSize: 9 }}>({probPct}%)</span>
+                  </span>
+                  <span style={{ fontSize: 9, color: '#9E8E7A' }}>of {ZAR(raw)}</span>
                 </div>
               </div>
             );
           })}
-          {b2bClients.length > 8 && (
+          {clientMap.length > 8 && (
             <p style={{ textAlign: 'center', fontSize: 10, fontStyle: 'italic', color: '#5A7A99', padding: '8px 0' }}>
-              +{b2bClients.length - 8} more B2B clients
+              +{clientMap.length - 8} more pipeline entries
             </p>
           )}
         </div>
@@ -2389,6 +2423,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         activeRep={activeRep}
         targets={targets}
         clients={clients}
+        visits={visits}
         onNavigate={onNavigate}
       />
 
@@ -2635,7 +2670,7 @@ function RecentVisits({ visits, clients }) {
     <div className="space-y-2">
       {visits.map(v => {
         const c = clients.find(c => c.id === v.clientId);
-        const outcomeColor = v.outcome === 'Sold In' ? '#5A7A99' : v.outcome === 'Rejected' ? '#CC233A' : '#BC8D26';
+        const outcomeColor = ['Sold In','Invoiced','Paid','Delivered'].includes(v.outcome) ? '#2d8659' : ['Signed','Pitched'].includes(v.outcome) ? '#5A7A99' : v.outcome === 'Rejected' ? '#CC233A' : '#BC8D26';
         return (
           <div key={v.id} className="border-l-2 pl-3 py-2" style={{ borderColor: outcomeColor }}>
             <div className="flex items-baseline justify-between">
@@ -5384,7 +5419,7 @@ function VisitsPage({ visits, clients, onLog, onEdit, onDelete, onEmail }) {
         <div className="space-y-2">
           {filtered.map(v => {
             const c = clients.find(c => c.id === v.clientId);
-            const outcomeColor = v.outcome === 'Sold In' ? '#2d8659' : v.outcome === 'Rejected' ? '#CC233A' : '#BC8D26';
+            const outcomeColor = ['Sold In','Invoiced','Paid','Delivered'].includes(v.outcome) ? '#2d8659' : ['Signed','Pitched'].includes(v.outcome) ? '#5A7A99' : v.outcome === 'Rejected' ? '#CC233A' : '#BC8D26';
             return (
               <div key={v.id} className="premium-card border-l-4" style={{ borderLeftColor: outcomeColor }}>
                 {/* Main row — always visible */}
@@ -5440,6 +5475,8 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
   const [clientId, setClientId] = useState(existingVisit?.clientId ? String(existingVisit.clientId) : preselectedClientId ? String(preselectedClientId) : '');
   const [date, setDate] = useState(existingVisit?.date || todayISO());
   const [outcome, setOutcome] = useState(existingVisit?.outcome || 'Met / Discussion');
+  const [saleType, setSaleType] = useState(existingVisit?.saleType || 'single');
+  const [prospectedAmount, setProspectedAmount] = useState(existingVisit?.prospectedAmount || '');
   const [contactMethod, setContactMethod] = useState(existingVisit?.contactMethod || 'In Person');
   const [followUpDate, setFollowUpDate] = useState(existingVisit?.followUpDate || '');
   const [items, setItems] = useState(existingVisit?.items ? existingVisit.items.map(it => ({ ...it })) : []);
@@ -5673,6 +5710,8 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
         lineTotal: (Number(it.unitPrice) || 0) * (Number(it.qty) || 0),
       })),
       notes, followUp, taggedReps,
+      saleType,
+      prospectedAmount: Number(prospectedAmount) || 0,
     };
     try {
       notifyNewTags({
@@ -5787,14 +5826,37 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
             <div>
               <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>OUTCOME</label>
               <select value={outcome} onChange={(e) => setOutcome(e.target.value)} className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
-                <option>Met / Discussion</option>
-                <option>Sold In</option>
-                <option>Sample Drop</option>
-                <option>Quoted</option>
-                <option>Follow-Up Required</option>
-                <option>Rejected</option>
-                <option>No Show</option>
+                {PIPELINE_OUTCOMES.map(o => <option key={o}>{o}</option>)}
               </select>
+            </div>
+          </div>
+
+          {/* Sale Type + Prospected Amount */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>SALE TYPE</label>
+              <select value={saleType} onChange={(e) => setSaleType(e.target.value)} className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
+                <option value="single">Single Sale — applies to current month</option>
+                <option value="monthly">Monthly Sale — split over 6 months</option>
+              </select>
+            </div>
+            <div>
+              <label className="font-display text-[10px] tracking-[0.3em] copper mb-2 block" style={{ fontWeight: 600 }}>
+                PROSPECTED AMOUNT (R)
+                {prospectedAmount > 0 && OUTCOME_PROBABILITY[outcome] && (
+                  <span style={{ marginLeft: 8, color: '#2d8659', fontWeight: 700 }}>
+                    → weighted {Math.round(Number(prospectedAmount) * OUTCOME_PROBABILITY[outcome]).toLocaleString('en-ZA')} @ {Math.round(OUTCOME_PROBABILITY[outcome]*100)}%
+                  </span>
+                )}
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={prospectedAmount}
+                onChange={(e) => setProspectedAmount(e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-3 border border bg-cream font-body text-sm focus:outline-none focus:border-copper"
+              />
             </div>
           </div>
 
