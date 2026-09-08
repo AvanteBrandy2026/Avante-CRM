@@ -345,6 +345,7 @@ function clientToDb(c) {
     notes: c.notes || '',
     total_sales: c.totalSales || 0,
     payment_terms: c.paymentTerms || '',
+    sale_type: c.saleType || 'single',
     client_tags: c.clientTags || [],
     prospected_amount: c.prospectedAmount || 0,
   };
@@ -371,6 +372,7 @@ function clientFromDb(r) {
     notes: r.notes || '',
     totalSales: Number(r.total_sales) || 0,
     paymentTerms: r.payment_terms || '',
+    saleType: r.sale_type || 'single',
     clientTags: r.client_tags || [],
     prospectedAmount: Number(r.prospected_amount) || 0,
   };
@@ -907,6 +909,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
     if (patch.totalSales !== undefined) dbPatch.total_sales = patch.totalSales;
     if (patch.lastContacted !== undefined) dbPatch.last_contacted = patch.lastContacted;
     if (patch.paymentTerms !== undefined) dbPatch.payment_terms = patch.paymentTerms;
+    if (patch.saleType !== undefined) dbPatch.sale_type = patch.saleType;
     if (patch.clientTags !== undefined) dbPatch.client_tags = patch.clientTags;
     if (patch.prospectedAmount !== undefined) dbPatch.prospected_amount = patch.prospectedAmount;
     if (Object.keys(dbPatch).length > 0) {
@@ -1938,7 +1941,8 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
     }).sort((a, b) => (b.prospectedAmount || 0) - (a.prospectedAmount || 0));
   }, [clients, pipelineRep]);
 
-  // For each client, find their most recent visit to get the latest outcome + saleType
+  // For each client, find their most recent visit to get the latest outcome
+  // saleType comes from the client profile itself
   const clientsWithMeta = useMemo(() => {
     return b2bClients.map(c => {
       const clientVisits = visits
@@ -1946,7 +1950,7 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
         .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       const latestVisit = clientVisits[0];
       const outcome = latestVisit?.outcome || 'Met / Discussion';
-      const saleType = latestVisit?.saleType || 'single';
+      const saleType = c.saleType || 'single';    // read from client profile
       const prob = OUTCOME_PROBABILITY[outcome] ?? 0.20;
       const raw = Number(c.prospectedAmount) || 0;
       const weighted = raw * prob;
@@ -6347,6 +6351,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
     status: 'New',
     notes: '',
     paymentTerms: 'COD',
+    saleType: 'single',
     prospectedAmount: 0,
   });
   const [saving, setSaving] = useState(false);
@@ -6499,6 +6504,18 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
               </select>
             </div>
           </div>
+
+          {/* Sale Type */}
+          {form.channel === 'B2B' && (
+            <div>
+              <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>SALE TYPE</label>
+              <p className="italic ocean mb-2" style={{ fontSize: 10 }}>How the prospected amount appears in the pipeline forecast</p>
+              <select value={form.saleType || 'single'} onChange={(e) => setF('saleType', e.target.value)} className="w-full px-3 py-2.5 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
+                <option value="single">Single Sale — full amount in current month</option>
+                <option value="monthly">Monthly Sale — split equally over 6 months</option>
+              </select>
+            </div>
+          )}
 
           {/* Prospected Amount — B2B only */}
           {form.channel === 'B2B' && (
@@ -6945,6 +6962,25 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               <SelectField label="Channel" value={form.channel} edit={edit} onChange={(v) => setForm({ ...form, channel: v })} options={CHANNELS} />
               <SelectField label="Location" value={form.location} edit={edit} onChange={(v) => setForm({ ...form, location: v })} options={['', ...LOCATIONS]} />
               <SelectField label="Payment Terms" value={form.paymentTerms} edit={edit} onChange={(v) => setForm({ ...form, paymentTerms: v })} options={PAYMENT_TERMS} />
+              {/* Sale Type — B2B channel only */}
+              {(form.channel || client.channel) === 'B2B' && (
+                <div>
+                  <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>SALE TYPE</label>
+                  {edit ? (
+                    <select
+                      value={form.saleType || 'single'}
+                      onChange={(e) => setForm({ ...form, saleType: e.target.value })}
+                      className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
+                      <option value="single">Single Sale — full amount in current month</option>
+                      <option value="monthly">Monthly Sale — split over 6 months</option>
+                    </select>
+                  ) : (
+                    <p className="font-display text-base ink mt-1" style={{ fontWeight: 700 }}>
+                      {(form.saleType || 'single') === 'monthly' ? 'Monthly Sale' : 'Single Sale'}
+                    </p>
+                  )}
+                </div>
+              )}
               {/* Prospected Amount — B2B channel only */}
               {(form.channel || client.channel) === 'B2B' && (
                 <div>
