@@ -1926,14 +1926,17 @@ function OverdueClients({ clients, visits, onNavigate, visibleReps }) {
 
 // =================== Prospect / Pipeline Forecast Widget ===================
 function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits = [], onNavigate }) {
-  // B2B clients with a prospected amount, filtered by rep
+  // Internal rep filter — independent of the dashboard's rep filter
+  const [pipelineRep, setPipelineRep] = useState('All');
+
+  // B2B clients with a prospected amount, filtered by pipelineRep
   const b2bClients = useMemo(() => {
     return clients.filter(c => {
       if (c.channel !== 'B2B') return false;
-      if (activeRep !== 'All' && c.accountManager !== activeRep) return false;
+      if (pipelineRep !== 'All' && c.accountManager !== pipelineRep) return false;
       return Number(c.prospectedAmount) > 0;
     }).sort((a, b) => (b.prospectedAmount || 0) - (a.prospectedAmount || 0));
-  }, [clients, activeRep]);
+  }, [clients, pipelineRep]);
 
   // For each client, find their most recent visit to get the latest outcome + saleType
   const clientsWithMeta = useMemo(() => {
@@ -1989,12 +1992,23 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 diamond-clip" style={{ background: '#DBB85E' }}></div>
           <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>
-            PIPELINE FORECAST {activeRep !== 'All' && `— ${activeRep.toUpperCase()}`}
+            PIPELINE FORECAST
           </h2>
         </div>
-        <span className="font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>
-          {clientsWithMeta.length} client{clientsWithMeta.length !== 1 ? 's' : ''} in pipeline
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <select
+            value={pipelineRep}
+            onChange={e => setPipelineRep(e.target.value)}
+            style={{ padding: '5px 10px', border: '1px solid rgba(0,40,85,0.2)', background: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, color: '#002855', cursor: 'pointer', outline: 'none', borderRadius: 4 }}>
+            <option value="All">ALL MEMBERS</option>
+            {SALES_REPS.concat(['Rob']).map(r => (
+              <option key={r} value={r}>{r.toUpperCase()}</option>
+            ))}
+          </select>
+          <span className="font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>
+            {clientsWithMeta.length} client{clientsWithMeta.length !== 1 ? 's' : ''}
+          </span>
+        </div>
       </div>
 
       {/* Total */}
