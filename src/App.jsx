@@ -379,9 +379,9 @@ function clientFromDb(r) {
     paymentTerms: r.payment_terms || '',
     saleType: r.sale_type || ((() => { try { return localStorage.getItem('cst_'+Number(r.id)) || 'single'; } catch(e) { return 'single'; } })()),
     pipelineStatus: r.pipeline_status || ((() => { try { return localStorage.getItem('cps_'+Number(r.id)) || 'Met / Discussion'; } catch(e) { return 'Met / Discussion'; } })()),
-    billingDetails: r.billing_details || '',
-    deliveryDetails: r.delivery_details || '',
-    vatNumber: r.vat_number || '',
+    billingDetails: r.billing_details || ((() => { try { return localStorage.getItem('cbd_'+Number(r.id)) || ''; } catch(e) { return ''; } })()),
+    deliveryDetails: r.delivery_details || ((() => { try { return localStorage.getItem('cdd_'+Number(r.id)) || ''; } catch(e) { return ''; } })()),
+    vatNumber: r.vat_number || ((() => { try { return localStorage.getItem('cvn_'+Number(r.id)) || ''; } catch(e) { return ''; } })()),
     clientTags: r.client_tags || [],
     prospectedAmount: Number(r.prospected_amount) || 0,
   };
@@ -926,13 +926,30 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       try { localStorage.setItem('cps_'+id, patch.pipelineStatus); } catch(e) {}
       dbPatch.pipeline_status = patch.pipelineStatus;
     }
-    if (patch.billingDetails !== undefined) dbPatch.billing_details = patch.billingDetails;
-    if (patch.deliveryDetails !== undefined) dbPatch.delivery_details = patch.deliveryDetails;
-    if (patch.vatNumber !== undefined) dbPatch.vat_number = patch.vatNumber;
+    if (patch.billingDetails !== undefined) {
+      try { localStorage.setItem('cbd_'+id, patch.billingDetails); } catch(e) {}
+      dbPatch.billing_details = patch.billingDetails;
+    }
+    if (patch.deliveryDetails !== undefined) {
+      try { localStorage.setItem('cdd_'+id, patch.deliveryDetails); } catch(e) {}
+      dbPatch.delivery_details = patch.deliveryDetails;
+    }
+    if (patch.vatNumber !== undefined) {
+      try { localStorage.setItem('cvn_'+id, patch.vatNumber); } catch(e) {}
+      dbPatch.vat_number = patch.vatNumber;
+    }
     if (patch.clientTags !== undefined) dbPatch.client_tags = patch.clientTags;
     if (patch.prospectedAmount !== undefined) dbPatch.prospected_amount = patch.prospectedAmount;
     if (Object.keys(dbPatch).length > 0) {
-      await supabase.from('clients').update(dbPatch).eq('id', id);
+      const { error: updateErr } = await supabase.from('clients').update(dbPatch).eq('id', id);
+      if (updateErr && updateErr.message && updateErr.message.includes('column')) {
+        // New columns don't exist yet — retry without them, localStorage already saved
+        const safePatch = { ...dbPatch };
+        ['billing_details','delivery_details','vat_number','sale_type','pipeline_status'].forEach(k => delete safePatch[k]);
+        if (Object.keys(safePatch).length > 0) {
+          await supabase.from('clients').update(safePatch).eq('id', id);
+        }
+      }
     }
     setClients((prev) => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   };
@@ -948,13 +965,27 @@ function AvanteCRMApp({ currentUser, onLogout }) {
     };
     const dbData = clientToDb({ ...newClientData, id: undefined });
     console.log('[addClient] inserting:', dbData);
-    const { data: inserted, error } = await supabase
+    let { data: inserted, error } = await supabase
       .from('clients').insert(dbData)
       .select().single();
+    if (error && error.message && error.message.includes('column')) {
+      // New columns missing — strip them and retry
+      const safeData = { ...dbData };
+      ['billing_details','delivery_details','vat_number','sale_type','pipeline_status'].forEach(k => delete safeData[k]);
+      ({ data: inserted, error } = await supabase.from('clients').insert(safeData).select().single());
+    }
     if (error) {
       console.error('[addClient] error:', error);
-      console.error('[addClient] error details:', JSON.stringify(error));
       throw new Error(error.message || JSON.stringify(error));
+    }
+    // Save new fields to localStorage keyed by inserted id
+    if (inserted?.id) {
+      const nid = inserted.id;
+      try { if (newClientData.billingDetails)  localStorage.setItem('cbd_'+nid, newClientData.billingDetails);  } catch(e) {}
+      try { if (newClientData.deliveryDetails) localStorage.setItem('cdd_'+nid, newClientData.deliveryDetails); } catch(e) {}
+      try { if (newClientData.vatNumber)       localStorage.setItem('cvn_'+nid, newClientData.vatNumber);       } catch(e) {}
+      try { localStorage.setItem('cst_'+nid, newClientData.saleType || 'single'); } catch(e) {}
+      try { localStorage.setItem('cps_'+nid, newClientData.pipelineStatus || 'Met / Discussion'); } catch(e) {}
     }
     const newClient = clientFromDb(inserted);
     setClients((prev) => [...prev, newClient]);
