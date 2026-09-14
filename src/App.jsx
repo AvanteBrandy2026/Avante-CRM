@@ -2082,13 +2082,6 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
               <option key={r} value={r}>{r.toUpperCase()}</option>
             ))}
           </select>
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            style={{ padding: '5px 10px', border: '1px solid rgba(0,40,85,0.2)', background: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.1em', fontWeight: 700, color: '#002855', cursor: 'pointer', outline: 'none', borderRadius: 4 }}>
-            <option value="priority">SORT: PRIORITY</option>
-            <option value="weighted">SORT: VALUE</option>
-          </select>
           <span className="font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>
             {clientsWithMeta.length} client{clientsWithMeta.length !== 1 ? 's' : ''}
           </span>
@@ -2140,9 +2133,13 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
         </div>
       ) : (
         <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-          {/* Column headers */}
-          <div style={{ display:'grid', gridTemplateColumns:'24px 1fr 60px 100px', gap:6, padding:'6px 8px', background:'rgba(0,40,85,0.04)', borderBottom:'1px solid rgba(0,40,85,0.08)' }}>
-            <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, color:'#BC8D26', fontWeight:700, letterSpacing:'0.1em' }}>P</span>
+          {/* Column headers — P header is clickable sort toggle */}
+          <div style={{ display:'grid', gridTemplateColumns:'56px 1fr 60px 100px', gap:6, padding:'6px 8px', background:'rgba(0,40,85,0.04)', borderBottom:'1px solid rgba(0,40,85,0.08)' }}>
+            <button onClick={() => setSortBy(s => s === 'priority' ? 'weighted' : 'priority')}
+              style={{ background:'none', border:'none', cursor:'pointer', textAlign:'left', padding:0, display:'flex', alignItems:'center', gap:4 }}>
+              <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, color:'#BC8D26', fontWeight:700, letterSpacing:'0.1em' }}>PRIORITY</span>
+              <span style={{ fontSize:9, color:'#BC8D26' }}>{sortBy === 'priority' ? '▲' : '↕'}</span>
+            </button>
             <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, color:'#5A7A99', fontWeight:700, letterSpacing:'0.1em' }}>CLIENT</span>
             <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, color:'#5A7A99', fontWeight:700, letterSpacing:'0.1em', textAlign:'center' }}>STATUS</span>
             <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, color:'#5A7A99', fontWeight:700, letterSpacing:'0.1em', textAlign:'right' }}>WEIGHTED</span>
@@ -2150,24 +2147,28 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
           {sortedClients.map((c, i) => {
             const probPct = Math.round(c.prob * 100);
             const priority = c.prospectPriority || 0;
-            const priColor = priority === 1 ? '#CC233A' : priority === 2 ? '#E07C2A' : priority === 3 ? '#BC8D26' : priority === 4 ? '#5A7A99' : '#C8C0B4';
-            const priLabel = priority > 0 ? String(priority) : '—';
+            const priColor = priority === 1 ? '#CC233A' : priority === 2 ? '#E07C2A' : priority === 3 ? '#BC8D26' : priority === 4 ? '#5A7A99' : '#9E8E7A';
             return (
               <div key={c.id}
-                style={{ display:'grid', gridTemplateColumns:'24px 1fr 60px 100px', gap:6, alignItems:'center', padding:'8px 8px', borderBottom: i < sortedClients.length - 1 ? '1px solid rgba(0,40,85,0.06)' : 'none', transition:'background 0.15s' }}
+                style={{ display:'grid', gridTemplateColumns:'56px 1fr 60px 100px', gap:6, alignItems:'center', padding:'7px 8px', borderBottom: i < sortedClients.length - 1 ? '1px solid rgba(0,40,85,0.06)' : 'none', transition:'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.02)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                {/* Priority circle — click cycles 0→1→2→3→4→5→0, saves immediately */}
-                <button
-                  onClick={e => {
+                {/* Priority dropdown */}
+                <select
+                  value={priority}
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => {
                     e.stopPropagation();
-                    const next = (priority % 5) + 1 === 6 ? 0 : (priority % 5) + 1;
-                    onUpdateClient && onUpdateClient(c.id, { prospectPriority: next });
+                    onUpdateClient && onUpdateClient(c.id, { prospectPriority: Number(e.target.value) });
                   }}
-                  title={`Priority ${priority || 'unset'} — click to change`}
-                  style={{ width:22, height:22, borderRadius:'50%', border: priority > 0 ? `2px solid ${priColor}` : '1px dashed #C8C0B4', background: priority > 0 ? priColor : 'transparent', color: priority > 0 ? '#fff' : '#C8C0B4', fontFamily:"'Cinzel',serif", fontSize:10, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  {priLabel}
-                </button>
+                  style={{ width:'100%', padding:'3px 4px', border: priority > 0 ? `1px solid ${priColor}` : '1px dashed #C8C0B4', borderRadius:4, fontFamily:"'Cinzel',serif", fontSize:10, fontWeight:700, color: priority > 0 ? priColor : '#C8C0B4', background: priority > 0 ? `${priColor}12` : 'transparent', cursor:'pointer', outline:'none' }}>
+                  <option value={0}>— None</option>
+                  <option value={1}>1 — Highest</option>
+                  <option value={2}>2 — High</option>
+                  <option value={3}>3 — Medium</option>
+                  <option value={4}>4 — Low</option>
+                  <option value={5}>5 — Lowest</option>
+                </select>
                 {/* Client name + status */}
                 <div style={{ minWidth:0, cursor:'pointer' }} onClick={() => onNavigate && onNavigate('leads', c.id)}>
                   <p style={{ fontFamily:"'Cinzel',serif", fontWeight:700, fontSize:11, color:'#002855', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.venue}</p>
