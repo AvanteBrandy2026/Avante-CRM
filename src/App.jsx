@@ -1481,6 +1481,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
             onDeleteProspect={deleteProspect}
             skuOverrides={skuPrices}
             allowedReps={userIsManager ? ['All', ...SALES_REPS] : ['All', userRep]}
+            onUpdateClient={updateClient}
             onNavigate={(v, clientId) => {
               setView(v);
               if (clientId) {
@@ -1984,7 +1985,7 @@ function OverdueClients({ clients, visits, onNavigate, visibleReps }) {
 }
 
 // =================== Prospect / Pipeline Forecast Widget ===================
-function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits = [], onNavigate }) {
+function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits = [], onNavigate, onUpdateClient }) {
   // Internal rep filter — independent of the dashboard's rep filter
   const [pipelineRep, setPipelineRep] = useState('All');
 
@@ -2156,10 +2157,14 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
                 style={{ display:'grid', gridTemplateColumns:'24px 1fr 60px 100px', gap:6, alignItems:'center', padding:'8px 8px', borderBottom: i < sortedClients.length - 1 ? '1px solid rgba(0,40,85,0.06)' : 'none', transition:'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.02)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                {/* Priority pill — click to cycle 0→1→2→3→4→5→0 */}
+                {/* Priority circle — click cycles 0→1→2→3→4→5→0, saves immediately */}
                 <button
-                  onClick={e => { e.stopPropagation(); onNavigate && onNavigate('leads', c.id, { setPriority: (priority % 5) + 1 }); }}
-                  title="Click to set priority (1=highest)"
+                  onClick={e => {
+                    e.stopPropagation();
+                    const next = (priority % 5) + 1 === 6 ? 0 : (priority % 5) + 1;
+                    onUpdateClient && onUpdateClient(c.id, { prospectPriority: next });
+                  }}
+                  title={`Priority ${priority || 'unset'} — click to change`}
                   style={{ width:22, height:22, borderRadius:'50%', border: priority > 0 ? `2px solid ${priColor}` : '1px dashed #C8C0B4', background: priority > 0 ? priColor : 'transparent', color: priority > 0 ? '#fff' : '#C8C0B4', fontFamily:"'Cinzel',serif", fontSize:10, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   {priLabel}
                 </button>
@@ -2409,7 +2414,7 @@ function NotificationsPage({ visits, clients, onSelectClient }) {
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, activeMonth, setActiveMonth, prospects, onAddProspect, onUpdateProspect, onDeleteProspect, skuOverrides, onNavigate, allowedReps }) {
+function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRep, activeMonth, setActiveMonth, prospects, onAddProspect, onUpdateProspect, onDeleteProspect, skuOverrides, onNavigate, allowedReps, onUpdateClient }) {
   // Parse activeMonth into a Date for display and daily calculations
   const [selYear, selMonthIdx] = activeMonth.split('-').map(Number);
   const selectedDate = new Date(selYear, selMonthIdx - 1, 1);
@@ -2525,6 +2530,7 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         clients={clients}
         visits={visits}
         onNavigate={onNavigate}
+        onUpdateClient={onUpdateClient}
       />
 
       {/* ── LEADERBOARD + RECENT VISITS ── */}
