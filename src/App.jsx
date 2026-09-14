@@ -348,6 +348,7 @@ function clientToDb(c) {
     // sale_type stored in localStorage as fallback if DB column missing
     sale_type: c.saleType || 'single',
     pipeline_status: c.pipelineStatus || 'Met / Discussion',
+    prospect_priority: c.prospectPriority || 0,
     billing_details: c.billingDetails || '',
     delivery_details: c.deliveryDetails || '',
     vat_number: c.vatNumber || '',
@@ -379,6 +380,7 @@ function clientFromDb(r) {
     paymentTerms: r.payment_terms || '',
     saleType: r.sale_type || ((() => { try { return localStorage.getItem('cst_'+Number(r.id)) || 'single'; } catch(e) { return 'single'; } })()),
     pipelineStatus: r.pipeline_status || ((() => { try { return localStorage.getItem('cps_'+Number(r.id)) || 'Met / Discussion'; } catch(e) { return 'Met / Discussion'; } })()),
+    prospectPriority: Number(r.prospect_priority) || ((() => { try { return Number(localStorage.getItem('cpp_'+Number(r.id))) || 0; } catch(e) { return 0; } })()),
     billingDetails: r.billing_details || ((() => { try { return localStorage.getItem('cbd_'+Number(r.id)) || ''; } catch(e) { return ''; } })()),
     deliveryDetails: r.delivery_details || ((() => { try { return localStorage.getItem('cdd_'+Number(r.id)) || ''; } catch(e) { return ''; } })()),
     vatNumber: r.vat_number || ((() => { try { return localStorage.getItem('cvn_'+Number(r.id)) || ''; } catch(e) { return ''; } })()),
@@ -926,6 +928,10 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       try { localStorage.setItem('cps_'+id, patch.pipelineStatus); } catch(e) {}
       dbPatch.pipeline_status = patch.pipelineStatus;
     }
+    if (patch.prospectPriority !== undefined) {
+      try { localStorage.setItem('cpp_'+id, String(patch.prospectPriority)); } catch(e) {}
+      dbPatch.prospect_priority = patch.prospectPriority;
+    }
     if (patch.billingDetails !== undefined) {
       try { localStorage.setItem('cbd_'+id, patch.billingDetails); } catch(e) {}
       dbPatch.billing_details = patch.billingDetails;
@@ -945,7 +951,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       if (updateErr && updateErr.message && updateErr.message.includes('column')) {
         // New columns don't exist yet — retry without them, localStorage already saved
         const safePatch = { ...dbPatch };
-        ['billing_details','delivery_details','vat_number','sale_type','pipeline_status'].forEach(k => delete safePatch[k]);
+        ['billing_details','delivery_details','vat_number','sale_type','pipeline_status','prospect_priority'].forEach(k => delete safePatch[k]);
         if (Object.keys(safePatch).length > 0) {
           await supabase.from('clients').update(safePatch).eq('id', id);
         }
@@ -971,7 +977,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
     if (error && error.message && error.message.includes('column')) {
       // New columns missing — strip them and retry
       const safeData = { ...dbData };
-      ['billing_details','delivery_details','vat_number','sale_type','pipeline_status'].forEach(k => delete safeData[k]);
+      ['billing_details','delivery_details','vat_number','sale_type','pipeline_status','prospect_priority'].forEach(k => delete safeData[k]);
       ({ data: inserted, error } = await supabase.from('clients').insert(safeData).select().single());
     }
     if (error) {
@@ -1982,13 +1988,15 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
   // Internal rep filter — independent of the dashboard's rep filter
   const [pipelineRep, setPipelineRep] = useState('All');
 
-  // B2B clients with a prospected amount, filtered by pipelineRep
+  // All clients visible as prospects, filtered by rep
+  // sortBy: 'priority' | 'weighted'
+  const [sortBy, setSortBy] = useState('priority');
+
   const b2bClients = useMemo(() => {
     return clients.filter(c => {
-      if (c.channel !== 'B2B') return false;
       if (pipelineRep !== 'All' && c.accountManager !== pipelineRep) return false;
-      return Number(c.prospectedAmount) > 0;
-    }).sort((a, b) => (b.prospectedAmount || 0) - (a.prospectedAmount || 0));
+      return true; // Show ALL clients, not just B2B or those with prospected amounts
+    });
   }, [clients, pipelineRep]);
 
   // For each client, find their most recent visit to get the latest outcome
@@ -2007,9 +2015,24 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
     });
   }, [b2bClients, visits]);
 
-  // Total weighted pipeline value
+  // Sorted clients — by priority (1 first, 0/unset last) or by weighted value
+  const sortedClients = useMemo(() => {
+    return [...clientsWithMeta].sort((a, b) => {
+      if (sortBy === 'priority') {
+        const pa = a.prospectPriority || 0;
+        const pb = b.prospectPriority || 0;
+        if (pa === 0 && pb === 0) return b.weighted - a.weighted;
+        if (pa === 0) return 1;
+        if (pb === 0) return -1;
+        return pa - pb; // 1 first, 5 last
+      }
+      return b.weighted - a.weighted; // weighted desc
+    });
+  }, [clientsWithMeta, sortBy]);
+
+  // Total weighted pipeline value — only clients with a prospected amount
   const totalWeightedPipeline = useMemo(
-    () => clientsWithMeta.reduce((s, c) => s + c.weighted, 0),
+    () => clientsWithMeta.filter(c => c.raw > 0).reduce((s, c) => s + c.weighted, 0),
     [clientsWithMeta]
   );
 
@@ -2058,6 +2081,13 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
               <option key={r} value={r}>{r.toUpperCase()}</option>
             ))}
           </select>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            style={{ padding: '5px 10px', border: '1px solid rgba(0,40,85,0.2)', background: '#FCF7F2', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.1em', fontWeight: 700, color: '#002855', cursor: 'pointer', outline: 'none', borderRadius: 4 }}>
+            <option value="priority">SORT: PRIORITY</option>
+            <option value="weighted">SORT: VALUE</option>
+          </select>
           <span className="font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>
             {clientsWithMeta.length} client{clientsWithMeta.length !== 1 ? 's' : ''}
           </span>
@@ -2103,41 +2133,63 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
       </div>
 
       {/* Client rows */}
-      {clientsWithMeta.length === 0 ? (
+      {sortedClients.length === 0 ? (
         <div style={{ padding: '16px 0', textAlign: 'center', borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-          <p className="italic ocean" style={{ fontSize: 12 }}>No B2B clients with a prospected amount yet — add one via the client profile.</p>
+          <p className="italic ocean" style={{ fontSize: 12 }}>No prospects yet — add clients to see them here.</p>
         </div>
       ) : (
         <div style={{ borderTop: '1px solid rgba(0,40,85,0.1)' }}>
-          {clientsWithMeta.slice(0, 8).map((c, i) => {
+          {/* Column headers */}
+          <div style={{ display:'grid', gridTemplateColumns:'24px 1fr 60px 100px', gap:6, padding:'6px 8px', background:'rgba(0,40,85,0.04)', borderBottom:'1px solid rgba(0,40,85,0.08)' }}>
+            <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, color:'#BC8D26', fontWeight:700, letterSpacing:'0.1em' }}>P</span>
+            <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, color:'#5A7A99', fontWeight:700, letterSpacing:'0.1em' }}>CLIENT</span>
+            <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, color:'#5A7A99', fontWeight:700, letterSpacing:'0.1em', textAlign:'center' }}>STATUS</span>
+            <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, color:'#5A7A99', fontWeight:700, letterSpacing:'0.1em', textAlign:'right' }}>WEIGHTED</span>
+          </div>
+          {sortedClients.map((c, i) => {
             const probPct = Math.round(c.prob * 100);
+            const priority = c.prospectPriority || 0;
+            const priColor = priority === 1 ? '#CC233A' : priority === 2 ? '#E07C2A' : priority === 3 ? '#BC8D26' : priority === 4 ? '#5A7A99' : '#C8C0B4';
+            const priLabel = priority > 0 ? String(priority) : '—';
             return (
               <div key={c.id}
-                onClick={() => onNavigate && onNavigate('leads', c.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderBottom: i < Math.min(clientsWithMeta.length, 8) - 1 ? '1px solid rgba(0,40,85,0.07)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.03)'}
+                style={{ display:'grid', gridTemplateColumns:'24px 1fr 60px 100px', gap:6, alignItems:'center', padding:'8px 8px', borderBottom: i < sortedClients.length - 1 ? '1px solid rgba(0,40,85,0.06)' : 'none', transition:'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,40,85,0.02)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <div style={{ width: 4, alignSelf: 'stretch', background: '#DBB85E', flexShrink: 0, borderRadius: 2 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="font-display ink" style={{ fontWeight: 700, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.venue}</p>
-                  <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic', marginTop: 1 }}>
-                    {c.outcome} · {c.saleType === 'monthly' ? 'Monthly' : 'Single'}
+                {/* Priority pill — click to cycle 0→1→2→3→4→5→0 */}
+                <button
+                  onClick={e => { e.stopPropagation(); onNavigate && onNavigate('leads', c.id, { setPriority: (priority % 5) + 1 }); }}
+                  title="Click to set priority (1=highest)"
+                  style={{ width:22, height:22, borderRadius:'50%', border: priority > 0 ? `2px solid ${priColor}` : '1px dashed #C8C0B4', background: priority > 0 ? priColor : 'transparent', color: priority > 0 ? '#fff' : '#C8C0B4', fontFamily:"'Cinzel',serif", fontSize:10, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  {priLabel}
+                </button>
+                {/* Client name + status */}
+                <div style={{ minWidth:0, cursor:'pointer' }} onClick={() => onNavigate && onNavigate('leads', c.id)}>
+                  <p style={{ fontFamily:"'Cinzel',serif", fontWeight:700, fontSize:11, color:'#002855', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.venue}</p>
+                  <p style={{ fontSize:9, color:'#5A7A99', fontStyle:'italic', marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {c.accountManager} · {c.channel}
                   </p>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-                  <span style={{ fontFamily: "'Cinzel',serif", fontSize: 11, fontWeight: 700, color: probPct >= 80 ? '#2d8659' : probPct >= 40 ? '#BC8D26' : '#5A7A99' }}>
-                    {ZAR(Math.round(c.weighted))} <span style={{ fontWeight: 400, fontSize: 9 }}>({probPct}%)</span>
+                {/* Pipeline status badge */}
+                <div style={{ textAlign:'center' }}>
+                  <span style={{ fontFamily:"'Cinzel',serif", fontSize:8, fontWeight:700, color: probPct >= 80 ? '#2d8659' : probPct >= 40 ? '#BC8D26' : '#5A7A99', background: probPct >= 80 ? 'rgba(45,134,89,0.1)' : probPct >= 40 ? 'rgba(188,141,38,0.1)' : 'rgba(90,122,153,0.1)', padding:'2px 5px', borderRadius:8 }}>
+                    {probPct}%
                   </span>
-                  <span style={{ fontSize: 9, color: '#9E8E7A' }}>of {ZAR(c.raw)}</span>
+                </div>
+                {/* Weighted value */}
+                <div style={{ textAlign:'right' }}>
+                  {c.raw > 0 ? (
+                    <>
+                      <p style={{ fontFamily:"'Cinzel',serif", fontSize:11, fontWeight:700, color:'#002855' }}>{ZAR(Math.round(c.weighted))}</p>
+                      <p style={{ fontSize:8, color:'#9E8E7A' }}>of {ZAR(c.raw)}</p>
+                    </>
+                  ) : (
+                    <p style={{ fontSize:9, color:'rgba(0,40,85,0.25)', fontStyle:'italic' }}>—</p>
+                  )}
                 </div>
               </div>
             );
           })}
-          {clientsWithMeta.length > 8 && (
-            <p style={{ textAlign: 'center', fontSize: 10, fontStyle: 'italic', color: '#5A7A99', padding: '8px 0' }}>
-              +{clientsWithMeta.length - 8} more clients
-            </p>
-          )}
         </div>
       )}
     </div>
@@ -6427,6 +6479,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
     paymentTerms: 'COD',
     saleType: 'single',
     pipelineStatus: 'Met / Discussion',
+    prospectPriority: 0,
     prospectedAmount: 0,
     billingDetails: '',
     deliveryDetails: '',
@@ -6613,6 +6666,23 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
           )}
 
           {/* Billing / Delivery / VAT */}
+          <div>
+            <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>PROSPECT PRIORITY</label>
+            <p className="italic ocean mb-2" style={{ fontSize: 10 }}>1 = highest · 5 = lowest · leave unset if unknown</p>
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              {[0,1,2,3,4,5].map(p => {
+                const active = (form.prospectPriority || 0) === p;
+                const priColor = p === 1 ? '#CC233A' : p === 2 ? '#E07C2A' : p === 3 ? '#BC8D26' : p === 4 ? '#5A7A99' : '#9E8E7A';
+                return (
+                  <button key={p} type="button"
+                    onClick={() => setF('prospectPriority', p)}
+                    style={{ width:36, height:36, borderRadius:'50%', border: active ? `2px solid ${priColor}` : '1px dashed #C8C0B4', background: active ? priColor : 'transparent', color: active ? '#fff' : '#9E8E7A', fontFamily:"'Cinzel',serif", fontSize:13, fontWeight:700, cursor:'pointer', transition:'all 0.15s' }}>
+                    {p === 0 ? '—' : p}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div>
             <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>BILLING DETAILS</label>
             <textarea value={form.billingDetails} onChange={(e) => setF('billingDetails', e.target.value)} rows="2"
@@ -7138,6 +7208,38 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
               )}
             </div>
           </div>
+
+            {/* Prospect Priority */}
+            <div>
+              <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>PROSPECT PRIORITY</label>
+              <p className="italic ocean mb-2" style={{ fontSize: 10 }}>1 = highest · 5 = lowest · 0 = unset</p>
+              {edit ? (
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  {[0,1,2,3,4,5].map(p => {
+                    const active = (form.prospectPriority || 0) === p;
+                    const priColor = p === 1 ? '#CC233A' : p === 2 ? '#E07C2A' : p === 3 ? '#BC8D26' : p === 4 ? '#5A7A99' : '#9E8E7A';
+                    return (
+                      <button key={p} type="button"
+                        onClick={() => setForm({ ...form, prospectPriority: p })}
+                        style={{ width:36, height:36, borderRadius:'50%', border: active ? `2px solid ${priColor}` : '1px dashed #C8C0B4', background: active ? priColor : 'transparent', color: active ? '#fff' : '#9E8E7A', fontFamily:"'Cinzel',serif", fontSize:13, fontWeight:700, cursor:'pointer', transition:'all 0.15s' }}>
+                        {p === 0 ? '—' : p}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  {(form.prospectPriority || 0) > 0 ? (
+                    <>
+                      <span style={{ width:28, height:28, borderRadius:'50%', background: form.prospectPriority === 1 ? '#CC233A' : form.prospectPriority === 2 ? '#E07C2A' : form.prospectPriority === 3 ? '#BC8D26' : form.prospectPriority === 4 ? '#5A7A99' : '#9E8E7A', color:'#fff', fontFamily:"'Cinzel',serif", fontSize:12, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        {form.prospectPriority}
+                      </span>
+                      <span className="text-sm ink">{['','Highest','High','Medium','Low','Lowest'][form.prospectPriority]} priority</span>
+                    </>
+                  ) : <span className="text-sm italic ocean">Not set</span>}
+                </div>
+              )}
+            </div>
 
             {/* Billing Details */}
             <div>
