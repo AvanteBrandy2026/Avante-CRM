@@ -1996,7 +1996,7 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
   const b2bClients = useMemo(() => {
     return clients.filter(c => {
       if (pipelineRep !== 'All' && c.accountManager !== pipelineRep) return false;
-      return true; // Show ALL clients, not just B2B or those with prospected amounts
+      return c.channel === 'B2B'; // Pipeline forecast: B2B only
     });
   }, [clients, pipelineRep]);
 
