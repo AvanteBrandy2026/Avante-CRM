@@ -347,6 +347,7 @@ function clientToDb(c) {
     payment_terms: c.paymentTerms || '',
     // sale_type stored in localStorage as fallback if DB column missing
     sale_type: c.saleType || 'single',
+    forecast_month: c.forecastMonth || '',
     pipeline_status: c.pipelineStatus || 'Met / Discussion',
     prospect_priority: c.prospectPriority || 0,
     billing_details: c.billingDetails || '',
@@ -379,6 +380,7 @@ function clientFromDb(r) {
     totalSales: Number(r.total_sales) || 0,
     paymentTerms: r.payment_terms || '',
     saleType: r.sale_type || ((() => { try { return localStorage.getItem('cst_'+Number(r.id)) || 'single'; } catch(e) { return 'single'; } })()),
+    forecastMonth: r.forecast_month || ((() => { try { return localStorage.getItem('cfm_'+Number(r.id)) || ''; } catch(e) { return ''; } })()),
     pipelineStatus: r.pipeline_status || ((() => { try { return localStorage.getItem('cps_'+Number(r.id)) || 'Met / Discussion'; } catch(e) { return 'Met / Discussion'; } })()),
     prospectPriority: Number(r.prospect_priority) || ((() => { try { return Number(localStorage.getItem('cpp_'+Number(r.id))) || 0; } catch(e) { return 0; } })()),
     billingDetails: r.billing_details || ((() => { try { return localStorage.getItem('cbd_'+Number(r.id)) || ''; } catch(e) { return ''; } })()),
@@ -924,6 +926,10 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       try { localStorage.setItem('cst_'+id, patch.saleType); } catch(e) {}
       dbPatch.sale_type = patch.saleType;
     }
+    if (patch.forecastMonth !== undefined) {
+      try { localStorage.setItem('cfm_'+id, patch.forecastMonth); } catch(e) {}
+      dbPatch.forecast_month = patch.forecastMonth;
+    }
     if (patch.pipelineStatus !== undefined) {
       try { localStorage.setItem('cps_'+id, patch.pipelineStatus); } catch(e) {}
       dbPatch.pipeline_status = patch.pipelineStatus;
@@ -951,7 +957,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       if (updateErr && updateErr.message && updateErr.message.includes('column')) {
         // New columns don't exist yet — retry without them, localStorage already saved
         const safePatch = { ...dbPatch };
-        ['billing_details','delivery_details','vat_number','sale_type','pipeline_status','prospect_priority'].forEach(k => delete safePatch[k]);
+        ['billing_details','delivery_details','vat_number','sale_type','pipeline_status','prospect_priority','forecast_month'].forEach(k => delete safePatch[k]);
         if (Object.keys(safePatch).length > 0) {
           await supabase.from('clients').update(safePatch).eq('id', id);
         }
@@ -977,7 +983,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
     if (error && error.message && error.message.includes('column')) {
       // New columns missing — strip them and retry
       const safeData = { ...dbData };
-      ['billing_details','delivery_details','vat_number','sale_type','pipeline_status','prospect_priority'].forEach(k => delete safeData[k]);
+      ['billing_details','delivery_details','vat_number','sale_type','pipeline_status','prospect_priority','forecast_month'].forEach(k => delete safeData[k]);
       ({ data: inserted, error } = await supabase.from('clients').insert(safeData).select().single());
     }
     if (error) {
@@ -991,6 +997,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
       try { if (newClientData.deliveryDetails) localStorage.setItem('cdd_'+nid, newClientData.deliveryDetails); } catch(e) {}
       try { if (newClientData.vatNumber)       localStorage.setItem('cvn_'+nid, newClientData.vatNumber);       } catch(e) {}
       try { localStorage.setItem('cst_'+nid, newClientData.saleType || 'single'); } catch(e) {}
+      try { if (newClientData.forecastMonth) localStorage.setItem('cfm_'+nid, newClientData.forecastMonth); } catch(e) {}
       try { localStorage.setItem('cps_'+nid, newClientData.pipelineStatus || 'Met / Discussion'); } catch(e) {}
     }
     const newClient = clientFromDb(inserted);
@@ -2009,10 +2016,11 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
       const saleType = c.saleType !== 'single'
         ? c.saleType
         : ((() => { try { return localStorage.getItem('cst_'+c.id) || 'single'; } catch(e) { return 'single'; } })());
+      const forecastMonth = c.forecastMonth || ((() => { try { return localStorage.getItem('cfm_'+c.id) || ''; } catch(e) { return ''; } })());
       const prob = OUTCOME_PROBABILITY[outcome] ?? 0.20;
       const raw = Number(c.prospectedAmount) || 0;
       const weighted = raw * prob;
-      return { ...c, outcome, saleType, prob, raw, weighted };
+      return { ...c, outcome, saleType, forecastMonth, prob, raw, weighted };
     });
   }, [b2bClients, visits]);
 
@@ -2053,8 +2061,14 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
         // Spread equally over all 6 months
         months.forEach(m => { m.amount += c.weighted / 6; });
       } else {
-        // Single sale → current month
-        if (months[0]) months[0].amount += c.weighted;
+        // Single sale — use forecastMonth if set, otherwise current month
+        let targetBucket = months[0];
+        if (c.forecastMonth) {
+          const [fy, fm] = c.forecastMonth.split('-').map(Number);
+          const found = months.find(m => m.year === fy && m.monthIdx === fm - 1);
+          if (found) targetBucket = found;
+        }
+        if (targetBucket) targetBucket.amount += c.weighted;
       }
     });
     return months;
@@ -2173,7 +2187,7 @@ function ProspectWidget({ activeRep = 'All', targets = {}, clients = [], visits 
                 <div style={{ minWidth:0, cursor:'pointer' }} onClick={() => onNavigate && onNavigate('leads', c.id)}>
                   <p style={{ fontFamily:"'Cinzel',serif", fontWeight:700, fontSize:11, color:'#002855', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.venue}</p>
                   <p style={{ fontSize:9, color:'#5A7A99', fontStyle:'italic', marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {c.accountManager} · {c.channel}
+                    {c.accountManager} · {c.saleType === 'monthly' ? 'Monthly' : c.forecastMonth ? (() => { const [y,m] = c.forecastMonth.split('-').map(Number); return new Date(y,m-1,1).toLocaleString('default',{month:'short',year:'numeric'}); })() : 'Single'}
                   </p>
                 </div>
                 {/* Pipeline status badge */}
@@ -6485,6 +6499,7 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
     notes: '',
     paymentTerms: 'COD',
     saleType: 'single',
+    forecastMonth: '',
     pipelineStatus: 'Met / Discussion',
     prospectPriority: 0,
     prospectedAmount: 0,
@@ -6649,9 +6664,26 @@ function NewClientModal({ defaultRep, onClose, onSave }) {
               <label className="font-display text-[10px] tracking-[0.25em] copper mb-1 block" style={{ fontWeight: 600 }}>SALE TYPE</label>
               <p className="italic ocean mb-2" style={{ fontSize: 10 }}>How the prospected amount appears in the pipeline forecast</p>
               <select value={form.saleType || 'single'} onChange={(e) => setF('saleType', e.target.value)} className="w-full px-3 py-2.5 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
-                <option value="single">Single Sale — full amount in current month</option>
+                <option value="single">Single Sale — one-off amount</option>
                 <option value="monthly">Monthly Sale — split equally over 6 months</option>
               </select>
+              {(form.saleType || 'single') === 'single' && (
+                <div style={{ marginTop: 8 }}>
+                  <label className="font-display text-[9px] tracking-[0.2em] copper mb-1 block" style={{ fontWeight: 600 }}>FORECAST MONTH</label>
+                  <p className="italic ocean mb-1" style={{ fontSize: 10 }}>Which month is this sale likely to come through?</p>
+                  <select value={form.forecastMonth || ''} onChange={(e) => setF('forecastMonth', e.target.value)}
+                    className="w-full px-3 py-2.5 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
+                    <option value="">— Current month (default)</option>
+                    {Array.from({ length: 6 }, (_, i) => {
+                      const d = new Date();
+                      d.setMonth(d.getMonth() + i);
+                      const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                      const lbl = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                      return <option key={val} value={val}>{lbl}</option>;
+                    })}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 
@@ -7146,16 +7178,46 @@ function ClientDetailModal({ client, visits, onClose, onUpdate, onPlaceOrder, on
                 <div>
                   <label className="font-display text-[10px] tracking-[0.3em] copper mb-1 block" style={{ fontWeight: 600 }}>SALE TYPE</label>
                   {edit ? (
-                    <select
-                      value={form.saleType || 'single'}
-                      onChange={(e) => setForm({ ...form, saleType: e.target.value })}
-                      className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
-                      <option value="single">Single Sale — full amount in current month</option>
-                      <option value="monthly">Monthly Sale — split over 6 months</option>
-                    </select>
+                    <>
+                      <select
+                        value={form.saleType || 'single'}
+                        onChange={(e) => setForm({ ...form, saleType: e.target.value, forecastMonth: e.target.value === 'monthly' ? '' : form.forecastMonth })}
+                        className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper mb-2">
+                        <option value="single">Single Sale — one-off amount</option>
+                        <option value="monthly">Monthly Sale — split over 6 months</option>
+                      </select>
+                      {(form.saleType || 'single') === 'single' && (
+                        <div>
+                          <label className="font-display text-[9px] tracking-[0.2em] copper mb-1 block" style={{ fontWeight: 600 }}>FORECAST MONTH</label>
+                          <p className="italic ocean mb-1" style={{ fontSize: 10 }}>Which month is this sale likely to come through?</p>
+                          <select
+                            value={form.forecastMonth || ''}
+                            onChange={(e) => setForm({ ...form, forecastMonth: e.target.value })}
+                            className="w-full px-3 py-2 border border bg-cream font-body text-sm focus:outline-none focus:border-copper">
+                            <option value="">— Current month (default)</option>
+                            {Array.from({ length: 6 }, (_, i) => {
+                              const d = new Date();
+                              d.setMonth(d.getMonth() + i);
+                              const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                              const lbl = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                              return <option key={val} value={val}>{lbl}</option>;
+                            })}
+                          </select>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <p className="font-display text-base ink mt-1" style={{ fontWeight: 700 }}>
-                      {(form.saleType || 'single') === 'monthly' ? 'Monthly Sale' : 'Single Sale'}
+                      {(form.saleType || 'single') === 'monthly' ? 'Monthly Sale — split over 6 months' : (
+                        <>
+                          {'Single Sale'}
+                          {form.forecastMonth && (() => {
+                            const [y, m] = (form.forecastMonth || '').split('-');
+                            const d = new Date(Number(y), Number(m)-1, 1);
+                            return ` → ${d.toLocaleString('default', { month: 'long', year: 'numeric' })}`;
+                          })()}
+                        </>
+                      )}
                     </p>
                   )}
                 </div>
