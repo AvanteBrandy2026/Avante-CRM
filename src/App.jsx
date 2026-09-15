@@ -4445,17 +4445,7 @@ const DEFAULT_OBJECTIVES = [
   },
 ];
 
-const DEFAULT_PRIORITIES = [
-  { id: 'p-1', title: 'Attain Xero permission and resolve Sales rep invoicing', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-22', owner: '', linkedOKR: '', linkedKR: '' },
-  { id: 'p-2', title: 'Meet with Big Zulu Will to go live with ads & soft sell (Askew)', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '', linkedKR: '' },
-  { id: 'p-3', title: 'Develop new B2B creative (Matt A)', description: '', status: 'To Do', impact: 'medium impact', effort: 'medium effort', dueDate: '', owner: 'Matthew', linkedOKR: '', linkedKR: '' },
-  { id: 'p-4', title: 'Win Marriot F&B manager as Avante Champion (ALEX)', description: 'Woo him at a tasting and achieve emotional buy-in so that F&B will sell the...', status: 'In Progress', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-20', owner: 'Alex', linkedOKR: '', linkedKR: '' },
-  { id: 'p-5', title: 'SACS Old Boys bottle sell to OBU (Lehmarc)', description: 'OBU', status: 'In Progress', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-09-03', owner: 'Lehmarc', linkedOKR: '', linkedKR: '' },
-  { id: 'p-6', title: 'Go live with new UK ads so as to achieve 2 x ROAS', description: '', status: 'Blocked', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-05-22', owner: '', linkedOKR: '', linkedKR: '' },
-  { id: 'p-7', title: 'Sell into Whisky & Cigar lounge - Full range listed with tasting experience (LEHMARC)', description: '', status: 'Blocked', impact: 'medium impact', effort: 'medium effort', dueDate: '2026-09-04', owner: 'Lehmarc', linkedOKR: '', linkedKR: '' },
-  { id: 'p-8', title: 'Makro Big Zulu sell in', description: 'Produce and sell in 500 bottles of Big Zulu VSOP to attain PO', status: 'Complete', impact: 'high impact', effort: 'medium effort', dueDate: '2026-05-22', owner: 'Matthew', linkedOKR: '', linkedKR: '' },
-  { id: 'p-9', title: '400 bottle customised private order (Alex)', description: 'JP Viljoen sale of 400 customised VSOPs. Confirm sale and deposit.', status: 'Complete', impact: 'high impact', effort: 'medium effort', dueDate: '', owner: '', linkedOKR: '', linkedKR: '' },
-];
+const DEFAULT_PRIORITIES = []; // Blank slate — all priorities created fresh by team
 
 // ── Avatar pill component ────────────────────────────────────────────────────
 function OwnerPill({ name, size = 26 }) {
@@ -4952,7 +4942,7 @@ function OKRPage({ currentUser, userIsManager }) {
 
   // ── Load: Supabase is the single source of truth for shared data ────────────
   // localStorage is only a fast-load cache — Supabase always wins
-  const OKR_VERSION = 'v5';
+  const OKR_VERSION = 'v6'; // Blank slate
   useEffect(() => {
     (async () => {
       // Step 1: Paint immediately from localStorage so UI isn't blank
