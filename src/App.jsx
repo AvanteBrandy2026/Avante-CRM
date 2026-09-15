@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+// Build: 2026-09-15 — OKR Supabase-first sync
 import { LayoutDashboard, Users, ClipboardList, Settings, TrendingUp, Phone, Mail, Search, Plus, X, ChevronRight, DollarSign, Award, Activity, Briefcase, Wine, ArrowUpRight, Save, RotateCcw, Target, BarChart3, Trash2, Download, FileSpreadsheet, UserPlus, Edit2, ShoppingCart, Package, ChevronDown, Bell, LogOut } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
