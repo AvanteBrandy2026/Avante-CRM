@@ -1593,7 +1593,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
           />
         )}
         {view === 'okr' && (
-          <OKRPage currentUser={currentUser} userIsManager={userIsManager} />
+          <OKRPage currentUser={currentUser} userIsManager={true} />
         )}
         {view === 'manager' && userIsManager && (
           <ManagerPortal
@@ -4668,14 +4668,12 @@ function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps, prior
           </div>
           <span style={{ fontSize:12, fontWeight:700, color:'#5A7A99', minWidth:30 }}>{avgPct}%</span>
         </div>
-        {userIsManager && (
-          <button onClick={e => { e.stopPropagation(); onDelete(obj.id); }}
+        <button onClick={e => { e.stopPropagation(); onDelete(obj.id); }}
             style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(204,35,58,0.3)', padding:4, marginLeft:4 }}
             onMouseEnter={e => e.currentTarget.style.color='#CC233A'}
             onMouseLeave={e => e.currentTarget.style.color='rgba(204,35,58,0.3)'}>
             <X style={{ width:14, height:14 }} />
           </button>
-        )}
       </div>
 
       {/* Key results table */}
@@ -4690,7 +4688,7 @@ function ObjectiveBlock({ obj, onUpdate, onDelete, userIsManager, allReps, prior
 
           {/* KR rows */}
           {obj.keyResults.map(kr => (
-            <KeyResultRow key={kr.id} kr={kr} onUpdate={updateKR} onDelete={deleteKR} userIsManager={userIsManager} priorities={priorities} />
+            <KeyResultRow key={kr.id} kr={kr} onUpdate={updateKR} onDelete={deleteKR} userIsManager={true} priorities={priorities} />
           ))}
 
           {/* Add KR */}
@@ -4952,8 +4950,18 @@ function OKRPage({ currentUser, userIsManager }) {
 
 
   // ── Load: localStorage first (instant), then try Supabase (optional sync) ──
+  // Version bump forces all users to reload fresh defaults (clears stale localStorage)
+  const OKR_VERSION = 'v4'; // bump this whenever DEFAULT_OBJECTIVES changes
   useEffect(() => {
-    // 1. Load from localStorage immediately — no network, no delay
+    // 1. Clear stale localStorage if version changed
+    try {
+      if (localStorage.getItem('avante_okr_version') !== OKR_VERSION) {
+        localStorage.removeItem('avante_okr_data');
+        localStorage.removeItem('avante_pri_data');
+        localStorage.setItem('avante_okr_version', OKR_VERSION);
+      }
+    } catch {}
+    // 2. Load from localStorage immediately — no network, no delay
     const lsObj = (() => { try { const v = localStorage.getItem('avante_okr_data'); const p = v ? JSON.parse(v) : null; return (p && p.length > 0) ? p : null; } catch { return null; } })();
     const lsPri = (() => { try { const v = localStorage.getItem('avante_pri_data'); const p = v ? JSON.parse(v) : null; return (p && p.length > 0) ? p : null; } catch { return null; } })();
     setObjectives(lsObj || DEFAULT_OBJECTIVES);
@@ -5115,12 +5123,10 @@ function OKRPage({ currentUser, userIsManager }) {
                 <h2 className="font-display ink" style={{ fontWeight:700, fontSize:24, margin:0 }}>Organisation OKRs</h2>
                 <p style={{ fontSize:12, color:'#5A7A99', fontStyle:'italic', marginTop:4 }}>OKRs help you set ambitious objectives with measurable key results. They create focus, alignment, and accountability while encouraging teams to stretch beyond what seems possible.</p>
               </div>
-              {userIsManager && (
-                <button onClick={() => setAddingObj(true)}
+              <button onClick={() => setAddingObj(true)}
                   style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 18px', background:'#002855', color:'#FCF7F2', border:'none', fontFamily:"'Cinzel',serif", fontSize:9, letterSpacing:'0.2em', fontWeight:700, cursor:'pointer', borderRadius:4 }}>
                   <Plus style={{ width:14, height:14 }} /> NEW OKR
                 </button>
-              )}
             </div>
 
             {addingObj && (
@@ -5135,7 +5141,7 @@ function OKRPage({ currentUser, userIsManager }) {
             )}
 
             {objectives.map(obj => (
-              <ObjectiveBlock key={obj.id} obj={obj} onUpdate={updateObjective} onDelete={deleteObjective} userIsManager={userIsManager} allReps={SALES_REPS} priorities={priorities} />
+              <ObjectiveBlock key={obj.id} obj={obj} onUpdate={updateObjective} onDelete={deleteObjective} userIsManager={true} allReps={SALES_REPS} priorities={priorities} />
             ))}
           </div>
         )}
@@ -5185,9 +5191,9 @@ function OKRPage({ currentUser, userIsManager }) {
             )}
 
             {priView === 'kanban' ? (
-              <PrioritiesKanban items={priorities.filter(p => priOwnerFilter === 'All' || (p.owner||'').trim() === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} objectives={objectives} />
+              <PrioritiesKanban items={priorities.filter(p => priOwnerFilter === 'All' || (p.owner||'').trim() === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={true} objectives={objectives} />
             ) : (
-              <PrioritiesList items={priorities.filter(p => priOwnerFilter === 'All' || (p.owner||'').trim() === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={userIsManager} objectives={objectives} />
+              <PrioritiesList items={priorities.filter(p => priOwnerFilter === 'All' || (p.owner||'').trim() === priOwnerFilter)} onUpdateItem={updatePriority} onDeleteItem={deletePriority} userIsManager={true} objectives={objectives} />
             )}
           </div>
         )}
