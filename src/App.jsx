@@ -305,10 +305,12 @@ const calcVisitsGP = (visits, gpCostOverrides = {}) => {
     v.items.forEach(it => {
       const qty = Number(it.qty) || 0;
       if (qty <= 0) return;
-      const sellPrice = Number(it.unitPrice) || 0;
+      // unitPrice is stored incl. VAT — convert to ex-VAT before comparing to cost
+      const sellPriceInclVAT = Number(it.unitPrice) || 0;
+      const sellPriceExVAT = sellPriceInclVAT / 1.15;
       const cost = getSkuCost(it.skuId, channel, gpCostOverrides);
-      if (cost === null) return; // no cost data for this SKU/channel combo — skip
-      totalGP += (sellPrice - cost) * qty;
+      if (cost === null) return; // no cost data for this SKU/channel — skip
+      totalGP += (sellPriceExVAT - cost) * qty;
     });
   });
   return totalGP;
@@ -3234,7 +3236,8 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
         // Calculate GP for this order using the same calcVisitsGP logic
         const orderGP = calcVisitsGP([{ ...v, channel }], gpCostOverrides || {});
         const orderTotal = Number(v.saleAmount || 0);
-        const gpPct = orderTotal > 0 ? ((orderGP / orderTotal) * 100).toFixed(1) + '%' : '—';
+        const orderTotalExVAT = orderTotal / 1.15; // GP is on ex-VAT revenue
+        const gpPct = orderTotalExVAT > 0 ? ((orderGP / orderTotalExVAT) * 100).toFixed(1) + '%' : '—';
         orderHistoryRows.push({
           'Date': v.date,
           'Venue': c.venue || 'Unknown',
@@ -5383,7 +5386,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
           <div>
             <h1 className="font-display ink" style={{ fontWeight: 700, fontSize: 28 }}>CLIENT ORDER HISTORY</h1>
             <p className="italic ocean" style={{ fontSize: 12, marginTop: 2 }}>
-              {orders.length} orders · {ZAR(totalRevenue)} total revenue
+              {orders.length} orders · {ZAR(totalRevenue)} incl. VAT · {ZAR(totalRevenue / 1.15)} ex-VAT
             </p>
           </div>
           {/* GP card */}
@@ -5393,6 +5396,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
                 {filterRep === 'All' ? 'TEAM GP' : `${filterRep.toUpperCase()}'S GP`} · {gpMonthLabel}
               </p>
               <p style={{ fontFamily: "'Cinzel',serif", fontSize: 18, fontWeight: 700, color: '#FCF7F2', margin: '2px 0 0' }}>{ZAR(totalGP)}</p>
+              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 9, color: '#9BAEC8', margin: '2px 0 0', letterSpacing: '0.1em' }}>on ex-VAT revenue</p>
             </div>
           </div>
         </div>
@@ -5485,8 +5489,9 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
                       <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>{skuCount} SKU{skuCount !== 1 ? 's' : ''} · {totalQty} units</p>
                     </div>
                     {/* Total */}
-                    <div style={{ flexShrink: 0, minWidth: 72, textAlign: 'right' }}>
+                    <div style={{ flexShrink: 0, minWidth: 90, textAlign: 'right' }}>
                       <p className="font-display copper" style={{ fontWeight: 700, fontSize: 13 }}>{ZAR(order.saleAmount || 0)}</p>
+                      <p style={{ fontSize: 9, color: '#9BAEC8', fontStyle: 'italic', marginTop: 1 }}>ex-VAT {ZAR((order.saleAmount || 0) / 1.15)}</p>
                     </div>
                     <ChevronDown style={{ width: 16, height: 16, color: '#BC8D26', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                   </div>
@@ -5532,7 +5537,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
                     <div>
                       {/* Header */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, padding: '6px 8px', background: '#002855' }}>
-                        {['SKU', 'QTY', 'UNIT R', 'DISC', 'LINE'].map(h => (
+                        {['SKU', 'QTY', 'UNIT (incl.VAT)', 'DISC', 'LINE (incl.VAT)'].map(h => (
                           <p key={h} style={{ fontSize: 8, letterSpacing: '0.2em', color: '#DBB85E', fontFamily: "'Cinzel',serif", fontWeight: 600, textAlign: h !== 'SKU' ? 'right' : 'left' }}>{h}</p>
                         ))}
                       </div>
@@ -5554,11 +5559,39 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
                           </div>
                         );
                       })}
-                      {/* Total row */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, padding: '10px 8px', background: '#002855', marginTop: 1 }}>
-                        <p style={{ fontSize: 9, letterSpacing: '0.2em', color: '#DBB85E', fontFamily: "'Cinzel',serif", fontWeight: 700, gridColumn: '1 / 5', textAlign: 'right' }}>TOTAL EX VAT</p>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: '#DBB85E', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(order.saleAmount || 0)}</p>
-                      </div>
+                      {/* Total + GP row */}
+                      {(() => {
+                        const totalInclVAT = order.saleAmount || 0;
+                        const totalExVAT = totalInclVAT / 1.15;
+                        const vatAmt = totalInclVAT - totalExVAT;
+                        const orderChannel = order.clientChannel || order.channel || '';
+                        const orderGP = calcVisitsGP([{ ...order, channel: orderChannel }], gpCostOverrides);
+                        const gpPct = totalExVAT > 0 ? ((orderGP / totalExVAT) * 100).toFixed(1) : null;
+                        const gpColor = gpPct >= 50 ? '#2d8659' : gpPct >= 25 ? '#BC8D26' : '#CC233A';
+                        return (
+                          <div style={{ background: '#002855', marginTop: 1, padding: '10px 8px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, marginBottom: 6 }}>
+                              <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#9BAEC8', fontFamily: "'Cinzel',serif", fontWeight: 600, gridColumn: '1 / 5', textAlign: 'right' }}>EX-VAT SUBTOTAL</p>
+                              <p style={{ fontSize: 12, fontWeight: 700, color: '#FCF7F2', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(totalExVAT)}</p>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, marginBottom: 6 }}>
+                              <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#9BAEC8', fontFamily: "'Cinzel',serif", fontWeight: 600, gridColumn: '1 / 5', textAlign: 'right' }}>VAT (15%)</p>
+                              <p style={{ fontSize: 12, fontWeight: 400, color: '#9BAEC8', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(vatAmt)}</p>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, marginBottom: 8 }}>
+                              <p style={{ fontSize: 9, letterSpacing: '0.2em', color: '#DBB85E', fontFamily: "'Cinzel',serif", fontWeight: 700, gridColumn: '1 / 5', textAlign: 'right' }}>TOTAL INCL. VAT</p>
+                              <p style={{ fontSize: 14, fontWeight: 700, color: '#DBB85E', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(totalInclVAT)}</p>
+                            </div>
+                            {gpPct !== null && (
+                              <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 8, letterSpacing: '0.2em', color: '#9BAEC8', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>GROSS PROFIT</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: gpColor, fontFamily: "'Cinzel',serif" }}>{ZAR(orderGP)}</span>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: gpColor, fontFamily: "'Cinzel',serif", background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 3 }}>{gpPct}%</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
