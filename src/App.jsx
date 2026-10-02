@@ -5759,12 +5759,25 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
     } else {
       const clientChannel = clients?.find(c => c.id === clientId)?.channel || 'Trade';
         const channelPrice = SKU_CHANNEL_PRICES[sku.id]?.[clientChannel] ?? sku.price;
-        setItems([...items, { skuId: sku.id, name: sku.name, qty: 1, unitPrice: channelPrice, listPrice: channelPrice }]);
+        setItems([...items, { skuId: sku.id, name: sku.name, qty: 1, unitPrice: channelPrice, unitPriceExVat: parseFloat((channelPrice / 1.15).toFixed(2)), listPrice: channelPrice }]);
     }
     setSkuPickerOpen(false);
   };
   const updateItem = (skuId, field, value) => {
-    setItems(items.map(it => it.skuId === skuId ? { ...it, [field]: value } : it));
+    setItems(items.map(it => {
+      if (it.skuId !== skuId) return it;
+      if (field === 'unitPriceIncl') {
+        // User typed incl. VAT → derive ex-VAT
+        const incl = Number(value) || 0;
+        return { ...it, unitPrice: incl, unitPriceExVat: parseFloat((incl / 1.15).toFixed(2)) };
+      }
+      if (field === 'unitPriceExVat') {
+        // User typed ex-VAT → derive incl. VAT
+        const exvat = Number(value) || 0;
+        return { ...it, unitPriceExVat: exvat, unitPrice: parseFloat((exvat * 1.15).toFixed(2)) };
+      }
+      return { ...it, [field]: value };
+    }));
   };
   const removeItem = (skuId) => setItems(items.filter(it => it.skuId !== skuId));
 
@@ -6149,36 +6162,48 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 gap-2 mb-2">
                           <div>
-                            <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>QTY</p>
+                            <p className="font-display text-[9px] tracking-[0.12em] ocean mb-1" style={{ fontWeight: 600 }}>QTY</p>
                             <input type="number" min="0" step="1" value={it.qty}
                               onChange={(e) => updateItem(it.skuId, 'qty', e.target.value)}
                               className="w-full px-2 py-2 border border bg-cream text-sm text-center focus:outline-none focus:border-copper" />
                           </div>
                           <div>
-                            <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>UNIT R</p>
-                            <input type="number" min="0" step="0.01" value={it.unitPrice}
-                              onChange={(e) => updateItem(it.skuId, 'unitPrice', e.target.value)}
-                              className="w-full px-2 py-2 border border bg-cream text-sm text-right focus:outline-none focus:border-copper"
-                              style={{ color: discounted ? '#BC8D26' : '#002855' }} />
-                          </div>
-                          <div>
-                            <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>DISC %</p>
+                            <p className="font-display text-[9px] tracking-[0.12em] ocean mb-1" style={{ fontWeight: 600 }}>DISC %</p>
                             <input type="number" min="0" max="100" step="1"
                               value={discountPct === 0 ? '' : discountPct}
                               placeholder="0"
                               onChange={(e) => {
                                 const pct = Math.max(0, Math.min(100, Number(e.target.value) || 0));
                                 const newPrice = Number(it.listPrice) * (1 - pct / 100);
-                                updateItem(it.skuId, 'unitPrice', newPrice.toFixed(2));
+                                updateItem(it.skuId, 'unitPriceIncl', newPrice.toFixed(2));
                               }}
                               className="w-full px-2 py-2 border border bg-cream text-sm text-center focus:outline-none focus:border-copper"
                               style={{ color: discountPct > 0 ? '#BC8D26' : '#002855' }} />
                           </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
                           <div>
-                            <p className="font-display text-[9px] tracking-[0.15em] ocean mb-1" style={{ fontWeight: 600 }}>TOTAL</p>
+                            <p className="font-display text-[9px] tracking-[0.12em] copper mb-1" style={{ fontWeight: 700 }}>INCL. VAT (R)</p>
+                            <input type="number" min="0" step="0.01"
+                              value={it.unitPrice}
+                              onChange={(e) => updateItem(it.skuId, 'unitPriceIncl', e.target.value)}
+                              className="w-full px-2 py-2 border border bg-cream text-sm text-right focus:outline-none focus:border-copper"
+                              style={{ color: discounted ? '#BC8D26' : '#002855', borderColor: '#BC8D26' }} />
+                          </div>
+                          <div>
+                            <p className="font-display text-[9px] tracking-[0.12em] ocean mb-1" style={{ fontWeight: 600 }}>EX-VAT (R)</p>
+                            <input type="number" min="0" step="0.01"
+                              value={it.unitPriceExVat ?? parseFloat((it.unitPrice / 1.15).toFixed(2))}
+                              onChange={(e) => updateItem(it.skuId, 'unitPriceExVat', e.target.value)}
+                              className="w-full px-2 py-2 border border bg-cream text-sm text-right focus:outline-none focus:border-copper"
+                              style={{ color: '#5A7A99' }} />
+                          </div>
+                          <div>
+                            <p className="font-display text-[9px] tracking-[0.12em] ocean mb-1" style={{ fontWeight: 600 }}>LINE TOTAL</p>
                             <p className="font-display text-sm ink py-2 text-right" style={{ fontWeight: 700 }}>{ZAR(lineTotal)}</p>
+                            <p style={{ fontSize: 9, color: '#5A7A99', textAlign: 'right' }}>ex {ZAR(lineTotal / 1.15)}</p>
                           </div>
                         </div>
                       </div>
@@ -6187,49 +6212,59 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                 </div>
                 {/* Desktop: compact grid */}
                 <div className="hidden md:block">
-                  <div className="grid grid-cols-12 gap-2 px-3 py-2  border-b">
-                    <div className="col-span-4 font-display text-[10px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>SKU</div>
-                    <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-center" style={{ fontWeight: 600 }}>QTY</div>
-                    <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>UNIT R</div>
-                    <div className="col-span-2 font-display text-[10px] tracking-[0.2em] ocean text-center" style={{ fontWeight: 600 }}>DISC %</div>
-                    <div className="col-span-1 font-display text-[10px] tracking-[0.2em] ocean text-right" style={{ fontWeight: 600 }}>LINE</div>
+                  <div className="grid grid-cols-12 gap-1 px-3 py-2 border-b" style={{ background: 'rgba(0,40,85,0.04)' }}>
+                    <div className="col-span-3 font-display text-[9px] tracking-[0.15em] ocean" style={{ fontWeight: 600 }}>SKU</div>
+                    <div className="col-span-1 font-display text-[9px] tracking-[0.15em] ocean text-center" style={{ fontWeight: 600 }}>QTY</div>
+                    <div className="col-span-2 font-display text-[9px] tracking-[0.15em] text-right" style={{ fontWeight: 700, color: '#BC8D26' }}>INCL. VAT (R)</div>
+                    <div className="col-span-2 font-display text-[9px] tracking-[0.15em] ocean text-right" style={{ fontWeight: 600 }}>EX-VAT (R)</div>
+                    <div className="col-span-1 font-display text-[9px] tracking-[0.15em] ocean text-center" style={{ fontWeight: 600 }}>DISC %</div>
+                    <div className="col-span-2 font-display text-[9px] tracking-[0.15em] ocean text-right" style={{ fontWeight: 600 }}>LINE (incl.VAT)</div>
                     <div className="col-span-1"></div>
                   </div>
                   {items.map(it => {
                     const lineTotal = (Number(it.unitPrice) || 0) * (Number(it.qty) || 0);
+                    const lineTotalExVat = lineTotal / 1.15;
                     const discountPct = it.listPrice > 0 ? Math.round((1 - Number(it.unitPrice) / Number(it.listPrice)) * 100) : 0;
                     const discounted = Number(it.unitPrice) < Number(it.listPrice);
+                    const exVatVal = it.unitPriceExVat != null ? it.unitPriceExVat : parseFloat((Number(it.unitPrice) / 1.15).toFixed(2));
                     return (
-                      <div key={it.skuId} className="grid grid-cols-12 gap-2 px-3 py-2 border-b items-center">
-                        <div className="col-span-4">
+                      <div key={it.skuId} className="grid grid-cols-12 gap-1 px-3 py-2 border-b items-center">
+                        <div className="col-span-3">
                           <p className="ink text-xs font-display" style={{ fontWeight: 700 }}>{it.name}</p>
-                          {discounted && <p className="text-[9px] copper italic">from {ZAR(it.listPrice)}</p>}
+                          {discounted && <p className="text-[9px] copper italic">disc. from {ZAR(it.listPrice)}</p>}
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-1">
                           <input type="number" min="0" step="1" value={it.qty}
                             onChange={(e) => updateItem(it.skuId, 'qty', e.target.value)}
                             className="w-full px-2 py-1 border border bg-cream text-xs text-center focus:outline-none focus:border-copper" />
                         </div>
                         <div className="col-span-2">
                           <input type="number" min="0" step="0.01" value={it.unitPrice}
-                            onChange={(e) => updateItem(it.skuId, 'unitPrice', e.target.value)}
-                            className="w-full px-2 py-1 border border bg-cream text-xs text-right focus:outline-none focus:border-copper"
-                            style={{ color: discounted ? '#BC8D26' : '#002855' }} />
+                            onChange={(e) => updateItem(it.skuId, 'unitPriceIncl', e.target.value)}
+                            className="w-full px-2 py-1 border border bg-cream text-xs text-right focus:outline-none"
+                            style={{ color: discounted ? '#BC8D26' : '#002855', borderColor: '#BC8D26' }} />
                         </div>
                         <div className="col-span-2">
+                          <input type="number" min="0" step="0.01" value={exVatVal}
+                            onChange={(e) => updateItem(it.skuId, 'unitPriceExVat', e.target.value)}
+                            className="w-full px-2 py-1 border border bg-cream text-xs text-right focus:outline-none focus:border-copper"
+                            style={{ color: '#5A7A99' }} />
+                        </div>
+                        <div className="col-span-1">
                           <input type="number" min="0" max="100" step="1"
                             value={discountPct === 0 ? '' : discountPct}
                             placeholder="0%"
                             onChange={(e) => {
                               const pct = Math.max(0, Math.min(100, Number(e.target.value) || 0));
                               const newPrice = Number(it.listPrice) * (1 - pct / 100);
-                              updateItem(it.skuId, 'unitPrice', newPrice.toFixed(2));
+                              updateItem(it.skuId, 'unitPriceIncl', newPrice.toFixed(2));
                             }}
                             className="w-full px-2 py-1 border border bg-cream text-xs text-center focus:outline-none focus:border-copper"
                             style={{ color: discountPct > 0 ? '#BC8D26' : '#002855' }} />
                         </div>
-                        <div className="col-span-1 text-right">
+                        <div className="col-span-2 text-right">
                           <span className="font-display text-xs ink" style={{ fontWeight: 700 }}>{ZAR(lineTotal)}</span>
+                          <p style={{ fontSize: 9, color: '#5A7A99' }}>ex {ZAR(lineTotalExVat)}</p>
                         </div>
                         <div className="col-span-1 text-right">
                           <button type="button" onClick={() => removeItem(it.skuId)} className="text-ink/40 hover:text-red-700">
@@ -6241,8 +6276,10 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
                   })}
                 </div>
                 <div className="grid grid-cols-12 gap-2 px-3 py-3" style={{ background: '#002855' }}>
-                  <div className="col-span-8 font-display text-[10px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 600 }}>ORDER TOTAL (EX VAT)</div>
-                  <div className="col-span-4 text-right font-display text-base" style={{ color: '#FCF7F2', fontWeight: 700 }}>{ZAR(orderTotal)}</div>
+                  <div className="col-span-6 font-display text-[10px] tracking-[0.3em]" style={{ color: '#9BAEC8', fontWeight: 600 }}>EX-VAT TOTAL</div>
+                  <div className="col-span-6 text-right font-display text-sm" style={{ color: '#9BAEC8', fontWeight: 600 }}>{ZAR(orderTotal / 1.15)}</div>
+                  <div className="col-span-6 font-display text-[10px] tracking-[0.3em]" style={{ color: '#DBB85E', fontWeight: 700 }}>TOTAL INCL. VAT</div>
+                  <div className="col-span-6 text-right font-display text-base" style={{ color: '#FCF7F2', fontWeight: 700 }}>{ZAR(orderTotal)}</div>
                 </div>
               </div>
             )}
