@@ -193,7 +193,7 @@ const DEFAULT_TARGETS = {
 // Avante SKU catalogue (Trade Ex VAT prices, ZAR per unit)
 const SKU_CATALOGUE = [
   { id: 'vsop_750_current', name: 'VSOP 750ml (Current)', price: 420.00 },
-  { id: 'vsop_750_new',     name: 'VSOP 750ml (New)',     price: 579.00 },
+  { id: 'vsop_750_new',     name: 'VSOP 750ml Big Zulu',  price: 579.00 },
   { id: 'vsop_200',         name: 'VSOP 200ml',           price: 150.00 },
   { id: 'xv_750',           name: 'XV 750ml',             price: 2086.00 },
   { id: 'vs_500',           name: 'VS 500ml',             price: 217.00 },
@@ -203,13 +203,14 @@ const SKU_CATALOGUE = [
   { id: 'vs_200',           name: 'VS 200ml',             price: 113.00 },
   { id: 'gift_4x50',        name: '4 x 50ml Gift Box',    price: 520.00 },
   { id: 'gift_3x200',       name: '3 x 200ml Gift Box',   price: 1050.00 },
+  { id: 'dv8_xxo',          name: 'DV8 XXO',               price: 2999.00 },
+  { id: 'kolbe_14',         name: 'Kolbe 14',               price: 699.00  },
   // Custom (B2B only) — selling price matches the equivalent regular SKU
   { id: 'custom_vs',        name: 'Custom VS',            price: 694.78 },
   { id: 'custom_xv',        name: 'Custom XV',            price: 694.78 },
   { id: 'custom_vsop',      name: 'Custom VSOP',          price: 579.00 },  // = VSOP 750ml (New)
   { id: 'custom_xo',        name: 'Custom XO',            price: 1043.00 }, // = XO 750ml
   // 50ml singles & mixed box
-  { id: 'mixed_50ml_box',   name: 'Mixed 50ml Box',       price: 961.50 },
   { id: 'vs_50ml',          name: 'VS 50ml',              price: 654.00 },
   { id: 'vsop_50ml',        name: 'VSOP 50ml',            price: 768.00 },
   { id: 'xo_50ml',          name: 'XO 50ml',              price: 1080.00 },
@@ -225,28 +226,28 @@ const CUSTOM_SKU_IDS = ['custom_vs', 'custom_xv', 'custom_vsop', 'custom_xo'];
 // Costs are overridable from the Manager tab; overrides are stored in Supabase
 // in the same shape as this object and merged on load.
 const DEFAULT_GP_COSTS = {
-  vsop_750_current: { Trade: 276.64,  'On-Con': 276.64,  B2B: 224.81, Schools: 276.64 },
-  vsop_750_new:     { Trade: 357.06,  'On-Con': 357.06,  B2B: 292.32, Schools: 357.06 },
-  vsop_200:         { Trade: 111.91,  'On-Con': 111.91,  B2B: 95.00, Schools: 111.91 },
-  xv_750:           { Trade: 1176.15, 'On-Con': 1176.15, B2B: 982.21, Schools: 1176.15 },
-  vs_500:           { Trade: 177.68,  'On-Con': 177.68,  B2B: 143.10, Schools: 177.68 },
-  vs_750:           { Trade: 242.26,  'On-Con': 242.26,  B2B: 195.92, Schools: 242.26 },
-  xv_200:           { Trade: 483.74,  'On-Con': 483.74,  B2B: 416.76, Schools: 483.74 },
-  xo_750:           { Trade: 570.71,  'On-Con': 570.71,  B2B: 465.42, Schools: 570.71 },
-  vs_200:           { Trade: 78.76,   'On-Con': 78.76,   B2B: 65.00, Schools: 78.76 },
-  gift_4x50:        { Trade: 421.76,  'On-Con': 421.76,  B2B: 360.93, Schools: 421.76 },
-  gift_3x200:       { Trade: 840.14,  'On-Con': 840.14,  B2B: 734.76, Schools: 840.14 },
-  vs_50ml:          { Trade: 37.59,   'On-Con': 37.59,   B2B: 28.80, Schools: 37.59 },
-  vsop_50ml:        { Trade: 40.80,   'On-Con': 40.80,   B2B: 31.20, Schools: 40.8 },
-  xo_50ml:          { Trade: 56.27,   'On-Con': 56.27,   B2B: 44.46, Schools: 56.27 },
-  xv_50ml:          { Trade: 72.14,   'On-Con': 72.14,   B2B: 58.46, Schools: 72.14 },
-  // Customs — B2B only, no Trade/On-Con cost (not sold via those channels)
-  custom_vs:        { Trade: null,    'On-Con': null,    B2B: 195.92, Schools: null },
-  custom_xv:        { Trade: null,    'On-Con': null,    B2B: 982.21, Schools: null },
-  custom_vsop:      { Trade: null,    'On-Con': null,    B2B: 292.32, Schools: null },
-  custom_xo:        { Trade: null,    'On-Con': null,    B2B: 465.42, Schools: null },
-  // No cost data supplied yet for this SKU — leave off GP calc until provided
-  mixed_50ml_box:   { Trade: null,    'On-Con': null,    B2B: null, Schools: null },
+  // Source: Update_1.xlsx uploaded 2026-10-02
+  vs_750:            { Trade: 221.83,  'On-Con': 221.83,  B2B: 211.83,  Schools: 201.83  },
+  vs_500:            { Trade: 173.10,  'On-Con': 173.10,  B2B: 163.10,  Schools: 153.10  },
+  vs_200:            { Trade: 80.33,   'On-Con': 80.33,   B2B: 70.33,   Schools: 60.33   },
+  vs_50ml:           { Trade: 37.59,   'On-Con': 37.59,   B2B: 27.59,   Schools: 17.59   },
+  vsop_750_current:  { Trade: 254.81,  'On-Con': 254.81,  B2B: 244.81,  Schools: 234.81  },
+  vsop_750_new:      { Trade: 333.92,  'On-Con': 333.92,  B2B: 323.92,  Schools: 313.92  },
+  vsop_200:          { Trade: 98.33,   'On-Con': 98.33,   B2B: 88.33,   Schools: 78.33   },
+  vsop_50ml:         { Trade: 40.80,   'On-Con': 40.80,   B2B: 30.80,   Schools: 20.80   },
+  xv_750:            { Trade: 1024.42, 'On-Con': 1024.42, B2B: 1014.42, Schools: 1004.42 },
+  xv_200:            { Trade: 483.74,  'On-Con': 483.74,  B2B: 473.74,  Schools: 463.74  },
+  xv_50ml:           { Trade: 72.14,   'On-Con': 72.14,   B2B: 62.14,   Schools: 52.14   },
+  xo_750:            { Trade: 435.42,  'On-Con': 435.42,  B2B: 425.42,  Schools: 415.42  },
+  xo_50ml:           { Trade: 56.27,   'On-Con': 56.27,   B2B: 46.27,   Schools: 36.27   },
+  gift_4x50:         { Trade: 390.65,  'On-Con': 390.65,  B2B: 380.65,  Schools: 370.65  },
+  gift_3x200:        { Trade: 813.42,  'On-Con': 813.42,  B2B: 803.42,  Schools: 793.42  },
+  custom_vs:         { Trade: null,    'On-Con': null,    B2B: 261.33,  Schools: null    },
+  custom_vsop:       { Trade: null,    'On-Con': null,    B2B: 326.42,  Schools: null    },
+  custom_xv:         { Trade: null,    'On-Con': null,    B2B: 1077.42, Schools: null    },
+  custom_xo:         { Trade: null,    'On-Con': null,    B2B: 591.42,  Schools: null    },
+  dv8_xxo:           { Trade: 1496.42, 'On-Con': 1496.42, B2B: 1504.94, Schools: 1504.94 },
+  kolbe_14:          { Trade: 399.42,  'On-Con': 399.42,  B2B: 499.42,  Schools: 499.42  },
 };
 
 // Returns the cost for a SKU in a given channel, applying overrides if present.
@@ -5755,23 +5756,33 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
       lines.push('─────────────────────────────────────────');
       lines.push('ORDER PLACED');
       lines.push('─────────────────────────────────────────');
-      lines.push('Qty   SKU                                    Unit (R)      Line (R)');
-      lines.push('-----------------------------------------------------------------------');
+      lines.push('Qty   SKU                              Ex-VAT/unit   Line Ex-VAT  Line incl.VAT');
+      lines.push('─────────────────────────────────────────────────────────────────────────────────');
       items.forEach(it => {
-        const qty = String(Number(it.qty) || 0).padEnd(5);
-        const name = (it.name || '').padEnd(38).slice(0, 38);
-        const unit = ('R ' + (Number(it.unitPrice) || 0).toFixed(2)).padStart(11);
-        const line = ('R ' + ((Number(it.unitPrice) || 0) * (Number(it.qty) || 0)).toFixed(2)).padStart(13);
-        lines.push(`${qty} ${name} ${unit}  ${line}`);
+        const qty        = Number(it.qty) || 0;
+        const unitIncl   = Number(it.unitPrice) || 0;
+        const unitExVat  = unitIncl / 1.15;
+        const lineExVat  = unitExVat * qty;
+        const lineIncl   = unitIncl * qty;
+        const qtyStr  = String(qty).padEnd(5);
+        const name    = (it.name || '').padEnd(34).slice(0, 34);
+        const unitEx  = ('R ' + unitExVat.toFixed(2)).padStart(12);
+        const lnEx    = ('R ' + lineExVat.toFixed(2)).padStart(13);
+        const lnIncl  = ('R ' + lineIncl.toFixed(2)).padStart(14);
+        lines.push(`${qtyStr} ${name} ${unitEx}  ${lnEx}  ${lnIncl}`);
         const discounted = Number(it.unitPrice) < Number(it.listPrice);
         if (discounted) {
-          lines.push(`      (discounted from R ${Number(it.listPrice).toFixed(2)} — saved R ${(Number(it.listPrice) - Number(it.unitPrice)).toFixed(2)} per unit)`);
+          lines.push(`      (discounted from R ${Number(it.listPrice).toFixed(2)} incl. VAT — saved R ${(Number(it.listPrice) - Number(it.unitPrice)).toFixed(2)} per unit)`);
         }
       });
-      lines.push('-----------------------------------------------------------------------');
-      lines.push(`${''.padEnd(45)}TOTAL EX VAT  R ${orderTotal.toFixed(2)}`);
+      lines.push('─────────────────────────────────────────────────────────────────────────────────');
+      const totalExVat = orderTotal / 1.15;
+      const totalVat   = orderTotal - totalExVat;
+      lines.push(`${''.padEnd(54)}SUBTOTAL (ex-VAT):  R ${totalExVat.toFixed(2)}`);
+      lines.push(`${''.padEnd(54)}VAT (15%):          R ${totalVat.toFixed(2)}`);
+      lines.push(`${''.padEnd(54)}TOTAL (incl. VAT):  R ${orderTotal.toFixed(2)}`);
       lines.push('');
-      lines.push('All prices shown are Trade Ex VAT in South African Rand.');
+      lines.push('Prices shown are VAT-inclusive. Ex-VAT amounts calculated at 15% VAT (ZA).');
       lines.push('');
     }
 
