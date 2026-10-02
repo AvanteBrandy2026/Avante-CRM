@@ -192,30 +192,66 @@ const DEFAULT_TARGETS = {
 
 // Avante SKU catalogue (Trade Ex VAT prices, ZAR per unit)
 const SKU_CATALOGUE = [
-  { id: 'vsop_750_current', name: 'VSOP 750ml (Current)', price: 420.00 },
-  { id: 'vsop_750_new',     name: 'VSOP 750ml Big Zulu',  price: 579.00 },
-  { id: 'vsop_200',         name: 'VSOP 200ml',           price: 150.00 },
-  { id: 'xv_750',           name: 'XV 750ml',             price: 2086.00 },
-  { id: 'vs_500',           name: 'VS 500ml',             price: 217.00 },
-  { id: 'vs_750',           name: 'VS 750ml',             price: 296.50 },
-  { id: 'xv_200',           name: 'XV 200ml',             price: 745.00 },
-  { id: 'xo_750',           name: 'XO 750ml',             price: 1043.00 },
-  { id: 'vs_200',           name: 'VS 200ml',             price: 113.00 },
-  { id: 'gift_4x50',        name: '4 x 50ml Gift Box',    price: 520.00 },
-  { id: 'gift_3x200',       name: '3 x 200ml Gift Box',   price: 1050.00 },
-  { id: 'dv8_xxo',          name: 'DV8 XXO',               price: 2999.00 },
-  { id: 'kolbe_14',         name: 'Kolbe 14',               price: 699.00  },
-  // Custom (B2B only) — selling price matches the equivalent regular SKU
-  { id: 'custom_vs',        name: 'Custom VS',            price: 694.78 },
-  { id: 'custom_xv',        name: 'Custom XV',            price: 694.78 },
-  { id: 'custom_vsop',      name: 'Custom VSOP',          price: 579.00 },  // = VSOP 750ml (New)
-  { id: 'custom_xo',        name: 'Custom XO',            price: 1043.00 }, // = XO 750ml
-  // 50ml singles & mixed box
-  { id: 'vs_50ml',          name: 'VS 50ml',              price: 654.00 },
-  { id: 'vsop_50ml',        name: 'VSOP 50ml',            price: 768.00 },
-  { id: 'xo_50ml',          name: 'XO 50ml',              price: 1080.00 },
-  { id: 'xv_50ml',          name: 'XV 50ml',              price: 1344.00 },
+  // Source: Update_2_.xlsx uploaded 2026-10-02 — prices are incl. VAT (Trade channel default)
+  { id: 'vs_750',           name: 'VS 750ml',              price: 340.98 },
+  { id: 'vs_500',           name: 'VS 500ml',              price: 249.55 },
+  { id: 'vs_200',           name: 'VS 200ml',              price: 129.95 },
+  { id: 'vs_50ml',          name: 'VS 50ml',               price:  56.35 },
+  { id: 'vsop_750_current', name: 'VSOP 750ml (Current)',  price: 483.00 },
+  { id: 'vsop_750_new',     name: 'VSOP 750ml Big Zulu',   price: 665.85 },
+  { id: 'vsop_200',         name: 'VSOP 200ml',            price: 172.50 },
+  { id: 'vsop_50ml',        name: 'VSOP 50ml',             price:  67.85 },
+  { id: 'xv_750',           name: 'XV 750ml',              price: 2398.90 },
+  { id: 'xv_200',           name: 'XV 200ml',              price: 856.75 },
+  { id: 'xv_50ml',          name: 'XV 50ml',               price: 136.85 },
+  { id: 'xo_750',           name: 'XO 750ml',              price: 1199.45 },
+  { id: 'xo_50ml',          name: 'XO 50ml',               price: 113.85 },
+  { id: 'dv8_xxo',          name: 'DV8 XXO',               price: 3448.85 },
+  { id: 'kolbe_14',         name: 'Kolbe 14',              price: 803.85 },
+  { id: 'gift_4x50',        name: '4 x 50ml Gift Box',     price: 598.00 },
+  { id: 'gift_3x200',       name: '3 x 200ml Gift Box',    price: 1207.50 },
+  // Custom (B2B only)
+  { id: 'custom_vs',        name: 'Custom VS',             price: 450.00 },
+  { id: 'custom_vsop',      name: 'Custom VSOP',           price: 799.00 },
+  { id: 'custom_xv',        name: 'Custom XV',             price: 2999.00 },
+  { id: 'custom_xo',        name: 'Custom XO',             price: 1499.00 },
 ];
+
+// Per-channel selling prices (incl. VAT) — sourced from Update_2_.xlsx
+// Used in Log a Visit to default the unit price to the correct channel price
+const SKU_CHANNEL_PRICES = {
+  vs_750:           { Trade: 340.98, 'On-Con': 340.98, B2B: 399.00, Schools: 399.00 },
+  vs_500:           { Trade: 249.55, 'On-Con': 249.55, B2B: 299.00, Schools: 299.00 },
+  vs_200:           { Trade: 129.95, 'On-Con': 129.95, B2B: 149.00, Schools: 149.00 },
+  vs_50ml:          { Trade:  56.35, 'On-Con':  56.35, B2B:  49.00, Schools:  49.00 },
+  vsop_750_current: { Trade: 483.00, 'On-Con': 483.00, B2B: 599.00, Schools: 599.00 },
+  vsop_750_new:     { Trade: 665.85, 'On-Con': 665.85, B2B: 799.00, Schools: 799.00 },
+  vsop_200:         { Trade: 172.50, 'On-Con': 172.50, B2B: 149.00, Schools: 149.00 },
+  vsop_50ml:        { Trade:  67.85, 'On-Con':  67.85, B2B: 125.00, Schools: 125.00 },
+  xv_750:           { Trade:2398.90, 'On-Con':2398.90, B2B:2999.00, Schools:2999.00 },
+  xv_200:           { Trade: 856.75, 'On-Con': 856.75, B2B: 999.00, Schools: 999.00 },
+  xv_50ml:          { Trade: 136.85, 'On-Con': 136.85, B2B: 249.00, Schools: 249.00 },
+  xo_750:           { Trade:1199.45, 'On-Con':1199.45, B2B:1499.00, Schools:1499.00 },
+  xo_50ml:          { Trade: 113.85, 'On-Con': 113.85, B2B: 175.00, Schools: 175.00 },
+  dv8_xxo:          { Trade:3448.85, 'On-Con':3448.85, B2B:2999.00, Schools:2999.00 },
+  kolbe_14:         { Trade: 803.85, 'On-Con': 803.85, B2B: 999.00, Schools: 999.00 },
+  gift_4x50:        { Trade: 598.00, 'On-Con': 598.00, B2B: 899.00, Schools: 899.00 },
+  gift_3x200:       { Trade:1207.50, 'On-Con':1207.50, B2B:1499.00, Schools:1499.00 },
+  custom_vs:        { Trade:   null, 'On-Con':   null,  B2B: 450.00, Schools:   null },
+  custom_vsop:      { Trade:   null, 'On-Con':   null,  B2B: 799.00, Schools:   null },
+  custom_xv:        { Trade:   null, 'On-Con':   null,  B2B:2999.00, Schools:   null },
+  custom_xo:        { Trade:   null, 'On-Con':   null,  B2B:1499.00, Schools:   null },
+};
+
+// Helper: get the correct channel price for a SKU, falling back to SKU_CATALOGUE price
+const getSkuChannelPrice = (skuId, channel, overrides = {}) => {
+  const override = overrides?.[skuId];
+  if (override !== undefined && override !== null) return Number(override);
+  const channelPrice = SKU_CHANNEL_PRICES[skuId]?.[channel];
+  if (channelPrice !== null && channelPrice !== undefined) return channelPrice;
+  // Fall back to SKU catalogue Trade price
+  return SKUS_FOR_CHANNEL.find(s => s.id === skuId)?.price ?? null;
+};
 
 // Custom SKUs are only available for the B2B channel
 const CUSTOM_SKU_IDS = ['custom_vs', 'custom_xv', 'custom_vsop', 'custom_xo'];
@@ -5688,7 +5724,9 @@ function LogVisitModal({ clients, onClose, onSubmit, onRequestNewClient, existin
       // already in list — bump qty
       setItems(items.map(it => it.skuId === sku.id ? { ...it, qty: it.qty + 1 } : it));
     } else {
-      setItems([...items, { skuId: sku.id, name: sku.name, qty: 1, unitPrice: sku.price, listPrice: sku.price }]);
+      const clientChannel = clients?.find(c => c.id === clientId)?.channel || 'Trade';
+        const channelPrice = SKU_CHANNEL_PRICES[sku.id]?.[clientChannel] ?? sku.price;
+        setItems([...items, { skuId: sku.id, name: sku.name, qty: 1, unitPrice: channelPrice, listPrice: channelPrice }]);
     }
     setSkuPickerOpen(false);
   };
