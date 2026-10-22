@@ -296,7 +296,17 @@ const getSkuCost = (skuId, channel, overrides = {}) => {
 };
 
 // Calculates total GP (in Rand) for an array of visits.
-// Each visit needs: channel, items: [{ skuId, qty, unitPrice }]
+// Each visit needs: channel, items: [{ skuId, qty, unitPrice, unitPriceExVat? }]
+//
+// Storage history:
+//   - Newer visits (after dual-price update): unitPrice = incl-VAT, unitPriceExVat = ex-VAT stored explicitly
+//   - Older visits (before dual-price update): unitPrice = incl-VAT channel price (e.g. R2,398.90 for XV Trade)
+//     HOWEVER some visits logged during the transition period stored unitPrice as the
+//     ex-VAT amount (e.g. R2,086 for XV Trade).
+//
+// Detection: if unitPriceExVat is present → use it (definitive).
+//            otherwise: if unitPrice * 1.15 is within R2 of a round incl-VAT channel price,
+//            it's already ex-VAT — use as-is. Otherwise divide by 1.15.
 const calcVisitsGP = (visits, gpCostOverrides = {}) => {
   let totalGP = 0;
   visits.forEach(v => {
@@ -305,9 +315,35 @@ const calcVisitsGP = (visits, gpCostOverrides = {}) => {
     v.items.forEach(it => {
       const qty = Number(it.qty) || 0;
       if (qty <= 0) return;
-      // unitPrice is stored incl. VAT — convert to ex-VAT before comparing to cost
-      const sellPriceInclVAT = Number(it.unitPrice) || 0;
-      const sellPriceExVAT = sellPriceInclVAT / 1.15;
+
+      let sellPriceExVAT;
+      const storedPrice = Number(it.unitPrice) || 0;
+
+      if (it.unitPriceExVat != null && Number(it.unitPriceExVat) > 0) {
+        // Definitive: ex-VAT stored explicitly on newer visits
+        sellPriceExVAT = Number(it.unitPriceExVat);
+      } else {
+        // Heuristic: check if storedPrice is already ex-VAT
+        // A price is ex-VAT if (price × 1.15) is very close to a whole-rand or .00/.50/.85/.95 amount
+        // Simpler test: the known channel incl-VAT price is >storedPrice but storedPrice×1.15 ≈ channelInclVAT
+        const channelInclVAT = (SKU_CHANNEL_PRICES[it.skuId] || {})[channel];
+        if (channelInclVAT && storedPrice > 0 && storedPrice < channelInclVAT * 0.99) {
+          // storedPrice is meaningfully less than the incl-VAT channel price
+          // Check if storedPrice × 1.15 is close to channelInclVAT (within 5% to allow discounts)
+          const impliedIncl = storedPrice * 1.15;
+          if (Math.abs(impliedIncl - channelInclVAT) / channelInclVAT < 0.02) {
+            // Very likely stored as ex-VAT (e.g. 2086 × 1.15 ≈ 2398.90) — use directly
+            sellPriceExVAT = storedPrice;
+          } else {
+            // Stored as incl-VAT at a discount — divide by 1.15
+            sellPriceExVAT = storedPrice / 1.15;
+          }
+        } else {
+          // storedPrice ≥ channelInclVAT or no channel default: treat as incl-VAT
+          sellPriceExVAT = storedPrice / 1.15;
+        }
+      }
+
       const cost = getSkuCost(it.skuId, channel, gpCostOverrides);
       if (cost === null) return; // no cost data for this SKU/channel — skip
       totalGP += (sellPriceExVAT - cost) * qty;
@@ -3249,7 +3285,8 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
           'SKUs Ordered': skuSummary,
           'Total SKU Lines': v.items.length,
           'Total Units': v.items.reduce((s, it) => s + (Number(it.qty) || 0), 0),
-          'Order Total Ex VAT (R)': orderTotal.toFixed(2),
+          'Order Total Incl. VAT (R)': orderTotal.toFixed(2),
+          'Order Total Ex VAT (R)': orderTotalExVAT.toFixed(2),
           'GP (R)': orderGP.toFixed(2),
           'GP %': gpPct,
           'Visit Notes': v.notes || '',
