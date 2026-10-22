@@ -316,32 +316,14 @@ const calcVisitsGP = (visits, gpCostOverrides = {}) => {
       const qty = Number(it.qty) || 0;
       if (qty <= 0) return;
 
+      // Always work in ex-VAT. unitPrice is always stored incl-VAT (the sell price
+      // entered in the app). Divide by 1.15 to get ex-VAT sell price.
+      // unitPriceExVat (if present on newer visits) is already ex-VAT — use directly.
       let sellPriceExVAT;
-      const storedPrice = Number(it.unitPrice) || 0;
-
       if (it.unitPriceExVat != null && Number(it.unitPriceExVat) > 0) {
-        // Definitive: ex-VAT stored explicitly on newer visits
         sellPriceExVAT = Number(it.unitPriceExVat);
       } else {
-        // Heuristic: check if storedPrice is already ex-VAT
-        // A price is ex-VAT if (price × 1.15) is very close to a whole-rand or .00/.50/.85/.95 amount
-        // Simpler test: the known channel incl-VAT price is >storedPrice but storedPrice×1.15 ≈ channelInclVAT
-        const channelInclVAT = (SKU_CHANNEL_PRICES[it.skuId] || {})[channel];
-        if (channelInclVAT && storedPrice > 0 && storedPrice < channelInclVAT * 0.99) {
-          // storedPrice is meaningfully less than the incl-VAT channel price
-          // Check if storedPrice × 1.15 is close to channelInclVAT (within 5% to allow discounts)
-          const impliedIncl = storedPrice * 1.15;
-          if (Math.abs(impliedIncl - channelInclVAT) / channelInclVAT < 0.02) {
-            // Very likely stored as ex-VAT (e.g. 2086 × 1.15 ≈ 2398.90) — use directly
-            sellPriceExVAT = storedPrice;
-          } else {
-            // Stored as incl-VAT at a discount — divide by 1.15
-            sellPriceExVAT = storedPrice / 1.15;
-          }
-        } else {
-          // storedPrice ≥ channelInclVAT or no channel default: treat as incl-VAT
-          sellPriceExVAT = storedPrice / 1.15;
-        }
+        sellPriceExVAT = (Number(it.unitPrice) || 0) / 1.15;
       }
 
       const cost = getSkuCost(it.skuId, channel, gpCostOverrides);
@@ -3269,10 +3251,17 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
         const c = clients.find(cl => cl.id === v.clientId) || {};
         const channel = v.channel || c.channel || '';
         const skuSummary = v.items.map(it => `${it.qty}x ${it.name}${Number(it.unitPrice) < Number(it.listPrice) ? ` (disc. ${ZAR(it.unitPrice)})` : ''}`).join(' | ');
-        // Calculate GP for this order using the same calcVisitsGP logic
+        // Calculate order total ex-VAT directly from items (unitPrice is incl-VAT)
+        const totalUnits = v.items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+        const orderTotalExVAT = v.items.reduce((s, it) => {
+          const qty = Number(it.qty) || 0;
+          const exVat = it.unitPriceExVat != null && Number(it.unitPriceExVat) > 0
+            ? Number(it.unitPriceExVat)
+            : (Number(it.unitPrice) || 0) / 1.15;
+          return s + exVat * qty;
+        }, 0);
+        // GP uses the same ex-VAT logic as calcVisitsGP
         const orderGP = calcVisitsGP([{ ...v, channel }], gpCostOverrides || {});
-        const orderTotal = Number(v.saleAmount || 0);
-        const orderTotalExVAT = orderTotal / 1.15; // GP is on ex-VAT revenue
         const gpPct = orderTotalExVAT > 0 ? ((orderGP / orderTotalExVAT) * 100).toFixed(1) + '%' : '—';
         orderHistoryRows.push({
           'Date': v.date,
@@ -3284,8 +3273,7 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
           'Outcome': v.outcome || '',
           'SKUs Ordered': skuSummary,
           'Total SKU Lines': v.items.length,
-          'Total Units': v.items.reduce((s, it) => s + (Number(it.qty) || 0), 0),
-          'Order Total Incl. VAT (R)': orderTotal.toFixed(2),
+          'Total Units': totalUnits,
           'Order Total Ex VAT (R)': orderTotalExVAT.toFixed(2),
           'GP (R)': orderGP.toFixed(2),
           'GP %': gpPct,
@@ -3297,7 +3285,7 @@ function ManagerPortal({ targets, saveTargets, clients, visits, askConfirm, skuP
     wsOrders['!cols'] = [
       { wch: 12 }, { wch: 28 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
       { wch: 12 }, { wch: 16 }, { wch: 55 }, { wch: 14 }, { wch: 12 },
-      { wch: 20 }, { wch: 14 }, { wch: 10 }, { wch: 38 }, { wch: 38 },
+      { wch: 18 }, { wch: 10 }, { wch: 8 }, { wch: 38 }, { wch: 38 },
     ];
     XLSX.utils.book_append_sheet(wb, wsOrders, 'Client Order History');
 
