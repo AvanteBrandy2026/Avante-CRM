@@ -5589,10 +5589,6 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
                         const totalInclVAT = order.saleAmount || 0;
                         const totalExVAT = totalInclVAT / 1.15;
                         const vatAmt = totalInclVAT - totalExVAT;
-                        const orderChannel = order.clientChannel || order.channel || '';
-                        const orderGP = calcVisitsGP([{ ...order, channel: orderChannel }], gpCostOverrides);
-                        const gpPct = totalExVAT > 0 ? ((orderGP / totalExVAT) * 100).toFixed(1) : null;
-                        const gpColor = gpPct >= 50 ? '#2d8659' : gpPct >= 25 ? '#BC8D26' : '#CC233A';
                         return (
                           <div style={{ background: '#002855', marginTop: 1, padding: '10px 8px' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 80px 80px', gap: 8, marginBottom: 6 }}>
@@ -5607,13 +5603,6 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
                               <p style={{ fontSize: 9, letterSpacing: '0.2em', color: '#DBB85E', fontFamily: "'Cinzel',serif", fontWeight: 700, gridColumn: '1 / 5', textAlign: 'right' }}>TOTAL INCL. VAT</p>
                               <p style={{ fontSize: 14, fontWeight: 700, color: '#DBB85E', textAlign: 'right', fontFamily: "'Cinzel',serif" }}>{ZAR(totalInclVAT)}</p>
                             </div>
-                            {gpPct !== null && (
-                              <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
-                                <span style={{ fontSize: 8, letterSpacing: '0.2em', color: '#9BAEC8', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>GROSS PROFIT</span>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: gpColor, fontFamily: "'Cinzel',serif" }}>{ZAR(orderGP)}</span>
-                                <span style={{ fontSize: 11, fontWeight: 700, color: gpColor, fontFamily: "'Cinzel',serif", background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 3 }}>{gpPct}%</span>
-                              </div>
-                            )}
                           </div>
                         );
                       })()}
