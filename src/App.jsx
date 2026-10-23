@@ -5414,16 +5414,6 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
               {orders.length} orders · {ZAR(totalRevenue)} incl. VAT · {ZAR(totalRevenue / 1.15)} ex-VAT
             </p>
           </div>
-          {/* GP card */}
-          <div style={{ padding: '10px 18px', background: '#002855', border: '1px solid rgba(188,141,38,0.4)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div>
-              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 8, letterSpacing: '0.25em', color: '#DBB85E', fontWeight: 700, margin: 0 }}>
-                {filterRep === 'All' ? 'TEAM GP' : `${filterRep.toUpperCase()}'S GP`} · {gpMonthLabel}
-              </p>
-              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 18, fontWeight: 700, color: '#FCF7F2', margin: '2px 0 0' }}>{ZAR(totalGP)}</p>
-              <p style={{ fontFamily: "'Cinzel',serif", fontSize: 9, color: '#9BAEC8', margin: '2px 0 0', letterSpacing: '0.1em' }}>on ex-VAT revenue</p>
-            </div>
-          </div>
         </div>
       </div>
 
