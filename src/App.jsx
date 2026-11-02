@@ -14,7 +14,7 @@ const USERS = {
   'anthony@breakfreebeverages.com':  { password: 'anthony123',  rep: 'Anthony', role: 'rep',     name: 'Anthony' },
   'matthew@breakfreebeverages.com':  { password: 'matthew123',  rep: 'Matthew', role: 'manager', name: 'Matthew' },
   'rob@breakfreebeverages.com':      { password: 'rob123',      rep: 'Rob',     role: 'manager', name: 'Rob' },
-  // Partner accounts — Dashboard, B2B Customs and OKR access only
+  'yolanda@breakfreebeverages.com': { password: 'yolanda1234', rep: 'Yolanda', role: 'manager', name: 'Yolanda' },
   'matt@117marketing.com':           { password: 'MattA1234',   rep: 'Matt A',  role: 'partner', name: 'Matthew Askew' },
   'john@newagency.co.za':            { password: 'John1234',    rep: 'John S',  role: 'partner', name: 'John Stanley' },
 };
