@@ -210,6 +210,14 @@ const SKU_CATALOGUE = [
   { id: 'kolbe_14',         name: 'Kolbe 14',              price: 803.85 },
   { id: 'gift_4x50',        name: '4 x 50ml Gift Box',     price: 598.00 },
   { id: 'gift_3x200',       name: '3 x 200ml Gift Box',    price: 1207.50 },
+  // Premium Cabinet / XXO range (added 2026-11-02)
+  { id: 'kolbe_sidestep_xxo', name: 'Kolbe Sidestep XXO with Cabinet', price: 3799.00 },
+  { id: 'kc_legends_xxo',    name: 'KC Legends Reserve XXO with Cabinet', price: 5199.00 },
+  { id: 'kaptein_xxo',       name: 'Kaptein XXO in Cabinet',           price: 4999.00 },
+  { id: 'xi_360',            name: 'XI 360 with Cabinet',              price: 5999.00 },
+  { id: 'dda_xxo',           name: 'DDA XXO Box & Authentication',     price: 4999.00 },
+  { id: 'duane_xxo',         name: 'XXO Duane with Cabinet',           price: 3299.00 },
+  { id: 'wp_nel_xxv',        name: 'WP Nel XXV',                       price: 3499.00 },
   // Custom (B2B only)
   { id: 'custom_vs',        name: 'Custom VS',             price: 450.00 },
   { id: 'custom_vsop',      name: 'Custom VSOP',           price: 799.00 },
@@ -237,6 +245,14 @@ const SKU_CHANNEL_PRICES = {
   kolbe_14:         { Trade: 803.85, 'On-Con': 803.85, B2B: 999.00, Schools: 999.00 },
   gift_4x50:        { Trade: 598.00, 'On-Con': 598.00, B2B: 899.00, Schools: 899.00 },
   gift_3x200:       { Trade:1207.50, 'On-Con':1207.50, B2B:1499.00, Schools:1499.00 },
+  // Premium Cabinet / XXO range (added 2026-11-02)
+  kolbe_sidestep_xxo: { Trade: 3799.00, 'On-Con': 3799.00, B2B: 3799.00, Schools: 3799.00 },
+  kc_legends_xxo:     { Trade: 5199.00, 'On-Con': 5199.00, B2B: 5199.00, Schools: 5199.00 },
+  kaptein_xxo:        { Trade: 4999.00, 'On-Con': 4999.00, B2B: 4999.00, Schools: 4999.00 },
+  xi_360:             { Trade: 5999.00, 'On-Con': 5999.00, B2B: 5999.00, Schools: 5999.00 },
+  dda_xxo:            { Trade: 4999.00, 'On-Con': 4999.00, B2B: 4999.00, Schools: 4999.00 },
+  duane_xxo:          { Trade: 3299.00, 'On-Con': 3299.00, B2B: 3299.00, Schools: 3299.00 },
+  wp_nel_xxv:         { Trade: 3499.00, 'On-Con': 3499.00, B2B: 3499.00, Schools: 3499.00 },
   custom_vs:        { Trade:   null, 'On-Con':   null,  B2B: 450.00, Schools:   null },
   custom_vsop:      { Trade:   null, 'On-Con':   null,  B2B: 799.00, Schools:   null },
   custom_xv:        { Trade:   null, 'On-Con':   null,  B2B:2999.00, Schools:   null },
@@ -284,6 +300,14 @@ const DEFAULT_GP_COSTS = {
   custom_xo:         { Trade: null,    'On-Con': null,    B2B: 591.42,  Schools: null    },
   dv8_xxo:           { Trade: 1496.42, 'On-Con': 1496.42, B2B: 1504.94, Schools: 1504.94 },
   kolbe_14:          { Trade: 399.42,  'On-Con': 399.42,  B2B: 499.42,  Schools: 499.42  },
+  // Premium Cabinet / XXO range (costs ex-VAT, added 2026-11-02)
+  kolbe_sidestep_xxo: { Trade: 1200.00, 'On-Con': 1200.00, B2B: 1200.00, Schools: 1200.00 },
+  kc_legends_xxo:     { Trade: 1300.00, 'On-Con': 1300.00, B2B: 1300.00, Schools: 1300.00 },
+  kaptein_xxo:        { Trade: 1050.00, 'On-Con': 1050.00, B2B: 1050.00, Schools: 1050.00 },
+  xi_360:             { Trade: 1400.00, 'On-Con': 1400.00, B2B: 1400.00, Schools: 1400.00 },
+  dda_xxo:            { Trade: 1100.00, 'On-Con': 1100.00, B2B: 1100.00, Schools: 1100.00 },
+  duane_xxo:          { Trade: 1000.00, 'On-Con': 1000.00, B2B: 1000.00, Schools: 1000.00 },
+  wp_nel_xxv:         { Trade:  850.00, 'On-Con':  850.00, B2B:  850.00, Schools:  850.00 },
 };
 
 // Returns the cost for a SKU in a given channel, applying overrides if present.
