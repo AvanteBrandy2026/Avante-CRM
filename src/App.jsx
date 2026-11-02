@@ -211,6 +211,7 @@ const SKU_CATALOGUE = [
   { id: 'gift_4x50',        name: '4 x 50ml Gift Box',     price: 598.00 },
   { id: 'gift_3x200',       name: '3 x 200ml Gift Box',    price: 1207.50 },
   // Premium Cabinet / XXO range (added 2026-11-02)
+  { id: 'xv_tribute',        name: 'XV Tribute in Box',               price: 4449.00 },
   { id: 'kolbe_sidestep_xxo', name: 'Kolbe Sidestep XXO with Cabinet', price: 3799.00 },
   { id: 'kc_legends_xxo',    name: 'KC Legends Reserve XXO with Cabinet', price: 5199.00 },
   { id: 'kaptein_xxo',       name: 'Kaptein XXO in Cabinet',           price: 4999.00 },
@@ -246,6 +247,7 @@ const SKU_CHANNEL_PRICES = {
   gift_4x50:        { Trade: 598.00, 'On-Con': 598.00, B2B: 899.00, Schools: 899.00 },
   gift_3x200:       { Trade:1207.50, 'On-Con':1207.50, B2B:1499.00, Schools:1499.00 },
   // Premium Cabinet / XXO range (added 2026-11-02)
+  xv_tribute:         { Trade: 4449.00, 'On-Con': 4449.00, B2B: 4449.00, Schools: 4449.00 },
   kolbe_sidestep_xxo: { Trade: 3799.00, 'On-Con': 3799.00, B2B: 3799.00, Schools: 3799.00 },
   kc_legends_xxo:     { Trade: 5199.00, 'On-Con': 5199.00, B2B: 5199.00, Schools: 5199.00 },
   kaptein_xxo:        { Trade: 4999.00, 'On-Con': 4999.00, B2B: 4999.00, Schools: 4999.00 },
@@ -301,6 +303,7 @@ const DEFAULT_GP_COSTS = {
   dv8_xxo:           { Trade: 1496.42, 'On-Con': 1496.42, B2B: 1504.94, Schools: 1504.94 },
   kolbe_14:          { Trade: 399.42,  'On-Con': 399.42,  B2B: 499.42,  Schools: 499.42  },
   // Premium Cabinet / XXO range (costs ex-VAT, added 2026-11-02)
+  xv_tribute:         { Trade: 1150.00, 'On-Con': 1150.00, B2B: 1150.00, Schools: 1150.00 },
   kolbe_sidestep_xxo: { Trade: 1200.00, 'On-Con': 1200.00, B2B: 1200.00, Schools: 1200.00 },
   kc_legends_xxo:     { Trade: 1300.00, 'On-Con': 1300.00, B2B: 1300.00, Schools: 1300.00 },
   kaptein_xxo:        { Trade: 1050.00, 'On-Con': 1050.00, B2B: 1050.00, Schools: 1050.00 },
