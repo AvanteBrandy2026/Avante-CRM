@@ -2623,15 +2623,18 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         <KPICard label="Conversion" value={`${conversionRate}%`} subtitle={`${sold} of ${visitCount} sold`} progress={conversionRate} icon={TrendingUp} accent="gold" sparkData={dailyConversion} todayDay={todayDay} />
       </div>
 
-      {/* ── PIPELINE FORECAST ── */}
-      <ProspectWidget
-        activeRep={activeRep}
-        targets={targets}
-        clients={clients}
-        visits={visits}
-        onNavigate={onNavigate}
-        onUpdateClient={onUpdateClient}
-      />
+      {/* ── X SERIES TRACKER ── */}
+      <div className="premium-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 diamond-clip" style={{ background: '#BC8D26' }}></div>
+            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>X SERIES TRACKER</h2>
+            <span style={{ fontSize: 9, fontFamily: "'Cinzel',serif", letterSpacing: '0.15em', padding: '2px 8px', background: '#002855', color: '#DBB85E', fontWeight: 700 }}>OCT – NOV {new Date().getFullYear()}</span>
+          </div>
+          <span className="text-[9px] tracking-[0.15em] font-display ocean uppercase" style={{ fontWeight: 600 }}>Bottles Sold</span>
+        </div>
+        <XSeriesLeaderboard visits={allVisits} />
+      </div>
 
       {/* ── LEADERBOARD + RECENT VISITS ── */}
       <div className="grid-lb">
@@ -2659,19 +2662,6 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
           </div>
           <RecentVisits visits={filteredVisits.slice(-6).reverse()} clients={clients} />
         </div>
-      </div>
-
-      {/* ── X SERIES LEADERBOARD ── */}
-      <div className="premium-card p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 diamond-clip" style={{ background: '#BC8D26' }}></div>
-            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>X SERIES LEADERBOARD</h2>
-            <span style={{ fontSize: 9, fontFamily: "'Cinzel',serif", letterSpacing: '0.15em', padding: '2px 8px', background: '#002855', color: '#DBB85E', fontWeight: 700 }}>OCT – NOV {new Date().getFullYear()}</span>
-          </div>
-          <span className="text-[9px] tracking-[0.15em] font-display ocean uppercase" style={{ fontWeight: 600 }}>Bottles Sold</span>
-        </div>
-        <XSeriesLeaderboard visits={allVisits} />
       </div>
 
       {/* ── PIPELINE SUMMARY (compact) ── */}
@@ -2891,9 +2881,15 @@ const X_SERIES_SKUS = [
   { id: 'dda_xxo',           label: 'DDA XXO' },
   { id: 'duane_xxo',         label: 'XXO Duane' },
   { id: 'wp_nel_xxv',        label: 'WP Nel XXV' },
+  { id: 'xv_750',            label: 'XV 750ml' },
+  { id: 'xo_750',            label: 'XO 750ml' },
+  { id: 'custom_xv',         label: 'Custom XV' },
+  { id: 'custom_xo',         label: 'Custom XO' },
 ];
 
 function XSeriesLeaderboard({ visits }) {
+  const [expandedRep, setExpandedRep] = React.useState(null);
+
   // Count X Series bottles per rep across Oct + Nov of the current year
   const year = new Date().getFullYear();
   const months = [`${year}-10`, `${year}-11`];
@@ -2938,28 +2934,60 @@ function XSeriesLeaderboard({ visits }) {
     <div>
       {/* Rep leaderboard */}
       <div className="space-y-2 mb-4">
-        {repTotals.map((r, i) => (
-          <div key={r.rep} style={{ padding: '10px 12px', border: '1px solid rgba(0,40,85,0.12)', background: i === 0 && r.totalBottles > 0 ? 'rgba(188,141,38,0.06)' : 'transparent' }}>
-            <div className="flex items-center gap-3 mb-1.5">
-              <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center font-display text-xs"
-                style={{ background: r.totalBottles > 0 ? '#002855' : 'rgba(0,40,85,0.12)', color: '#FCF7F2', fontWeight: 700 }}>
-                {r.totalBottles > 0 ? (MEDALS[i] || i + 1) : '—'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <h3 className="font-display text-sm tracking-[0.1em] ink" style={{ fontWeight: 700 }}>{r.rep.toUpperCase()}</h3>
-                  <span className="font-display text-base flex-shrink-0" style={{ fontWeight: 700, color: r.totalBottles > 0 ? '#BC8D26' : '#9BAEC8' }}>
-                    {r.totalBottles} {r.totalBottles === 1 ? 'bottle' : 'bottles'}
-                  </span>
+        {repTotals.map((r, i) => {
+          const isOpen = expandedRep === r.rep;
+          const repSkuSold = X_SERIES_SKUS.filter(s => (r.skuBreakdown[s.id] || 0) > 0)
+            .map(s => ({ ...s, qty: r.skuBreakdown[s.id] }))
+            .sort((a, b) => b.qty - a.qty);
+
+          return (
+            <div key={r.rep} style={{ border: '1px solid rgba(0,40,85,0.12)', background: i === 0 && r.totalBottles > 0 ? 'rgba(188,141,38,0.06)' : 'transparent' }}>
+              {/* Row header — clickable if rep has sales */}
+              <button
+                onClick={() => r.totalBottles > 0 && setExpandedRep(isOpen ? null : r.rep)}
+                style={{ width: '100%', textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', cursor: r.totalBottles > 0 ? 'pointer' : 'default' }}
+              >
+                <div className="flex items-center gap-3 mb-1.5">
+                  <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center font-display text-xs"
+                    style={{ background: r.totalBottles > 0 ? '#002855' : 'rgba(0,40,85,0.12)', color: '#FCF7F2', fontWeight: 700 }}>
+                    {r.totalBottles > 0 ? (MEDALS[i] || i + 1) : '—'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="font-display text-sm tracking-[0.1em] ink" style={{ fontWeight: 700 }}>{r.rep.toUpperCase()}</h3>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="font-display text-base" style={{ fontWeight: 700, color: r.totalBottles > 0 ? '#BC8D26' : '#9BAEC8' }}>
+                          {r.totalBottles} {r.totalBottles === 1 ? 'bottle' : 'bottles'}
+                        </span>
+                        {r.totalBottles > 0 && (
+                          <span style={{ fontSize: 10, color: '#5A7A99', transition: 'transform 0.2s', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[10px] italic ocean">{r.totalRevenue > 0 ? `${ZAR(r.totalRevenue)} ex-VAT revenue` : 'No X Series sales yet'}</p>
+                  </div>
                 </div>
-                <p className="text-[10px] italic ocean">{r.totalRevenue > 0 ? `${ZAR(r.totalRevenue)} ex-VAT revenue` : 'No X Series sales yet'}</p>
-              </div>
+                <div className="h-1.5" style={{ background: 'rgba(0,40,85,0.08)' }}>
+                  <div className="h-full transition-all" style={{ width: `${(r.totalBottles / maxBottles) * 100}%`, background: i === 0 ? '#BC8D26' : '#5A7A99' }}></div>
+                </div>
+              </button>
+
+              {/* Expandable SKU breakdown */}
+              {isOpen && repSkuSold.length > 0 && (
+                <div style={{ padding: '8px 12px 12px 12px', borderTop: '1px solid rgba(0,40,85,0.08)', background: 'rgba(0,40,85,0.03)' }}>
+                  <div className="flex flex-wrap gap-1.5">
+                    {repSkuSold.map(s => (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: '#002855', borderRadius: 0 }}>
+                        <span style={{ fontSize: 9, fontFamily: "'Cinzel',serif", letterSpacing: '0.12em', color: '#9BAEC8', fontWeight: 600 }}>{s.label}</span>
+                        <span style={{ fontSize: 11, fontFamily: "'Cinzel',serif", letterSpacing: '0.05em', color: '#DBB85E', fontWeight: 700 }}>{s.qty}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="h-1.5" style={{ background: 'rgba(0,40,85,0.08)' }}>
-              <div className="h-full transition-all" style={{ width: `${(r.totalBottles / maxBottles) * 100}%`, background: i === 0 ? '#BC8D26' : '#5A7A99' }}></div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Footer: grand total + SKU breakdown */}
