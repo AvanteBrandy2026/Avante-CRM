@@ -211,7 +211,7 @@ const SKU_CATALOGUE = [
   { id: 'gift_4x50',        name: '4 x 50ml Gift Box',     price: 598.00 },
   { id: 'gift_3x200',       name: '3 x 200ml Gift Box',    price: 1207.50 },
   // Premium Cabinet / XXO range (added 2026-11-02)
-  { id: 'xv_tribute',        name: 'XV Tribute in Box',               price: 4449.00 },
+  { id: 'xv_tribute',        name: 'Avante XV Tribute',               price: 4499.00 },
   { id: 'kolbe_sidestep_xxo', name: 'Kolbe Sidestep XXO with Cabinet', price: 3799.00 },
   { id: 'kc_legends_xxo',    name: 'KC Legends Reserve XXO with Cabinet', price: 5199.00 },
   { id: 'kaptein_xxo',       name: 'Kaptein XXO in Cabinet',           price: 4999.00 },
@@ -247,7 +247,7 @@ const SKU_CHANNEL_PRICES = {
   gift_4x50:        { Trade: 598.00, 'On-Con': 598.00, B2B: 899.00, Schools: 899.00 },
   gift_3x200:       { Trade:1207.50, 'On-Con':1207.50, B2B:1499.00, Schools:1499.00 },
   // Premium Cabinet / XXO range (added 2026-11-02)
-  xv_tribute:         { Trade: 4449.00, 'On-Con': 4449.00, B2B: 4449.00, Schools: 4449.00 },
+  xv_tribute:         { Trade: 4499.00, 'On-Con': 4499.00, B2B: 4499.00, Schools: 4499.00 },
   kolbe_sidestep_xxo: { Trade: 3799.00, 'On-Con': 3799.00, B2B: 3799.00, Schools: 3799.00 },
   kc_legends_xxo:     { Trade: 5199.00, 'On-Con': 5199.00, B2B: 5199.00, Schools: 5199.00 },
   kaptein_xxo:        { Trade: 4999.00, 'On-Con': 4999.00, B2B: 4999.00, Schools: 4999.00 },
@@ -2661,6 +2661,19 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         </div>
       </div>
 
+      {/* ── X SERIES LEADERBOARD ── */}
+      <div className="premium-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 diamond-clip" style={{ background: '#BC8D26' }}></div>
+            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>X SERIES LEADERBOARD</h2>
+            <span style={{ fontSize: 9, fontFamily: "'Cinzel',serif", letterSpacing: '0.15em', padding: '2px 8px', background: '#002855', color: '#DBB85E', fontWeight: 700 }}>OCT – NOV {new Date().getFullYear()}</span>
+          </div>
+          <span className="text-[9px] tracking-[0.15em] font-display ocean uppercase" style={{ fontWeight: 600 }}>Bottles Sold</span>
+        </div>
+        <XSeriesLeaderboard visits={allVisits} />
+      </div>
+
       {/* ── PIPELINE SUMMARY (compact) ── */}
       <div className="premium-card p-4">
         <div className="flex items-center justify-between mb-3">
@@ -2864,6 +2877,110 @@ function Leaderboard({ clients, visits, targets }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── X SERIES SKU IDs ─────────────────────────────────────────────────────────
+const X_SERIES_SKUS = [
+  { id: 'xv_tribute',        label: 'XV Tribute' },
+  { id: 'kolbe_sidestep_xxo', label: 'Kolbe Sidestep XXO' },
+  { id: 'kc_legends_xxo',    label: 'KC Legends XXO' },
+  { id: 'kaptein_xxo',       label: 'Kaptein XXO' },
+  { id: 'xi_360',            label: 'XI 360' },
+  { id: 'dda_xxo',           label: 'DDA XXO' },
+  { id: 'duane_xxo',         label: 'XXO Duane' },
+  { id: 'wp_nel_xxv',        label: 'WP Nel XXV' },
+];
+
+function XSeriesLeaderboard({ visits }) {
+  // Count X Series bottles per rep across Oct + Nov of the current year
+  const year = new Date().getFullYear();
+  const months = [`${year}-10`, `${year}-11`];
+  const xSkuIds = new Set(X_SERIES_SKUS.map(s => s.id));
+
+  const repTotals = SALES_REPS.map(rep => {
+    let totalBottles = 0;
+    let totalRevenue = 0;
+    const skuBreakdown = {};
+    X_SERIES_SKUS.forEach(s => { skuBreakdown[s.id] = 0; });
+
+    visits.forEach(v => {
+      if (v.salesRep !== rep) return;
+      if (!months.some(m => (v.date || '').startsWith(m))) return;
+      (v.items || []).forEach(it => {
+        if (!xSkuIds.has(it.skuId)) return;
+        const qty = Number(it.qty) || 0;
+        if (qty <= 0) return;
+        totalBottles += qty;
+        skuBreakdown[it.skuId] = (skuBreakdown[it.skuId] || 0) + qty;
+        const priceExVat = it.unitPriceExVat != null && Number(it.unitPriceExVat) > 0
+          ? Number(it.unitPriceExVat)
+          : (Number(it.unitPrice) || 0) / 1.15;
+        totalRevenue += priceExVat * qty;
+      });
+    });
+    return { rep, totalBottles, totalRevenue, skuBreakdown };
+  }).sort((a, b) => b.totalBottles - a.totalBottles);
+
+  const maxBottles = Math.max(...repTotals.map(r => r.totalBottles), 1);
+  const grandTotal = repTotals.reduce((s, r) => s + r.totalBottles, 0);
+
+  // Top SKUs sold across all reps
+  const skuTotals = X_SERIES_SKUS.map(s => ({
+    ...s,
+    total: repTotals.reduce((sum, r) => sum + (r.skuBreakdown[s.id] || 0), 0),
+  })).filter(s => s.total > 0).sort((a, b) => b.total - a.total);
+
+  const MEDALS = ['🥇', '🥈', '🥉'];
+
+  return (
+    <div>
+      {/* Rep leaderboard */}
+      <div className="space-y-2 mb-4">
+        {repTotals.map((r, i) => (
+          <div key={r.rep} style={{ padding: '10px 12px', border: '1px solid rgba(0,40,85,0.12)', background: i === 0 && r.totalBottles > 0 ? 'rgba(188,141,38,0.06)' : 'transparent' }}>
+            <div className="flex items-center gap-3 mb-1.5">
+              <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center font-display text-xs"
+                style={{ background: r.totalBottles > 0 ? '#002855' : 'rgba(0,40,85,0.12)', color: '#FCF7F2', fontWeight: 700 }}>
+                {r.totalBottles > 0 ? (MEDALS[i] || i + 1) : '—'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="font-display text-sm tracking-[0.1em] ink" style={{ fontWeight: 700 }}>{r.rep.toUpperCase()}</h3>
+                  <span className="font-display text-base flex-shrink-0" style={{ fontWeight: 700, color: r.totalBottles > 0 ? '#BC8D26' : '#9BAEC8' }}>
+                    {r.totalBottles} {r.totalBottles === 1 ? 'bottle' : 'bottles'}
+                  </span>
+                </div>
+                <p className="text-[10px] italic ocean">{r.totalRevenue > 0 ? `${ZAR(r.totalRevenue)} ex-VAT revenue` : 'No X Series sales yet'}</p>
+              </div>
+            </div>
+            <div className="h-1.5" style={{ background: 'rgba(0,40,85,0.08)' }}>
+              <div className="h-full transition-all" style={{ width: `${(r.totalBottles / maxBottles) * 100}%`, background: i === 0 ? '#BC8D26' : '#5A7A99' }}></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer: grand total + SKU breakdown */}
+      <div style={{ borderTop: '1px solid rgba(0,40,85,0.12)', paddingTop: 10 }}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-display text-[9px] tracking-[0.2em] ocean" style={{ fontWeight: 600 }}>TEAM TOTAL · OCT–NOV {year}</span>
+          <span className="font-display text-sm copper" style={{ fontWeight: 700 }}>{grandTotal} bottles</span>
+        </div>
+        {skuTotals.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {skuTotals.map(s => (
+              <span key={s.id} style={{ fontSize: 9, fontFamily: "'Cinzel',serif", letterSpacing: '0.1em', padding: '2px 7px', background: 'rgba(0,40,85,0.07)', color: '#002855', fontWeight: 600 }}>
+                {s.label}: {s.total}
+              </span>
+            ))}
+          </div>
+        )}
+        {skuTotals.length === 0 && (
+          <p className="text-[10px] italic ocean text-center py-2">Log X Series visits to see SKU breakdown</p>
+        )}
+      </div>
     </div>
   );
 }
