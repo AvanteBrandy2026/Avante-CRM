@@ -491,6 +491,7 @@ function visitToDb(v, includeExtended = true) {
     notes: v.notes || '',
     follow_up_notes: v.followUpNotes || v.followUp || '',
     order_placed: v.orderPlaced || '',
+    dispatched: v.dispatched === true ? true : (v.dispatched === false ? false : null),
   };
   if (includeExtended) {
     row.contact_method = v.contactMethod || '';
@@ -517,6 +518,7 @@ function visitFromDb(r) {
     followUpDate: r.follow_up_date || '',
     taggedReps: r.tagged_reps || [],
     channel: r.channel || '',
+    dispatched: r.dispatched === true ? true : (r.dispatched === false ? false : null),
   };
 }
 
@@ -1615,6 +1617,7 @@ function AvanteCRMApp({ currentUser, onLogout }) {
             currentUser={currentUser}
             userIsManager={userIsManager}
             gpCostOverrides={gpCostOverrides}
+            onUpdateVisit={(visitId, patch) => updateVisit(visitId, patch)}
             onDeleteVisit={(visitId) => {
               const v = visits.find(x => x.id === visitId);
               const c = v ? clients.find(cl => cl.id === v.clientId) : null;
@@ -5506,7 +5509,7 @@ function MonthFilter({ value, onChange }) {
   );
 }
 
-function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsManager, gpCostOverrides }) {
+function OrderHistoryPage({ clients, visits, onDeleteVisit, onUpdateVisit, currentUser, userIsManager, gpCostOverrides }) {
   const [search, setSearch] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [filterChannel, setFilterChannel] = useState('All');
@@ -5515,6 +5518,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
   const [sortBy, setSortBy] = useState('date');
   // Defaults to the current month so GP reads correctly the moment this tab opens
   const [filterMonth, setFilterMonth] = useState(monthISO());
+  const [filterDispatched, setFilterDispatched] = useState('All'); // 'All' | 'Yes' | 'No'
 
   // Only visits that have actual orders (items with qty > 0)
   const orders = useMemo(() => {
@@ -5528,6 +5532,11 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
         if (filterChannel !== 'All' && v.clientChannel !== filterChannel) return false;
         if (filterRep !== 'All' && v.salesRep !== filterRep) return false;
         if (filterMonth !== 'All' && !(v.date || '').startsWith(filterMonth)) return false;
+        if (filterDispatched !== 'All') {
+          const isDispatched = v.dispatched === true;
+          if (filterDispatched === 'Yes' && !isDispatched) return false;
+          if (filterDispatched === 'No' && isDispatched) return false;
+        }
         if (search.trim()) {
           const q = search.trim().toLowerCase();
           return v.clientName.toLowerCase().includes(q) ||
@@ -5540,7 +5549,7 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
       .sort((a, b) => sortBy === 'amount'
         ? (b.saleAmount || 0) - (a.saleAmount || 0)
         : (b.date || '').localeCompare(a.date || ''));
-  }, [visits, clients, search, filterChannel, filterRep, filterMonth, sortBy]);
+  }, [visits, clients, search, filterChannel, filterRep, filterMonth, filterDispatched, sortBy]);
 
   const totalRevenue = orders.reduce((s, o) => s + (o.saleAmount || 0), 0);
   const statusColors = (s) => getStatusColor(s);
@@ -5603,11 +5612,19 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
           {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5A7A99', fontSize: 18, lineHeight: 1 }}>×</button>}
         </div>
         {/* Channel filter */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {['All', ...CHANNELS].map(ch => (
             <button key={ch} onClick={() => setFilterChannel(ch)}
               style={{ padding: '6px 14px', border: `1px solid ${filterChannel === ch ? '#002855' : 'rgba(0,40,85,0.2)'}`, background: filterChannel === ch ? '#002855' : 'none', color: filterChannel === ch ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 600, cursor: 'pointer' }}>
               {ch === 'All' ? 'ALL' : ch.toUpperCase()}
+            </button>
+          ))}
+          <div style={{ marginLeft: 8, width: 1, height: 20, background: 'rgba(0,40,85,0.15)' }} />
+          <span style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.2em', color: '#5A7A99', fontWeight: 600 }}>DISPATCHED:</span>
+          {['All', 'Yes', 'No'].map(d => (
+            <button key={d} onClick={() => setFilterDispatched(d)}
+              style={{ padding: '6px 14px', border: `1px solid ${filterDispatched === d ? (d === 'Yes' ? '#2d8659' : d === 'No' ? '#CC233A' : '#002855') : 'rgba(0,40,85,0.2)'}`, background: filterDispatched === d ? (d === 'Yes' ? '#2d8659' : d === 'No' ? '#CC233A' : '#002855') : 'none', color: filterDispatched === d ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel', serif", fontSize: 9, letterSpacing: '0.15em', fontWeight: 600, cursor: 'pointer' }}>
+              {d.toUpperCase()}
             </button>
           ))}
         </div>
@@ -5671,9 +5688,14 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
                         {order.clientLocation || ''}{order.clientLocation && order.clientChannel ? ' · ' : ''}{order.clientChannel || ''}
                       </p>
                     </div>
-                    {/* SKU summary */}
+                    {/* SKU summary + dispatch badge */}
                     <div style={{ flexShrink: 0, textAlign: 'right' }}>
                       <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>{skuCount} SKU{skuCount !== 1 ? 's' : ''} · {totalQty} units</p>
+                      {order.clientChannel === 'B2B' && (
+                        <span style={{ display: 'inline-block', marginTop: 3, fontSize: 8, fontFamily: "'Cinzel',serif", letterSpacing: '0.12em', fontWeight: 700, padding: '2px 7px', background: order.dispatched ? '#2d8659' : 'rgba(0,40,85,0.1)', color: order.dispatched ? '#FCF7F2' : '#5A7A99' }}>
+                          {order.dispatched ? '✓ DISPATCHED' : 'NOT DISPATCHED'}
+                        </span>
+                      )}
                     </div>
                     {/* Total */}
                     <div style={{ flexShrink: 0, minWidth: 90, textAlign: 'right' }}>
@@ -5716,6 +5738,23 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, currentUser, userIsM
                         <div style={{ flex: 1 }}>
                           <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600 }}>NOTES</p>
                           <p style={{ fontSize: 11, color: '#002855', fontStyle: 'italic' }}>{order.notes}</p>
+                        </div>
+                      )}
+                      {order.clientChannel === 'B2B' && (
+                        <div>
+                          <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600, marginBottom: 4 }}>DISPATCHED</p>
+                          <div style={{ display: 'flex', gap: 0 }}>
+                            <button
+                              onClick={() => onUpdateVisit && onUpdateVisit(order.id, { dispatched: true })}
+                              style={{ padding: '5px 14px', border: `1px solid ${order.dispatched ? '#2d8659' : 'rgba(0,40,85,0.2)'}`, background: order.dispatched ? '#2d8659' : 'none', color: order.dispatched ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, cursor: 'pointer' }}>
+                              YES
+                            </button>
+                            <button
+                              onClick={() => onUpdateVisit && onUpdateVisit(order.id, { dispatched: false })}
+                              style={{ padding: '5px 14px', border: `1px solid ${order.dispatched === false ? '#CC233A' : 'rgba(0,40,85,0.2)'}`, background: order.dispatched === false ? '#CC233A' : 'none', color: order.dispatched === false ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, cursor: 'pointer', marginLeft: -1 }}>
+                              NO
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
