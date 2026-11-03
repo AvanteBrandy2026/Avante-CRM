@@ -492,6 +492,8 @@ function visitToDb(v, includeExtended = true) {
     follow_up_notes: v.followUpNotes || v.followUp || '',
     order_placed: v.orderPlaced || '',
     dispatched: v.dispatched === true ? true : (v.dispatched === false ? false : null),
+    waybill_number: v.waybillNumber || null,
+    dispatch_date: v.dispatchDate || null,
   };
   if (includeExtended) {
     row.contact_method = v.contactMethod || '';
@@ -519,6 +521,8 @@ function visitFromDb(r) {
     taggedReps: r.tagged_reps || [],
     channel: r.channel || '',
     dispatched: r.dispatched === true ? true : (r.dispatched === false ? false : null),
+    waybillNumber: r.waybill_number || '',
+    dispatchDate: r.dispatch_date || '',
   };
 }
 
@@ -2639,6 +2643,19 @@ function Dashboard({ clients, visits, allVisits, targets, activeRep, setActiveRe
         <XSeriesLeaderboard visits={allVisits} />
       </div>
 
+      {/* ── X SERIES SKU BAR CHART ── */}
+      <div className="premium-card p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 diamond-clip" style={{ background: '#BC8D26' }}></div>
+            <h2 className="font-display text-xs md:text-sm tracking-[0.2em] ink" style={{ fontWeight: 700 }}>X SERIES · TOP 3 PER SKU</h2>
+            <span style={{ fontSize: 9, fontFamily: "'Cinzel',serif", letterSpacing: '0.15em', padding: '2px 8px', background: '#002855', color: '#DBB85E', fontWeight: 700 }}>OCT – NOV {new Date().getFullYear()}</span>
+          </div>
+          <span className="text-[9px] tracking-[0.15em] font-display ocean uppercase" style={{ fontWeight: 600 }}>Bottles</span>
+        </div>
+        <XSeriesSkuChart visits={allVisits} />
+      </div>
+
       {/* ── LEADERBOARD + RECENT VISITS ── */}
       <div className="grid-lb">
         <div className="premium-card p-4">
@@ -2889,6 +2906,112 @@ const X_SERIES_SKUS = [
   { id: 'custom_xv',         label: 'Custom XV' },
   { id: 'custom_xo',         label: 'Custom XO' },
 ];
+
+// Rep colours — consistent across both charts
+const REP_COLOURS = ['#BC8D26', '#002855', '#5A7A99', '#2d8659', '#CC233A', '#9BAEC8'];
+
+function XSeriesSkuChart({ visits }) {
+  const year = new Date().getFullYear();
+  const months = [`${year}-10`, `${year}-11`];
+  const xSkuIds = new Set(X_SERIES_SKUS.map(s => s.id));
+
+  // Build: skuId -> { label, total, top3: [{rep, qty, colour}] }
+  const skuMap = {};
+  X_SERIES_SKUS.forEach(s => { skuMap[s.id] = { label: s.label, repQty: {} }; });
+
+  visits.forEach(v => {
+    if (!months.some(m => (v.date || '').startsWith(m))) return;
+    const rep = v.salesRep;
+    (v.items || []).forEach(it => {
+      if (!xSkuIds.has(it.skuId)) return;
+      const qty = Number(it.qty) || 0;
+      if (qty <= 0) return;
+      if (!skuMap[it.skuId]) return;
+      skuMap[it.skuId].repQty[rep] = (skuMap[it.skuId].repQty[rep] || 0) + qty;
+    });
+  });
+
+  // Convert to array, filter SKUs with any sales, sort by total desc
+  const skuData = Object.entries(skuMap)
+    .map(([id, d]) => {
+      const repEntries = Object.entries(d.repQty).sort((a, b) => b[1] - a[1]);
+      const top3 = repEntries.slice(0, 3).map(([rep, qty], i) => ({ rep, qty, colour: REP_COLOURS[i] }));
+      const total = repEntries.reduce((s, [, q]) => s + q, 0);
+      return { id, label: d.label, total, top3 };
+    })
+    .filter(s => s.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  if (skuData.length === 0) {
+    return <p style={{ fontSize: 11, fontStyle: 'italic', color: '#5A7A99', textAlign: 'center', padding: '24px 0' }}>No X Series sales logged yet for Oct–Nov.</p>;
+  }
+
+  const maxTotal = Math.max(...skuData.map(s => s.total), 1);
+  // Collect all reps that appear in top3, assign them a consistent colour
+  const repColorMap = {};
+  skuData.forEach(s => s.top3.forEach(({ rep, colour }) => {
+    if (!repColorMap[rep]) repColorMap[rep] = colour;
+  }));
+  const legendReps = Object.entries(repColorMap);
+
+  return (
+    <div>
+      {/* Legend */}
+      {legendReps.length > 0 && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+          {legendReps.map(([rep, colour]) => (
+            <div key={rep} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div style={{ width: 10, height: 10, background: colour, flexShrink: 0 }} />
+              <span style={{ fontSize: 9, fontFamily: "'Cinzel',serif", letterSpacing: '0.1em', color: '#002855', fontWeight: 600 }}>{rep.toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Chart grid */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {skuData.map(sku => {
+          const barWidthPct = (sku.total / maxTotal) * 100;
+          return (
+            <div key={sku.id}>
+              {/* SKU label + total */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, fontFamily: "'Cinzel',serif", letterSpacing: '0.12em', color: '#002855', fontWeight: 700 }}>{sku.label.toUpperCase()}</span>
+                <span style={{ fontSize: 11, fontFamily: "'Cinzel',serif", letterSpacing: '0.05em', color: '#BC8D26', fontWeight: 700 }}>{sku.total} {sku.total === 1 ? 'bottle' : 'bottles'}</span>
+              </div>
+
+              {/* Stacked bar */}
+              <div style={{ position: 'relative', height: 28, background: 'rgba(0,40,85,0.06)', width: '100%' }}>
+                {/* Proportional fill showing total */}
+                <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${barWidthPct}%`, display: 'flex' }}>
+                  {sku.top3.map((r, ri) => {
+                    const segPct = (r.qty / sku.total) * 100;
+                    return (
+                      <div key={r.rep} style={{ height: '100%', width: `${segPct}%`, background: r.colour, position: 'relative', transition: 'width 0.3s' }}>
+                        {/* Rep qty label inside bar if wide enough */}
+                        {segPct > 12 && (
+                          <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 9, fontFamily: "'Cinzel',serif", fontWeight: 700, color: ri === 1 ? '#DBB85E' : '#FCF7F2', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+                            {r.rep}: {r.qty}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Qty labels outside bar when segments are narrow */}
+                <div style={{ position: 'absolute', left: `calc(${barWidthPct}% + 6px)`, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6 }}>
+                  {sku.top3.filter(r => (r.qty / sku.total) * 100 <= 12).map(r => (
+                    <span key={r.rep} style={{ fontSize: 9, fontFamily: "'Cinzel',serif", fontWeight: 700, color: r.colour, whiteSpace: 'nowrap' }}>{r.rep}: {r.qty}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function XSeriesLeaderboard({ visits }) {
   const [expandedRep, setExpandedRep] = React.useState(null);
@@ -5513,8 +5636,8 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, onUpdateVisit, curre
   const [search, setSearch] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [filterChannel, setFilterChannel] = useState('All');
-  // Reps only ever see their own GP; managers can toggle through reps or ALL for the team total
-  const [filterRep, setFilterRep] = useState(userIsManager ? 'All' : (currentUser?.rep || 'All'));
+  // Everyone sees all reps by default; managers get the agent toggle to filter
+  const [filterRep, setFilterRep] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   // Defaults to the current month so GP reads correctly the moment this tab opens
   const [filterMonth, setFilterMonth] = useState(monthISO());
@@ -5693,7 +5816,9 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, onUpdateVisit, curre
                       <p style={{ fontSize: 10, color: '#5A7A99', fontStyle: 'italic' }}>{skuCount} SKU{skuCount !== 1 ? 's' : ''} · {totalQty} units</p>
                       {order.clientChannel === 'B2B' && (
                         <span style={{ display: 'inline-block', marginTop: 3, fontSize: 8, fontFamily: "'Cinzel',serif", letterSpacing: '0.12em', fontWeight: 700, padding: '2px 7px', background: order.dispatched ? '#2d8659' : 'rgba(0,40,85,0.1)', color: order.dispatched ? '#FCF7F2' : '#5A7A99' }}>
-                          {order.dispatched ? '✓ DISPATCHED' : 'NOT DISPATCHED'}
+                          {order.dispatched
+                            ? `✓ DISPATCHED${order.waybillNumber ? ` · ${order.waybillNumber}` : ''}${order.dispatchDate ? ` · ${order.dispatchDate}` : ''}`
+                            : 'NOT DISPATCHED'}
                         </span>
                       )}
                     </div>
@@ -5741,19 +5866,50 @@ function OrderHistoryPage({ clients, visits, onDeleteVisit, onUpdateVisit, curre
                         </div>
                       )}
                       {order.clientChannel === 'B2B' && (
-                        <div>
-                          <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600, marginBottom: 4 }}>DISPATCHED</p>
-                          <div style={{ display: 'flex', gap: 0 }}>
-                            <button
-                              onClick={() => onUpdateVisit && onUpdateVisit(order.id, { dispatched: true })}
-                              style={{ padding: '5px 14px', border: `1px solid ${order.dispatched ? '#2d8659' : 'rgba(0,40,85,0.2)'}`, background: order.dispatched ? '#2d8659' : 'none', color: order.dispatched ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, cursor: 'pointer' }}>
-                              YES
-                            </button>
-                            <button
-                              onClick={() => onUpdateVisit && onUpdateVisit(order.id, { dispatched: false })}
-                              style={{ padding: '5px 14px', border: `1px solid ${order.dispatched === false ? '#CC233A' : 'rgba(0,40,85,0.2)'}`, background: order.dispatched === false ? '#CC233A' : 'none', color: order.dispatched === false ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, cursor: 'pointer', marginLeft: -1 }}>
-                              NO
-                            </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div>
+                            <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600, marginBottom: 4 }}>DISPATCHED</p>
+                            <div style={{ display: 'flex', gap: 0 }}>
+                              <button
+                                onClick={() => onUpdateVisit && onUpdateVisit(order.id, { dispatched: true })}
+                                style={{ padding: '5px 14px', border: `1px solid ${order.dispatched ? '#2d8659' : 'rgba(0,40,85,0.2)'}`, background: order.dispatched ? '#2d8659' : 'none', color: order.dispatched ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, cursor: 'pointer' }}>
+                                YES
+                              </button>
+                              <button
+                                onClick={() => onUpdateVisit && onUpdateVisit(order.id, { dispatched: false })}
+                                style={{ padding: '5px 14px', border: `1px solid ${order.dispatched === false ? '#CC233A' : 'rgba(0,40,85,0.2)'}`, background: order.dispatched === false ? '#CC233A' : 'none', color: order.dispatched === false ? '#FCF7F2' : '#002855', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, cursor: 'pointer', marginLeft: -1 }}>
+                                NO
+                              </button>
+                            </div>
+                          </div>
+                          <div>
+                            <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600, marginBottom: 4 }}>WAYBILL NO.</p>
+                            <input
+                              type="text"
+                              defaultValue={order.waybillNumber || ''}
+                              placeholder="e.g. CPT123456"
+                              onBlur={e => {
+                                const val = e.target.value.trim();
+                                if (val !== (order.waybillNumber || '')) {
+                                  onUpdateVisit && onUpdateVisit(order.id, { waybillNumber: val });
+                                }
+                              }}
+                              style={{ padding: '5px 10px', border: '1px solid rgba(0,40,85,0.2)', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 11, color: '#002855', background: '#FCF7F2', outline: 'none', width: 160 }}
+                            />
+                          </div>
+                          <div>
+                            <p style={{ fontSize: 8, letterSpacing: '0.2em', color: '#BC8D26', fontFamily: "'Cinzel',serif", fontWeight: 600, marginBottom: 4 }}>DISPATCH DATE</p>
+                            <input
+                              type="date"
+                              defaultValue={order.dispatchDate || ''}
+                              onBlur={e => {
+                                const val = e.target.value;
+                                if (val !== (order.dispatchDate || '')) {
+                                  onUpdateVisit && onUpdateVisit(order.id, { dispatchDate: val });
+                                }
+                              }}
+                              style={{ padding: '5px 10px', border: '1px solid rgba(0,40,85,0.2)', fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: 11, color: '#002855', background: '#FCF7F2', outline: 'none' }}
+                            />
                           </div>
                         </div>
                       )}
